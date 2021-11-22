@@ -1,0 +1,4 @@
+/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/build/CMakeFiles/rebuild_cache.dir
+/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/build/CMakeFiles/autoaim_lib.dir
+/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/build/CMakeFiles/edit_cache.dir
+/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/build/CMakeFiles/autoaim.dir

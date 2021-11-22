@@ -1,0 +1,27 @@
+[
+{
+  "directory": "/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/build",
+  "command": "/usr/bin/x86_64-linux-gnu-g++-7  -I/opt/intel/openvino_2021.4.689/opencv/include -I/usr/local/include/eigen3 -I/opt/intel/openvino_2021.4.689/deployment_tools/inference_engine/include -g -o CMakeFiles/autoaim_lib.dir/detector/inference.cpp.o -c /home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/detector/inference.cpp",
+  "file": "/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/detector/inference.cpp"
+},
+{
+  "directory": "/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/build",
+  "command": "/usr/bin/x86_64-linux-gnu-g++-7  -I/opt/intel/openvino_2021.4.689/opencv/include -I/usr/local/include/eigen3 -I/opt/intel/openvino_2021.4.689/deployment_tools/inference_engine/include -g -o CMakeFiles/autoaim_lib.dir/predictor/particle_filter.cpp.o -c /home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/predictor/particle_filter.cpp",
+  "file": "/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/predictor/particle_filter.cpp"
+},
+{
+  "directory": "/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/build",
+  "command": "/usr/bin/x86_64-linux-gnu-g++-7  -I/usr/local/include/eigen3 -isystem /opt/intel/openvino_2021.4.689/opencv/include -isystem /opt/intel/openvino_2021.4.689/deployment_tools/inference_engine/include -g -Wno-error=deprecated-declarations -o CMakeFiles/autoaim.dir/autoaim.cpp.o -c /home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/autoaim.cpp",
+  "file": "/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/autoaim.cpp"
+},
+{
+  "directory": "/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/build",
+  "command": "/usr/bin/x86_64-linux-gnu-g++-7  -I/usr/local/include/eigen3 -isystem /opt/intel/openvino_2021.4.689/opencv/include -isystem /opt/intel/openvino_2021.4.689/deployment_tools/inference_engine/include -g -Wno-error=deprecated-declarations -o CMakeFiles/autoaim.dir/detector/inference.cpp.o -c /home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/detector/inference.cpp",
+  "file": "/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/detector/inference.cpp"
+},
+{
+  "directory": "/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/build",
+  "command": "/usr/bin/x86_64-linux-gnu-g++-7  -I/usr/local/include/eigen3 -isystem /opt/intel/openvino_2021.4.689/opencv/include -isystem /opt/intel/openvino_2021.4.689/deployment_tools/inference_engine/include -g -Wno-error=deprecated-declarations -o CMakeFiles/autoaim.dir/predictor/particle_filter.cpp.o -c /home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/predictor/particle_filter.cpp",
+  "file": "/home/tup/Desktop/TUP-Vision-Infantry-2022/autoaim/predictor/particle_filter.cpp"
+}
+]
