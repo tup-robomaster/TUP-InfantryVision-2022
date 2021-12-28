@@ -1,28 +1,9 @@
 #include "particle_filter.h"
 
-template<typename T>
-bool initMatrix(Eigen::MatrixXd &matrix,std::vector<T> &vector);
-
-template<typename T>
-bool initMatrix(Eigen::MatrixXd &matrix,std::vector<T> &vector)
-{
-    int cnt = 0;
-    for(int row = 0;row < matrix.rows();row++)
-    {
-        for(int col = 0;col < matrix.cols();col++)
-        {
-            matrix(row,col) = vector[cnt];
-            cnt++;
-        }
-    }
-    return true;
-}
-
 bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix,Eigen::MatrixXd &cov)
 {
     default_random_engine e(time(0));
     std::vector<normal_distribution<double>> normal_distribution_list;
-    normal_distribution_list.empty();
 
     for(int i = 0;i<cov.cols();i++)
     {
@@ -47,7 +28,15 @@ bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix,Eigen::MatrixXd &cov)
 
 ParticleFilter::ParticleFilter(YAML::Node &config,const string param_name)
 {
-    // cout<<"1";
+    initParam(config,param_name);
+}
+
+ParticleFilter::ParticleFilter()
+{
+}
+
+bool ParticleFilter::initParam(YAML::Node &config,const string param_name)
+{
     //初始化向量长度与粒子数
     vector_len = config[param_name]["vector_len"].as<int>();
     num_particle = config[param_name]["num_particle"].as<int>();
@@ -72,6 +61,8 @@ ParticleFilter::ParticleFilter(YAML::Node &config,const string param_name)
     randomlizedGaussianColwise(matrix_particle, process_noise_cov);
     matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
     is_ready = false;
+    
+    return true;
 }
 
 ParticleFilter::~ParticleFilter()
@@ -150,31 +141,31 @@ bool ParticleFilter::resample()
     return true;
 }
 
-int main()
-{
-    YAML::Node config = YAML::LoadFile("/home/rangeronmars/RM/TUP-Vision-Infantry-2022/params/filter/filter_param.yaml");
-    ParticleFilter particle_filter(config,"autoaim");
-    cv::Mat pic = cv::Mat::zeros(2000, 1000, CV_8UC3);
-    double dr_ms;
+// int main()
+// {
+//     YAML::Node config = YAML::LoadFile("/home/rangeronmars/RM/TUP-Vision-Infantry-2022/params/filter/filter_param.yaml");
+//     ParticleFilter particle_filter(config,"autoaim");
+//     cv::Mat pic = cv::Mat::zeros(2000, 1000, CV_8UC3);
+//     double dr_ms;
 
-    for(int i = 1;i < 200;i++)
-    {
-        auto t1=std::chrono::steady_clock::now();
-        auto x = i;
-        auto y = 100 * cos (2 * CV_PI * 0.01 *i) + 100 + 0.3 * i;
-        // auto y = 500 + 10 * cos (2 * CV_PI * 0.01 *i);
-        cv::circle(pic,cv::Point2f(x,y),1,cv::Scalar(0,255,0),1);
-        auto tmp = particle_filter.predict();
-        cv::circle(pic,cv::Point2f(tmp[0],tmp[1]),1,cv::Scalar(0,0,255),1);
-        // particle_filter.predict();
-        // cout<<tmp<<endl;
-        Eigen::VectorXd measure(2);
-        measure<<x, y;
-        particle_filter.estimate(measure);
-        auto t2=std::chrono::steady_clock::now();
-        dr_ms=std::chrono::duration<double,std::milli>(t2-t1).count();
-        cout<<"Time: "<<dr_ms<<"ms"<<endl;
-    }
-    // cv::imshow("result",pic);
-    // cv::waitKey(0);
-}
+//     for(int i = 1;i < 200;i++)
+//     {
+//         auto t1=std::chrono::steady_clock::now();
+//         auto x = i;
+//         auto y = 100 * cos (2 * CV_PI * 0.01 *i) + 100 + 0.3 * i;
+//         // auto y = 500 + 10 * cos (2 * CV_PI * 0.01 *i);
+//         cv::circle(pic,cv::Point2f(x,y),1,cv::Scalar(0,255,0),1);
+//         auto tmp = particle_filter.predict();
+//         cv::circle(pic,cv::Point2f(tmp[0],tmp[1]),1,cv::Scalar(0,0,255),1);
+//         // particle_filter.predict();
+//         // cout<<tmp<<endl;
+//         Eigen::VectorXd measure(2);
+//         measure<<x, y;
+//         particle_filter.estimate(measure);
+//         auto t2=std::chrono::steady_clock::now();
+//         dr_ms=std::chrono::duration<double,std::milli>(t2-t1).count();
+//         cout<<"Time: "<<dr_ms<<"ms"<<endl;
+//     }
+//     // cv::imshow("result",pic);
+//     // cv::waitKey(0);
+// }

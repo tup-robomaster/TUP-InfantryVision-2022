@@ -14,7 +14,7 @@
 #define file_name_t            std::string
 #define imread_t               cv::imread
 #define NMS_THRESH 0.1
-#define BBOX_CONF_THRESH 0.3
+#define BBOX_CONF_THRESH 0.6
 
 static constexpr int INPUT_W = 640;    // Width of input
 static constexpr int INPUT_H = 384;    // Height of input
@@ -22,7 +22,8 @@ static constexpr int NUM_CLASSES = 8;  // Number of classes
 static constexpr int NUM_COLORS = 3;   // Number of color
 static constexpr int TOPK = 128;       // TopK
 
-static inline int argmax(const float *ptr, int len) {
+static inline int argmax(const float *ptr, int len) 
+{
     int max_arg = 0;
     for (int i = 1; i < len; i++) {
         if (ptr[i] > ptr[max_arg]) max_arg = i;
@@ -36,7 +37,8 @@ static inline int argmax(const float *ptr, int len) {
  * @param transform_matrix Transform Matrix of Resize
  * @return Image after resize
  */
-cv::Mat letterBoxResize(cv::Mat& img, Eigen::Matrix<float,3,3> &transform_matrix) {
+cv::Mat letterBoxResize(cv::Mat& img, Eigen::Matrix<float,3,3> &transform_matrix)
+{
     float r = std::min(INPUT_W / (img.cols * 1.0), INPUT_H / (img.rows * 1.0));
     int unpad_w = r * img.cols;
     int unpad_h = r * img.rows;
@@ -59,39 +61,6 @@ cv::Mat letterBoxResize(cv::Mat& img, Eigen::Matrix<float,3,3> &transform_matrix
     return out;
 }
 
-/**
- * @brief Fill input blob from image.
- */
-void blobFromImage(cv::Mat& img, Blob::Ptr& blob)
-{
-    int channels = 3;
-    int img_h = img.rows;
-    int img_w = img.cols;
-    InferenceEngine::MemoryBlob::Ptr mblob = InferenceEngine::as<InferenceEngine::MemoryBlob>(blob);
-    if (!mblob) 
-    {
-        THROW_IE_EXCEPTION << "We expect blob to be inherited from MemoryBlob in matU8ToBlob, "
-            << "but by fact we were not able to cast inputBlob to MemoryBlob";
-    }
-    // locked memory holder should be alive all time while access to its buffer happens
-    auto mblobHolder = mblob->wmap();
-
-    float *blob_data = mblobHolder.as<float *>();
-
-    for (size_t c = 0; c < channels; c++) 
-    {
-        for (size_t  h = 0; h < img_h; h++) 
-        {
-            for (size_t w = 0; w < img_w; w++) 
-            {
-                blob_data[c * img_w * img_h + h * img_w + w] =
-                    (float)img.at<cv::Vec3b>(h, w)[c];
-            }
-        }
-    }
-}
-
-
 
 /**
  * @brief Generate grids and stride.
@@ -100,7 +69,8 @@ void blobFromImage(cv::Mat& img, Blob::Ptr& blob)
  * @param strides A vector of stride.
  * @param grid_strides Grid stride generated in this function.
  */
-static void generate_grids_and_stride(const int target_w, const int target_h, std::vector<int>& strides, std::vector<GridAndStride>& grid_strides)
+static void generate_grids_and_stride(const int target_w, const int target_h,
+                                        std::vector<int>& strides, std::vector<GridAndStride>& grid_strides)
 {
     for (auto stride : strides)
     {
@@ -124,7 +94,9 @@ static void generate_grids_and_stride(const int target_w, const int target_h, st
  * @param prob_threshold Confidence Threshold.
  * @param objects Objects proposed.
  */
-static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, const float* feat_ptr, Eigen::Matrix<float,3,3> &transform_matrix,float prob_threshold, std::vector<Object>& objects)
+static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, const float* feat_ptr,
+                                    Eigen::Matrix<float,3,3> &transform_matrix,float prob_threshold,
+                                    std::vector<Object>& objects)
 {
 
     const int num_anchors = grid_strides.size();
@@ -154,11 +126,11 @@ static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, cons
 
         float box_objectness = (feat_ptr[basic_pos + 8]);
         
-        float cls_conf = (feat_ptr[basic_pos + 9 + box_color]);
-        float color_conf = (feat_ptr[basic_pos + 9 + NUM_COLORS + box_class]);
+        float color_conf = (feat_ptr[basic_pos + 9 + box_color]);
+        float cls_conf = (feat_ptr[basic_pos + 9 + NUM_COLORS + box_class]);
 
-        // float box_prob = (box_objectness + cls_conf + color_conf) / 3.0;
-        float box_prob = box_objectness;
+        float box_prob = (box_objectness + cls_conf + color_conf) / 3.0;
+        // float box_prob = box_objectness;
 
         if (box_prob > prob_threshold)
         {
@@ -174,9 +146,10 @@ static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, cons
             apex_dst = transform_matrix * apex_norm;
 
             for (int i = 0;i < 4;i++)
-                obj.apex.push_back(cv::Point2f(apex_dst(0,i),apex_dst(1,i)));
-
-            obj.rect = cv::boundingRect(obj.apex);
+                obj.apex[i] = cv::Point2f(apex_dst(0,i),apex_dst(1,i));
+            
+            vector<cv::Point2f> tmp(obj.apex,obj.apex + 4);
+            obj.rect = cv::boundingRect(tmp);
 
             obj.cls = box_class;
             obj.color = box_color;
@@ -246,7 +219,8 @@ static void qsort_descent_inplace(std::vector<Object>& objects)
     qsort_descent_inplace(objects, 0, objects.size() - 1);
 }
 
-static void nms_sorted_bboxes(const std::vector<Object>& faceobjects, std::vector<int>& picked, float nms_threshold)
+static void nms_sorted_bboxes(const std::vector<Object>& faceobjects, std::vector<int>& picked,
+                            float nms_threshold)
 {
     picked.clear();
 
@@ -287,7 +261,9 @@ static void nms_sorted_bboxes(const std::vector<Object>& faceobjects, std::vecto
  * @param img_w Width of Image.
  * @param img_h Height of Image.
  */
-static void decodeOutputs(const float* prob, std::vector<Object>& objects, Eigen::Matrix<float,3,3> &transform_matrix, const int img_w, const int img_h) {
+static void decodeOutputs(const float* prob, std::vector<Object>& objects,
+                            Eigen::Matrix<float,3,3> &transform_matrix, const int img_w, const int img_h)
+{
         std::vector<Object> proposals;
         std::vector<int> strides = {8, 16, 32};
         std::vector<GridAndStride> grid_strides;
@@ -296,10 +272,8 @@ static void decodeOutputs(const float* prob, std::vector<Object>& objects, Eigen
         generateYoloxProposals(grid_strides, prob, transform_matrix, BBOX_CONF_THRESH, proposals);
         qsort_descent_inplace(proposals);
 
-
         if (proposals.size() >= TOPK) 
             proposals.resize(TOPK);
-
         std::vector<int> picked;
         nms_sorted_bboxes(proposals, picked, NMS_THRESH);
         int count = picked.size();
@@ -323,13 +297,13 @@ Detector::~Detector()
 bool Detector::initModel(string path)
 {
     ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "/home/tup/Desktop/TUP-Vision-Infantry-2022/.cache"}});
+    ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
+    // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
     // Step 1. Read a model in OpenVINO Intermediate Representation (.xml and
     // .bin files) or ONNX (.onnx file) format
     network = ie.ReadNetwork(path);
     if (network.getOutputsInfo().size() != 1)
         throw std::logic_error("Sample supports topologies with 1 output only");
-    if (network.getInputsInfo().size() != 1)
-        throw std::logic_error("Sample supports topologies with 1 input only");
 
     // Step 2. Configure input & output
     //  Prepare input blobs
@@ -338,24 +312,26 @@ bool Detector::initModel(string path)
 
 
     //  Prepare output blobs
-    if (network.getOutputsInfo().empty()) {
+    if (network.getOutputsInfo().empty())
+    {
         std::cerr << "Network outputs info is empty" << std::endl;
         return EXIT_FAILURE;
     }
     DataPtr output_info = network.getOutputsInfo().begin()->second;
     output_name = network.getOutputsInfo().begin()->first;
 
-    output_info->setPrecision(Precision::FP32);
-
+    // output_info->setPrecision(Precision::FP16);
     // Step 3. Loading a model to the device
-    // executable_network = ie.LoadNetwork(network, "GPU");
-    executable_network = ie.LoadNetwork(network, "MULTI:GPU,CPU");
+    // executable_network = ie.LoadNetwork(network, "MULTI:GPU");
+    executable_network = ie.LoadNetwork(network, "GPU");
+
     // Step 4. Create an infer request
     infer_request = executable_network.CreateInferRequest();
     const Blob::Ptr output_blob = infer_request.GetBlob(output_name);
     moutput = as<MemoryBlob>(output_blob);
     // Blob::Ptr input = infer_request.GetBlob(input_name);     // just wrap Mat data by Blob::Ptr
-    if (!moutput) {
+    if (!moutput)
+    {
         throw std::logic_error("We expect output to be inherited from MemoryBlob, "
                                 "but by fact we were not able to cast output to MemoryBlob");
     }
@@ -365,14 +341,36 @@ bool Detector::initModel(string path)
 }
 
 bool Detector::detect(Mat &src,std::vector<Object>& objects)
-{        
+{
+    // cout<<
     cv::Mat pr_img = letterBoxResize(src,transfrom_matrix);
+    cv::Mat pre;
+    cv::Mat pre_split[3];
+    pr_img.convertTo(pre,CV_32F);
+    // auto t1=std::chrono::steady_clock::now();
+    cv::split(pre,pre_split);
+    // auto t2=std::chrono::steady_clock::now();
+    // double dr_ms=std::chrono::duration<double,std::milli>(t2-t1).count();
+    // cout<<dr_ms<<"ms"<<endl;
+
     Blob::Ptr imgBlob = infer_request.GetBlob(input_name);     // just wrap Mat data by Blob::Ptr
-    blobFromImage(pr_img, imgBlob);
+    InferenceEngine::MemoryBlob::Ptr mblob = InferenceEngine::as<InferenceEngine::MemoryBlob>(imgBlob);
+    // locked memory holder should be alive all time while access to its buffer happens
+    auto mblobHolder = mblob->wmap();
+    float *blob_data = mblobHolder.as<float *>();
+
+    auto img_offset = INPUT_W * INPUT_H;
+    //Copy img into blob
+    for(int c = 0;c < 3;c++)
+    {
+        memcpy(blob_data, pre_split[c].data, INPUT_W * INPUT_H * sizeof(float));
+        blob_data += img_offset;
+    }
+
     infer_request.Infer();
     // -----------------------------------------------------------------------------------------------------
-    // --------------------------- Step 8. Process output
-    // ------------------------------------------------------
+    // --------------------------- Step 8. Process output----------------
+    // ----------------------------Guhaodashabi--------------------------
     // const Blob::Ptr output_blob = infer_request.GetBlob(output_name);
     // MemoryBlob::CPtr moutput = as<MemoryBlob>(output_blob);
 
@@ -382,6 +380,7 @@ bool Detector::detect(Mat &src,std::vector<Object>& objects)
     int img_h = src.rows;
 
     decodeOutputs(net_pred, objects, transfrom_matrix, img_w, img_h);
+
     return true;
 
 }

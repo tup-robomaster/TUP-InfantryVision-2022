@@ -16,7 +16,7 @@ using namespace InferenceEngine;
 
 struct Object
 {
-    vector<cv::Point2f> apex;
+    Point2f apex[4];
     cv::Rect_<float> rect;
     int cls;
     int color;

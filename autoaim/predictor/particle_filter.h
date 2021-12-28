@@ -8,6 +8,11 @@
 #include <Eigen/Core>
 #include <opencv2/opencv.hpp>
 
+#include "../../general/general.h"
+// #include "/home/tup/Desktop/TUP-Vision-Infantry-2022/general/general.h"
+
+
+
 using namespace std;
 using namespace Eigen;
 
@@ -15,9 +20,11 @@ class ParticleFilter
 {
 public:
     ParticleFilter(YAML::Node &config,const string param_name);
+    ParticleFilter();
     ~ParticleFilter();
 
     Eigen::VectorXd predict();
+    bool initParam(YAML::Node &config,const string param_name);
     bool estimate(Eigen::VectorXd &measure);
     bool is_ready;
 private:
