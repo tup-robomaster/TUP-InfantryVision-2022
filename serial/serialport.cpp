@@ -99,13 +99,28 @@ bool SerialPort::get_Mode(int &mode, int &sentry_mode, int &base_mode)
     {
         //判断针头和CRC校验是否正确
         mode  = (int)rdata[1]; //通过此数据控制线程的开启	0关闭自瞄1开启自瞄2小能量机关3大能量机关
-        // printf("接收到的指令:%d\r\n", mode);
-	//----------No use---------//    
-        sentry_mode  = (int)rdata[15];
-        // printf("Is in sentry mode ? :%d\r\n", sentry_mode);
-        base_mode  = (int)rdata[16];
-        // printf("Is in base mode ? :%d\r\n", base_mode);
+	f1[0] = rdata[3];
+        f1[1] = rdata[4];
+        f1[2] = rdata[5];
+        f1[3] = rdata[6];
+        f2[0] = rdata[7];
+        f2[1] = rdata[8];
+        f2[2] = rdata[9];
+        f2[3] = rdata[10];
+        f3[0] = rdata[11];
+        f3[1] = rdata[12];
+        f3[2] = rdata[13];
+        f3[3] = rdata[14];
+        f4[0] = rdata[15];
+        f4[1] = rdata[16];
+        f4[2] = rdata[17];
+        f4[3] = rdata[18];
 
+        quat[0] = exchange_data(f1);
+        quat[1] = exchange_data(f2);
+        quat[2] = exchange_data(f3);
+        quat[3] = exchange_data(f4);
+	#TODO:将输出更变为mode和quat
     }
     return true;
 }
