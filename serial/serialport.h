@@ -96,9 +96,11 @@ private:
     int speed, databits, stopbits, parity;
     unsigned char rdata[255]; //raw_data
     unsigned char Tdata[30];  //transfrom data
+	float quat[4]; //四元数
 
 	void set_Brate();
 	int set_Bit();
+	float exchange_data(unsigned char *data); //将4个uchar合并成一个float
 public:
 
     atomic_bool need_init = true;
