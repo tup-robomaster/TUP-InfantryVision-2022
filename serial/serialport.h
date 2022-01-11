@@ -96,6 +96,7 @@ private:
     int speed, databits, stopbits, parity;
     unsigned char rdata[255]; //raw_data
     unsigned char Tdata[30];  //transfrom data
+	unsigned char f1[4],f2[4],f3[4],f4[4]; //接收四元数转换数组
 	float quat[4]; //四元数
 
 	void set_Brate();
