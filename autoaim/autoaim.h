@@ -14,13 +14,19 @@ struct Armor
     Eigen::Vector3d apex3d;
 };
 
+struct Image
+{
+    Mat img;
+    int timestamp;
+};
+
 class Autoaim
 {
 public:
     Autoaim();
     ~Autoaim();
 
-    bool run(Mat &src,VisionData &data);       // 自瞄主函数
+    bool run(Image &src,VisionData &data);       // 自瞄主函数
 private:
     Detector detector;
     //TODO:预测器暂未完成

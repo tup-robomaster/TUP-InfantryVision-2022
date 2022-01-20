@@ -73,15 +73,7 @@ bool Factory<T>::consume(T &product)
     return true;
 }
 
-bool producer(Factory<cv::Mat> &factory);
-bool consumer(Factory<cv::Mat> &autoaim_factory,Factory<VisionData> &transmit_factory);
+bool producer(Factory<Image> &factory);
+bool consumer(Factory<Image> &autoaim_factory,Factory<VisionData> &transmit_factory);
 bool serialWatcher(SerialPort &serial);
 bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory);
-
-// class ThreadManagement
-// {
-// public:
-
-// private:
-
-// };

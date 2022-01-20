@@ -49,8 +49,8 @@ using namespace std;
 const vector<string> DEFAULT_PORT = {"ttyUSB","ttyACM"};
 //默认串口最大编号
 const int MAX_ITER = 5;
-const string SERIAL_ID = "1d6b/2/503";
-// const string SERIAL_ID = "1a86/7523/264";
+// const string SERIAL_ID = "1d6b/2/503";
+const string SERIAL_ID = "1a86/7523/264";
 
 //字节数为4的结构体
 typedef union
@@ -101,7 +101,7 @@ private:
 
 	void set_Brate();
 	int set_Bit();
-	float exchange_data(unsigned char *data); //将4个uchar合并成一个float
+	// float exchange_data(unsigned char *data); //将4个uchar合并成一个float
 public:
 
     atomic_bool need_init = true;

@@ -347,11 +347,7 @@ bool Detector::detect(Mat &src,std::vector<Object>& objects)
     cv::Mat pre;
     cv::Mat pre_split[3];
     pr_img.convertTo(pre,CV_32F);
-    // auto t1=std::chrono::steady_clock::now();
     cv::split(pre,pre_split);
-    // auto t2=std::chrono::steady_clock::now();
-    // double dr_ms=std::chrono::duration<double,std::milli>(t2-t1).count();
-    // cout<<dr_ms<<"ms"<<endl;
 
     Blob::Ptr imgBlob = infer_request.GetBlob(input_name);     // just wrap Mat data by Blob::Ptr
     InferenceEngine::MemoryBlob::Ptr mblob = InferenceEngine::as<InferenceEngine::MemoryBlob>(imgBlob);

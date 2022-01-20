@@ -15,6 +15,13 @@
 using namespace std;
 using namespace cv;
 
+//目标信息
+struct TargetInfo
+{
+    int dist;
+    time_t timestamp;
+};
+
 class Predictor
 {
 public:

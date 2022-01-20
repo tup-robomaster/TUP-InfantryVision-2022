@@ -8,7 +8,7 @@ DaHengCamera DaHeng;
 
 int main()
 {
-    Factory<cv::Mat> autoaim_factory(3);
+    Factory<Image> autoaim_factory(3);
     Factory<VisionData> data_transmit_factory(5);
     SerialPort serial;
 

@@ -4,9 +4,10 @@
  * @brief 生产者线程
  * @param factory 工厂类
 **/
-bool producer(Factory<cv::Mat> &factory)
+bool producer(Factory<Image> &factory)
 {
     DaHengCamera DaHeng;
+    auto time_start = std::chrono::steady_clock::now();
 
     DaHeng.StartDevice(1);
     // 设置分辨率
@@ -21,10 +22,17 @@ bool producer(Factory<cv::Mat> &factory)
     // DaHeng.Set_BALANCE_AUTO(1);
     while(1)
     {
-        Mat src;
-        DaHeng.GetMat(src);
-        if (src.empty())
+        Image src;
+        Mat img;
+        auto time_cap = std::chrono::steady_clock::now();
+
+        DaHeng.GetMat(img);
+        if (img.empty())
             continue;
+
+        src.img = img;
+        src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
+        
         factory.produce(src);
     }
     return true;
@@ -34,13 +42,14 @@ bool producer(Factory<cv::Mat> &factory)
  * @brief 消费者线程
  * @param factory 工厂类
 **/
-bool consumer(Factory<cv::Mat> &autoaim_factory,Factory<VisionData> &transmit_factory)
+bool consumer(Factory<Image> &autoaim_factory,Factory<VisionData> &transmit_factory)
 {
     Autoaim autoaim;
-    Mat dst;
     while(1)
     {
+        Image dst;
         VisionData data;
+
         autoaim_factory.consume(dst);
         if (autoaim.run(dst,data))
         {
