@@ -72,6 +72,13 @@ Device SerialPort::setDeviceByID(std::vector<Device> devices)
     return Device();
 }
 
+float SerialPort::exchange_data(unsigned char *data)
+{
+    float float_data;
+    float_data = *((float*)data);
+    return float_data;
+};
+
 ////////////////////////////////////////////////////////////////
 /**
  *@brief   获取模式命令
