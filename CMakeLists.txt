@@ -9,6 +9,7 @@ find_package(OpenCV 4 REQUIRED)
 find_package(InferenceEngine REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(Ceres REQUIRED COMPONENTS EigenSparse OpenMP)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIRS})
@@ -60,4 +61,4 @@ add_executable(Infantry_Vision main.cpp
 #                         ../general/general.h
 #                         )
 target_link_libraries(Infantry_Vision ${OpenCV_LIBRARIES} ${InferenceEngine_LIBRARIES} ${Eigen3_LIBRARIES}
-                         yaml-cpp gxiapi)
+                         yaml-cpp gxiapi Ceres::ceres)
