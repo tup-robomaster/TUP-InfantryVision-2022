@@ -64,8 +64,6 @@ bool Autoaim::run(Image &src,VisionData &data)
     auto t2=std::chrono::steady_clock::now();
     double dr_ms=std::chrono::duration<double,std::milli>(t2-t1).count();
 
-    cout<<src.timestamp<<endl;
-
     for (auto object : objects)
     {
         Armor armor;
@@ -84,34 +82,57 @@ bool Autoaim::run(Image &src,VisionData &data)
             line(src.img, object.apex[i % 4], object.apex[(i + 1) % 4], Scalar(0,255,0), 1);
 #endif //SHOW_ALL_ARMOR
 
-        auto points = coordsolver.pnp(object.apex, SOLVEPNP_EPNP);
+        auto center = coordsolver.pnp(object.apex, SOLVEPNP_EPNP);
 
 #ifdef USING_IMU
 #endif //USING_IMU
 
-        armor.apex3d = points;
+        armor.center3d = center;
         armors.push_back(armor);
     }
 
-
 #ifdef SHOW_FPS
     putText(src.img, "FPS:" + to_string(int(1000 / dr_ms)), Point2i(20,20), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
-    imshow("dst",src.img);
-    waitKey(1);
+#endif //SHOW_FPS
+
+#ifdef SHOW_AIM_CROSS
+        line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), Scalar(0,255,0), 1);
+        line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), Scalar(0,255,0), 1);
 #endif //SHOW_FPS
 
     if (objects.size() == 0)
+    {
+#ifdef SHOW_IMG
+        imshow("dst",src.img);
+        waitKey(1);
+#endif //SHOW_IMG
         return false;
+    }
     
     auto target = chooseTarget(armors);
-    auto angle = coordsolver.getAngle(target.apex3d);
+    auto predict_info = predictor.predict(target.center3d, src.timestamp);
+
+#ifdef SHOW_PREDICT
+    auto center2d_src = coordsolver.reproject(target.center3d);
+    auto center2d_pred = coordsolver.reproject(predict_info);
+    circle(src.img, center2d_src, 10, Scalar(0, 0, 255), 2);
+    circle(src.img, center2d_pred, 5, Scalar(0, 255, 255), 2);
+#endif //SHOW_PREDICT
+
+    auto angle = coordsolver.getAngle(target.center3d);
     
+#ifdef SHOW_IMG
+    imshow("dst",src.img);
+    waitKey(1);
+#endif //SHOW_IMG
+
 #ifdef PRINT_TARGET_INFO
     cout<<"-----------INFO------------"<<endl;
     cout<<"Yaw: "<<angle[0]<<endl;
     cout<<"Pitch: "<<angle[1]<<endl;
-    cout<<"Dist: "<<target.apex3d.norm()<<endl;
+    cout<<"Dist: "<<target.center3d.norm()<<endl;
 #endif //PRINT_TARGET_INFO
+
     data = {(float)angle[1], (float)angle[0], 0, 0, 1, 0, 1};
     return true;
 }

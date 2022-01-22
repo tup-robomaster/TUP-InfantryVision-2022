@@ -101,7 +101,7 @@ private:
 
 	void set_Brate();
 	int set_Bit();
-	// float exchange_data(unsigned char *data); //将4个uchar合并成一个float
+	float exchange_data(unsigned char *data); //将4个uchar合并成一个float
 public:
 
     atomic_bool need_init = true;

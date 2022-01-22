@@ -5,6 +5,7 @@
 #include <vector>
 #include <ctime>
 
+#include <ceres/ceres.h>
 #include <yaml-cpp/yaml.h>
 #include <Eigen/Core>
 #include <opencv2/opencv.hpp>
@@ -18,8 +19,9 @@ using namespace cv;
 //目标信息
 struct TargetInfo
 {
+    Eigen::Vector3d xyz;
     int dist;
-    time_t timestamp;
+    int timestamp;
 };
 
 class Predictor
@@ -28,10 +30,30 @@ public:
 
     Predictor();
     ~Predictor();
-    Eigen::Vector3d predict(Eigen::Vector3d xyz);
+    Eigen::Vector3d predict(Eigen::Vector3d xyz,  int timestamp);
 private:
     Vector3d last_xyz;                                                  //最后坐标
     Vector3d last_v_xyz;                                                //最后速度
-    deque<std::chrono::_V2::steady_clock::time_point> last_time;       //最后坐标时间戳队列
-    ParticleFilter pf;                                              //粒子滤波
+    ParticleFilter pf;                                                  //粒子滤波
+    std::deque<TargetInfo> history_info;                                //目标队列
+
+    const int max_timespan = 500;                                       //最大时间跨度，大于该时间重置预测器       
+    const int history_deque_len = 10;                                   //队列长度   
+    const int bullet_speed = 30;                                        //TODO:弹速可变
+    const int delay = 100;                                              //发弹延迟
+};
+
+struct CURVE_FITTING_COST
+{
+    CURVE_FITTING_COST (double x, double y) : _x ( x ), _y ( y ) {}
+    // 残差的计算
+    template <typename T>
+    bool operator() (
+        const T* const abc,     // 模型参数，有3维
+        T* residual ) const     // 残差
+    {
+        residual[0] = T (_y) - 0.5 * abc[0] - abc[1] * ceres::cos(T (_x)) - abc[2] * ceres::sin(T (_x)); // 一阶三角级数
+        return true;
+    }
+    const double _x, _y;    // x,y数据
 };

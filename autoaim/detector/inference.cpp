@@ -366,7 +366,6 @@ bool Detector::detect(Mat &src,std::vector<Object>& objects)
     infer_request.Infer();
     // -----------------------------------------------------------------------------------------------------
     // --------------------------- Step 8. Process output----------------
-    // ----------------------------Guhaodashabi--------------------------
     // const Blob::Ptr output_blob = infer_request.GetBlob(output_name);
     // MemoryBlob::CPtr moutput = as<MemoryBlob>(output_blob);
 

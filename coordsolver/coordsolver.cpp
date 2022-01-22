@@ -70,6 +70,17 @@ Eigen::Vector2d CoordSolver::getAngle(Eigen::Vector3d &xyz)
 
 }
 
+
+//TODO:加入陀螺仪旋转矩阵
+cv::Point2f CoordSolver::reproject(Eigen::Vector3d &xyz)
+{
+    Eigen::Matrix3d mat_intrinsic;
+    cv2eigen(intrinsic, mat_intrinsic);
+    //(u,v,1)^T = (1/Z) * K * (X,Y,Z)^T
+    auto result = (100.f / xyz[2]) * mat_intrinsic * (xyz/ 100.f);//解算前进行单位转换
+    return cv::Point2f(result[0], result[1]);
+}
+
 inline Eigen::Vector3d CoordSolver::staticCoordOffset(Eigen::Vector3d &xyz)
 {
     return xyz + xyz_offset;

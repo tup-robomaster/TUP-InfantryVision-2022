@@ -123,10 +123,10 @@ bool SerialPort::get_Mode(int &mode, int &sentry_mode, int &base_mode)
         f4[2] = rdata[17];
         f4[3] = rdata[18];
 
-        // quat[0] = exchange_data(f1);
-        // quat[1] = exchange_data(f2);
-        // quat[2] = exchange_data(f3);
-        // quat[3] = exchange_data(f4);
+        quat[0] = exchange_data(f1);
+        quat[1] = exchange_data(f2);
+        quat[2] = exchange_data(f3);
+        quat[3] = exchange_data(f4);
 	//TODO:将输出更变为mode和quat
     }
     return true;

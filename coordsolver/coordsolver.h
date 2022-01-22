@@ -27,6 +27,8 @@ public:
     Eigen::Vector2d staticAngleOffset(Eigen::Vector2d &angle);
     Eigen::Vector2d getAngle(Eigen::Vector3d &xyz);
     Eigen::Vector2d calcYawPitch(Eigen::Vector3d &xyz);
+
+    cv::Point2f reproject(Eigen::Vector3d &xyz);
 private:
     Mat intrinsic;
     Mat dis_coeff;

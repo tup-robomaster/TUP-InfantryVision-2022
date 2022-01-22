@@ -11,13 +11,13 @@ struct Armor
     int id;
     int color;
     Point2f apex2d[4];
-    Eigen::Vector3d apex3d;
+    Eigen::Vector3d center3d;
 };
 
 struct Image
 {
     Mat img;
-    int timestamp;
+    int timestamp;//单位：ms
 };
 
 class Autoaim
@@ -30,7 +30,7 @@ public:
 private:
     Detector detector;
     //TODO:预测器暂未完成
-    // Predictor predictor;
+    Predictor predictor;
     CoordSolver coordsolver;
 
     Armor chooseTarget(vector<Armor> &armors);
