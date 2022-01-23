@@ -13,6 +13,8 @@ Predictor::~Predictor()
 //TODO:支持多块装甲版同时预测
 Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
 {
+
+    auto t1=std::chrono::steady_clock::now();
     TargetInfo target = {xyz, (int)xyz.norm(), timestamp};
     
     if (history_info.size() < history_deque_len)
@@ -22,7 +24,9 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
     }
     else if (target.timestamp - history_info.front().timestamp >= max_timespan)
     {
-        history_info.empty();
+        cout<<"Invaild timespan:"<<target.timestamp - history_info.front().timestamp<<endl;
+        history_info.pop_front();
+        history_info.push_back(target);
         return xyz;
     }
     else if (history_info.size() == history_deque_len)
@@ -32,9 +36,9 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
         history_info.push_back(target);
     }
 
-    double abc_x[3] = {0,0,0};            // abc参数的估计值
-    double abc_y[3] = {0,0,0};            // abc参数的估计值
-    double abc_z[3] = {0,0,0};            // abc参数的估计值
+    double params_x[4] = {1,1,1,0};            // 参数的估计值
+    double params_y[4] = {1,1,1,0};            // 参数的估计值
+    double params_z[4] = {1,1,1,0};            // 参数的估计值
 
     ceres::Problem problem_x;
     ceres::Problem problem_y;
@@ -56,82 +60,73 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
     {
         problem_x.AddResidualBlock (     // 向问题中添加误差项
         // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 3> ( 
+            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 4> ( 
                 new CURVE_FITTING_COST ( target_info.timestamp - history_info.front().timestamp, target_info.xyz[0])
             ),
             nullptr,            // 核函数，这里不使用，为空
-            abc_x                 // 待估计参数
+            params_x                 // 待估计参数
         );
         problem_y.AddResidualBlock (     // 向问题中添加误差项
         // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 3> ( 
+            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 4> ( 
                 new CURVE_FITTING_COST ( target_info.timestamp - history_info.front().timestamp, target_info.xyz[1])
             ),
             nullptr,            // 核函数，这里不使用，为空
-            abc_y                 // 待估计参数
+            params_y                 // 待估计参数
         );
         problem_z.AddResidualBlock (     // 向问题中添加误差项
         // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 3> ( 
+            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 4> ( 
                 new CURVE_FITTING_COST ( target_info.timestamp - history_info.front().timestamp, target_info.xyz[2])
             ),
             nullptr,            // 核函数，这里不使用，为空
-            abc_z                 // 待估计参数
+            params_z                 // 待估计参数
         );
     }
 
-    ceres::Solve(options_x, &problem_x, &summary_x);  // 开始优化
-    ceres::Solve(options_y, &problem_y, &summary_y);  // 开始优化
-    ceres::Solve(options_z, &problem_z, &summary_z);  // 开始优化
+    //异步计算
+    auto status_solve_x = std::async(std::launch::async, [&](){ceres::Solve(options_x, &problem_x, &summary_x);});
+    auto status_solve_y = std::async(std::launch::async, [&](){ceres::Solve(options_y, &problem_y, &summary_y);});
+    auto status_solve_z = std::async(std::launch::async, [&](){ceres::Solve(options_z, &problem_z, &summary_z);});
 
     auto last_dist = history_info.back().dist;
-
     auto delta_time_estimate = ((last_dist / 100.f) / bullet_speed) * 1000 + delay;
     auto time_estimate = delta_time_estimate + history_info.back().timestamp - history_info.front().timestamp;
 
-    auto x_pred = 0.5 * abc_x[0] + abc_x[1] * cos(time_estimate) + abc_x[2] * sin(time_estimate);
-    auto y_pred = 0.5 * abc_y[0] + abc_y[1] * cos(time_estimate) + abc_y[2] * sin(time_estimate);
-    auto z_pred = 0.5 * abc_z[0] + abc_z[1] * cos(time_estimate) + abc_z[2] * sin(time_estimate);
+    // cout<<"t"<<time_estimate<<endl;
+    // for (auto target_info : history_info)
+    // {
+    //     cout<<target_info.timestamp<<" : "<<target_info.xyz[0]<<endl;
+    // }
+
+    status_solve_x.wait();
+    status_solve_y.wait();
+    status_solve_z.wait();
+
+    // cout<<history_info.back().xyz<<endl;
+    // cout<<"estimated a1,a2,b1,w = ";
+    // for ( auto a:params_x ) cout<<a<<" ";
+    // cout<<endl;
+
+    // cout<<summary_x.BriefReport()<<endl;
+    // cout<<summary_y.BriefReport()<<endl;
+    // cout<<summary_z.BriefReport()<<endl;
+
+    // auto t2=std::chrono::steady_clock::now();
+    // double dr_ms=std::chrono::duration<double,std::milli>(t2-t1).count();
+    // if(target.timestamp % 100 == 0)
+    // cout<<dr_ms<<endl;
+
+    Vector3d result = {0,0,0};
+
+    auto x_pred = 1e2 * params_x[0] + 1e4 * params_x[1] * cos(params_x[3] * time_estimate) + 1e4 * params_x[2] * sin(params_x[3] * time_estimate);
+    auto y_pred = 1e2 * params_y[0] + 1e4 * params_y[1] * cos(params_y[3] * time_estimate) + 1e4 * params_y[2] * sin(params_y[3] * time_estimate);
+    auto z_pred = 1e2 * params_z[0] + 1e4 * params_z[1] * cos(params_z[3] * time_estimate) + 1e4 * params_z[2] * sin(params_z[3] * time_estimate);
 
 
-    Vector3d result = {x_pred,y_pred,z_pred};
-
+    result = {x_pred,y_pred,z_pred};
+    // cout<<result<<endl;
+    // cout<<"---"<<endl;
     return result;
-
-    // if (last_time.size() == 0)
-    // {
-    //     last_time.push_back(std::chrono::steady_clock::now());
-    //     last_xyz = xyz;
-
-    //     return xyz;
-    // }
-    // else if (last_time.size() < 2)
-    // {
-    //     last_time.push_back(std::chrono::steady_clock::now());
-    //     double delta_time = std::chrono::duration<double>
-    //                         (last_time.back() - last_time.front()).count();
-
-    //     last_v_xyz = (xyz - last_xyz) / delta_time;
-    //     last_xyz = xyz;
-    //     return xyz;
-    // }
-    // else
-
-    // {
-    //     if (last_time.size() == 3)
-    //         last_time.pop_front();
-    //     last_time.push_back(std::chrono::steady_clock::now());
-
-        // double delta_time = std::c    Armor Autoaim::chooseTarget(vector<Armor> &armors)
-        // cout<<delta_time<<endl;
-        // cout<<v_xyz<<endl;
-        // cout<<xyz<<endl;
-        // cout<<xyz.norm()<<endl;
-        // cout<<"------"<<endl;
-
-        // last_xyz = xyz;
-        // last_v_xyz = v_xyz;
-        // return xyz;
-    // }
-
 }
+

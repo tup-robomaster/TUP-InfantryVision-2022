@@ -15,7 +15,7 @@ bool producer(Factory<Image> &factory)
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-    DaHeng.SetExposureTime(10000);
+    DaHeng.SetExposureTime(5000);
     // 设置
     DaHeng.SetGAIN(3, 16);
     // 是否启用自动曝光

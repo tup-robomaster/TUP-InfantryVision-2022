@@ -115,11 +115,11 @@ bool Autoaim::run(Image &src,VisionData &data)
 #ifdef SHOW_PREDICT
     auto center2d_src = coordsolver.reproject(target.center3d);
     auto center2d_pred = coordsolver.reproject(predict_info);
-    circle(src.img, center2d_src, 10, Scalar(0, 0, 255), 2);
-    circle(src.img, center2d_pred, 5, Scalar(0, 255, 255), 2);
+    circle(src.img, center2d_src, 5, Scalar(0, 0, 255), 2);
+    circle(src.img, center2d_pred, 2, Scalar(0, 255, 255), 2);
 #endif //SHOW_PREDICT
 
-    auto angle = coordsolver.getAngle(target.center3d);
+    auto angle = coordsolver.getAngle(predict_info);
     
 #ifdef SHOW_IMG
     imshow("dst",src.img);
@@ -133,6 +133,6 @@ bool Autoaim::run(Image &src,VisionData &data)
     cout<<"Dist: "<<target.center3d.norm()<<endl;
 #endif //PRINT_TARGET_INFO
 
-    data = {(float)angle[1], (float)angle[0], 0, 0, 1, 0, 1};
+    data = {(float)angle[1], (float)angle[0], (float)target.center3d.norm(), 0, 1, 0, 1};
     return true;
 }
