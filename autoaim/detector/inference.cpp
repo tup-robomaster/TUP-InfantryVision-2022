@@ -132,7 +132,7 @@ static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, cons
         float box_prob = (box_objectness + cls_conf + color_conf) / 3.0;
         // float box_prob = box_objectness;
 
-        if (box_prob > prob_threshold)
+        if (box_prob >= prob_threshold)
         {
             Object obj;
 
@@ -342,7 +342,6 @@ bool Detector::initModel(string path)
 
 bool Detector::detect(Mat &src,std::vector<Object>& objects)
 {
-    // cout<<
     cv::Mat pr_img = letterBoxResize(src,transfrom_matrix);
     cv::Mat pre;
     cv::Mat pre_split[3];
@@ -375,7 +374,8 @@ bool Detector::detect(Mat &src,std::vector<Object>& objects)
     int img_h = src.rows;
 
     decodeOutputs(net_pred, objects, transfrom_matrix, img_w, img_h);
-
-    return true;
+    if (objects.size() != 0)
+        return true;
+    else return false;
 
 }

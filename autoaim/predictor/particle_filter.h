@@ -9,7 +9,6 @@
 #include <opencv2/opencv.hpp>
 
 #include "../../general/general.h"
-// #include "/home/tup/Desktop/TUP-Vision-Infantry-2022/general/general.h"
 
 
 
@@ -25,7 +24,7 @@ public:
 
     Eigen::VectorXd predict();
     bool initParam(YAML::Node &config,const string param_name);
-    bool estimate(Eigen::VectorXd &measure);
+    bool correct(Eigen::VectorXd &measure);
     bool is_ready;
 private:
 
@@ -35,7 +34,6 @@ private:
     int num_particle;
 
     Eigen::MatrixXd process_noise_cov;
-    Eigen::MatrixXd measure_noise_cov;
     Eigen::MatrixXd weights;
 
     Eigen::MatrixXd matrix_estimate;

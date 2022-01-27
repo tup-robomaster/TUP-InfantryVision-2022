@@ -11,6 +11,8 @@
 #include <Eigen/Core>
 #include <opencv2/opencv.hpp>
 
+
+#include "debug.h"
 #include "../../general/general.h"
 #include "particle_filter.h"
 
@@ -25,6 +27,11 @@ struct TargetInfo
     int timestamp;
 };
 
+struct PredictStatus
+{
+    bool xyz_status[3];
+};
+
 class Predictor
 {
 public:
@@ -32,17 +39,26 @@ public:
     Predictor();
     ~Predictor();
     Eigen::Vector3d predict(Eigen::Vector3d xyz,  int timestamp);
+    PredictStatus predict_pf_run(TargetInfo target, Vector3d &result, int time_estimated);
+    PredictStatus predict_fitting_run(Vector3d &result, int time_estimated);
 private:
-    Vector3d last_xyz;                                                  //最后坐标
-    Vector3d last_v_xyz;                                                //最后速度
-    ParticleFilter pf;                                                  //粒子滤波
+    bool fitting_disabled;                                                  //当前是否禁用拟合
+
+    TargetInfo last_target;                                                  //最后目标
+    ParticleFilter pf_x;                                                  //粒子滤波
+    ParticleFilter pf_y;                                                  //粒子滤波
+    ParticleFilter pf_z;                                                  //粒子滤波
     std::deque<TargetInfo> history_info;                                //目标队列
 
-    const int max_timespan = 1000;                                       //最大时间跨度，大于该时间重置预测器
-    const int max_d = 1000;      
-    const int history_deque_len = 8;                                   //队列长度   
+    const int max_timespan = 1000;                                       //最大时间跨度，大于该时间重置预测器(ms)
+    const int max_cost = 1e1;                                            //回归函数最大Cost
+    const int max_v = 5;                                                //设置最大速度,单位m/s
+    const int history_deque_len = 10;                                   //队列长度   
     const int bullet_speed = 30;                                        //TODO:弹速可变
     const int delay = 50;                                              //发弹延迟
+    const int window_size = 5;                                         //滑动窗口大小
+
+    Eigen::Vector3d shiftWindowFilter();
 };
 
 struct CURVE_FITTING_COST

@@ -2,7 +2,8 @@
 
 bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix,Eigen::MatrixXd &cov)
 {
-    default_random_engine e(time(0));
+    std::random_device rd;
+    default_random_engine e(rd());
     std::vector<normal_distribution<double>> normal_distribution_list;
 
     for(int i = 0;i<cov.cols();i++)
@@ -49,14 +50,7 @@ bool ParticleFilter::initParam(YAML::Node &config,const string param_name)
     initMatrix(process_noise_cov_tmp,read_vector);
     process_noise_cov = process_noise_cov_tmp;
 
-    //初始化状态噪声矩阵
-    read_vector = config[param_name]["measure_noise"].as<vector<float>>();
-    initMatrix(measure_noise_cov_tmp,read_vector);
-    measure_noise_cov = measure_noise_cov_tmp;
-
     //初始化粒子矩阵及粒子权重
-    srand((unsigned)time(NULL));
-    // matrix_particle = Eigen::MatrixXd::Random(num_particle, vector_len) * process_noise_cov;
     matrix_particle = Eigen::MatrixXd::Zero(num_particle, vector_len);
     randomlizedGaussianColwise(matrix_particle, process_noise_cov);
     matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
@@ -75,13 +69,10 @@ Eigen::VectorXd ParticleFilter::predict()
     return Eigen::VectorXd(particles_weighted);
 }
 
-bool ParticleFilter::estimate(Eigen::VectorXd &measure)
+bool ParticleFilter::correct(Eigen::VectorXd &measure)
 {
-    // cout<<measure<<endl;
     Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
-    randomlizedGaussianColwise(gaussian, measure_noise_cov);
-
-    Eigen::MatrixXd mat_measure = measure.replicate(1,num_particle).transpose() + gaussian;
+    Eigen::MatrixXd mat_measure = measure.replicate(1,num_particle).transpose();
 
     if (is_ready)
     {
@@ -96,7 +87,6 @@ bool ParticleFilter::estimate(Eigen::VectorXd &measure)
     else
     {
         matrix_particle += mat_measure;
-        // cout<<matrix_particle<<endl;
         is_ready = true;
         return false;
     }
@@ -104,68 +94,35 @@ bool ParticleFilter::estimate(Eigen::VectorXd &measure)
 }
 
 bool ParticleFilter::resample()
-{
-    srand((unsigned)time(NULL));
-    auto matrix_weights_cumsum = matrix_weights;
+{    
+    
+    //重采样采用低方差采样,复杂度为O(N),较轮盘法的O(NlogN)更小,实现可参考<Probablistic Robotics>
+    std::random_device rd;
+    default_random_engine e(rd());
+    std::uniform_real_distribution<> random {0.0, 1.f / num_particle};
+
+    int i = 0;
+    double c = matrix_weights(0,0);
+    auto r = random(e);
     auto matrix_particle_tmp = matrix_particle;
-
-    double cum_sum = 0;
-
-    for(int i = 0;i < matrix_weights.rows();i++)
-    {
-        cum_sum = cum_sum + matrix_weights(i,0);
-        matrix_weights_cumsum(i,0) = cum_sum;
-    }
 
     auto n_eff = 1.0 / (matrix_weights.transpose() * matrix_weights).value();
     if (n_eff < num_particle / 2.0)
     {
-        for(int i = 1;i < num_particle;i++)
+        for(int m = 1; m <= num_particle; m++)
         {
-            auto selected = rand() / float(RAND_MAX);
-            for(int j = 0;j < matrix_particle.rows();j++)
+            auto u = r + (m - 1) * (1.f / num_particle);
+            if (u > c)
             {
-
-                if (matrix_weights_cumsum(j) >= selected)
-                {
-                    matrix_particle_tmp.row(i) = matrix_particle.row(j);
-                    break;
-                }
+                i++;
+                c = c + matrix_weights(i,0);
             }
+            matrix_particle_tmp.row(m - 1) = matrix_particle.row(i);
         }
-        Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
-        randomlizedGaussianColwise(gaussian, process_noise_cov);
-        matrix_particle = matrix_particle_tmp + gaussian;
-        matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
     }
+    Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
+    randomlizedGaussianColwise(gaussian, process_noise_cov);
+    matrix_particle = matrix_particle_tmp + gaussian;
+    matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
     return true;
 }
-
-// int main()
-// {
-//     YAML::Node config = YAML::LoadFile("/home/rangeronmars/RM/TUP-Vision-Infantry-2022/params/filter/filter_param.yaml");
-//     ParticleFilter particle_filter(config,"autoaim");
-//     cv::Mat pic = cv::Mat::zeros(2000, 1000, CV_8UC3);
-//     double dr_ms;
-
-//     for(int i = 1;i < 200;i++)
-//     {
-//         auto t1=std::chrono::steady_clock::now();
-//         auto x = i;
-//         auto y = 100 * cos (2 * CV_PI * 0.01 *i) + 100 + 0.3 * i;
-//         // auto y = 500 + 10 * cos (2 * CV_PI * 0.01 *i);
-//         cv::circle(pic,cv::Point2f(x,y),1,cv::Scalar(0,255,0),1);
-//         auto tmp = particle_filter.predict();
-//         cv::circle(pic,cv::Point2f(tmp[0],tmp[1]),1,cv::Scalar(0,0,255),1);
-//         // particle_filter.predict();
-//         // cout<<tmp<<endl;
-//         Eigen::VectorXd measure(2);
-//         measure<<x, y;
-//         particle_filter.estimate(measure);
-//         auto t2=std::chrono::steady_clock::now();
-//         dr_ms=std::chrono::duration<double,std::milli>(t2-t1).count();
-//         cout<<"Time: "<<dr_ms<<"ms"<<endl;
-//     }
-//     // cv::imshow("result",pic);
-//     // cv::waitKey(0);
-// }

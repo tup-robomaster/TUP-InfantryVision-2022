@@ -28,12 +28,18 @@ public:
 
     bool run(Image &src,VisionData &data);       // 自瞄主函数
 private:
+    int lost_cnt;
+    Point2i roi_offset;
+    Point2i last_roi_center;
+    Size2d input_size;
+
     Detector detector;
     //TODO:预测器暂未完成
     Predictor predictor;
     CoordSolver coordsolver;
 
     Armor chooseTarget(vector<Armor> &armors);
+    Point2i cropImageByROI(Mat &img);
 };
 
 

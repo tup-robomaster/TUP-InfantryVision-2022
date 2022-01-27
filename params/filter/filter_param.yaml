@@ -1,12 +1,16 @@
-autoaim:
-    vector_len: 3
-    num_particle: 500	
-    process_noise: [10,0,0,
-                    0,10,0,
-                    0,0,10]
 
-    measure_noise: [10,0,0,
-                    0,10,0,
-                    0,0,10]
+autoaim_x:
+    vector_len: 1
+    num_particle: 500
+    process_noise: [2]
+autoaim_y:
+    vector_len: 1
+    num_particle: 500	
+    process_noise: [2]
+autoaim_z:
+    vector_len: 1
+    num_particle: 2000
+    process_noise: [2]
+
 	
 

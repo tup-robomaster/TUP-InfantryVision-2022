@@ -11,11 +11,11 @@ bool producer(Factory<Image> &factory)
 
     DaHeng.StartDevice(1);
     // 设置分辨率
-    DaHeng.SetResolution(2,2);
+    DaHeng.SetResolution(1,1);
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-    DaHeng.SetExposureTime(5000);
+    DaHeng.SetExposureTime(10000);
     // 设置
     DaHeng.SetGAIN(3, 16);
     // 是否启用自动曝光

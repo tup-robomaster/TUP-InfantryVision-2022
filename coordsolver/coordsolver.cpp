@@ -38,17 +38,28 @@ bool CoordSolver::loadParam(string coord_path,string param_name)
     return true;
 }
 
-Eigen::Vector3d CoordSolver::pnp(Point2f apex[4], int method=SOLVEPNP_ITERATIVE)
+Eigen::Vector3d CoordSolver::pnp(Point2f apex[4], int method)
 {
     std::vector<Point3d> points_world;
     std::vector<Point2f> points_pic(apex,apex + 4);
+    std::vector<Point2f> vecotr_apex = {apex[0], apex[1], apex[2], apex[3]};
 
-    points_world = {
-        {-6.6,2.7,0},
-        {-6.6,-2.7,0},
-        {6.6,-2.7,0},
-        {6.6,2.7,0}
-    };
+    RotatedRect points_pic_rrect = minAreaRect(vecotr_apex);
+    auto apex_wh_ratio = max(points_pic_rrect.size.height, points_pic_rrect.size.width) / min(points_pic_rrect.size.height, points_pic_rrect.size.width);
+
+
+    if(apex_wh_ratio > armor_type_wh_thres)
+        points_world = {
+            {-11.25,2.7,0},
+            {-11.25,-2.7,0},
+            {11.25,-2.7,0},
+            {11.25,2.7,0}};
+    else
+        points_world = {
+            {-6.6,2.7,0},
+            {-6.6,-2.7,0},
+            {6.6,-2.7,0},
+            {6.6,2.7,0}};
 
     Mat rvec;
     Mat tvec;

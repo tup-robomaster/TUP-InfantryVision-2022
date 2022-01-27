@@ -90,7 +90,6 @@ std::vector<string> generatePathTree(string path)
     return tree;
 }
 
-
 /**
  * @brief 由树状结构生成路径
  * @return 生成路径

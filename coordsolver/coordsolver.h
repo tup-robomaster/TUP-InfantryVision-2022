@@ -22,7 +22,7 @@ public:
     ~CoordSolver();
 
     bool loadParam(string coord_path,string param_name);
-    Eigen::Vector3d pnp(Point2f apex[4],int method);
+    Eigen::Vector3d pnp(Point2f apex[4],int id);
     Eigen::Vector3d staticCoordOffset(Eigen::Vector3d &xyz);
     Eigen::Vector2d staticAngleOffset(Eigen::Vector2d &angle);
     Eigen::Vector2d getAngle(Eigen::Vector3d &xyz);
@@ -36,4 +36,6 @@ private:
     Eigen::Vector2d angle_offset;
 
     YAML::Node param_node;
+
+    const int armor_type_wh_thres = 7;      //大小装甲板长宽比阈值
 };
