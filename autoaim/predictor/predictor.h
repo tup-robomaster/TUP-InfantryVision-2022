@@ -1,15 +1,15 @@
 
 #include <iostream>
 
+#include <ctime>
+#include <future>
 #include <random>
 #include <vector>
-#include <future>
-#include <ctime>
 
 #include <ceres/ceres.h>
-#include <yaml-cpp/yaml.h>
 #include <Eigen/Core>
 #include <opencv2/opencv.hpp>
+#include <yaml-cpp/yaml.h>
 
 
 #include "debug.h"
@@ -18,6 +18,16 @@
 
 using namespace std;
 using namespace cv;
+
+struct Armor
+{
+    int id;
+    int color;
+    string key;
+    Point2f apex2d[4];
+    Eigen::Vector3d center3d;
+    Eigen::Vector3d predict;
+};
 
 //目标信息
 struct TargetInfo
@@ -35,16 +45,18 @@ struct PredictStatus
 class Predictor
 {
 public:
+    TargetInfo last_target;                                                  //最后目标
 
     Predictor();
     ~Predictor();
+    bool initParam(string coord_path);
+    Predictor generate();
     Eigen::Vector3d predict(Eigen::Vector3d xyz,  int timestamp);
     PredictStatus predict_pf_run(TargetInfo target, Vector3d &result, int time_estimated);
     PredictStatus predict_fitting_run(Vector3d &result, int time_estimated);
 private:
     bool fitting_disabled;                                                  //当前是否禁用拟合
 
-    TargetInfo last_target;                                                  //最后目标
     ParticleFilter pf_x;                                                  //粒子滤波
     ParticleFilter pf_y;                                                  //粒子滤波
     ParticleFilter pf_z;                                                  //粒子滤波

@@ -32,6 +32,7 @@ ParticleFilter::ParticleFilter(YAML::Node &config,const string param_name)
     initParam(config,param_name);
 }
 
+
 ParticleFilter::ParticleFilter()
 {
 }
@@ -43,7 +44,6 @@ bool ParticleFilter::initParam(YAML::Node &config,const string param_name)
     num_particle = config[param_name]["num_particle"].as<int>();
 
     Eigen::MatrixXd process_noise_cov_tmp(vector_len,vector_len);
-    Eigen::MatrixXd measure_noise_cov_tmp(vector_len,vector_len);
     
     //初始化过程噪声矩阵
     auto read_vector = config[param_name]["process_noise"].as<vector<float>>();
@@ -57,6 +57,16 @@ bool ParticleFilter::initParam(YAML::Node &config,const string param_name)
     is_ready = false;
     
     return true;
+}
+
+bool ParticleFilter::initParam(ParticleFilter parent)
+{
+    vector_len = parent.vector_len;
+    num_particle = parent.num_particle;
+    process_noise_cov = parent.process_noise_cov;
+    matrix_particle = parent.matrix_particle;
+    matrix_weights = parent.matrix_weights;
+    is_ready = false;
 }
 
 ParticleFilter::~ParticleFilter()

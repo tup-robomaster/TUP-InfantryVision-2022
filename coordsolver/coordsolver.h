@@ -24,6 +24,8 @@ public:
     bool loadParam(string coord_path,string param_name);
     Eigen::Vector3d pnp(Point2f apex[4],int id);
     Eigen::Vector3d staticCoordOffset(Eigen::Vector3d &xyz);
+    Eigen::Vector3d camToWorld(Eigen::Vector3d &point_camera, Eigen::Matrix3d &rmat);
+    Eigen::Vector3d worldToCam(Eigen::Vector3d &point_world, Eigen::Matrix3d &rmat);
     Eigen::Vector2d staticAngleOffset(Eigen::Vector2d &angle);
     Eigen::Vector2d getAngle(Eigen::Vector3d &xyz);
     Eigen::Vector2d calcYawPitch(Eigen::Vector3d &xyz);
@@ -34,6 +36,8 @@ private:
     Mat dis_coeff;
     Eigen::Vector3d xyz_offset;
     Eigen::Vector2d angle_offset;
+    Eigen::Matrix4d transform_ic;
+    Eigen::Matrix4d transform_ci;
 
     YAML::Node param_node;
 

@@ -13,6 +13,8 @@ bool CoordSolver::loadParam(string coord_path,string param_name)
     YAML::Node config = YAML::LoadFile(coord_path);
 
     Eigen::MatrixXd mat_intrinsic(3, 3);
+    Eigen::MatrixXd mat_ic(4, 4);
+    Eigen::MatrixXd mat_ci(4, 4);
     Eigen::MatrixXd mat_coeff(1, 5);
     Eigen::MatrixXd mat_xyz_offset(1,3);
     Eigen::MatrixXd mat_angle_offset(1,2);
@@ -34,6 +36,14 @@ bool CoordSolver::loadParam(string coord_path,string param_name)
     read_vector = config[param_name]["angle_offset"].as<vector<float>>();
     initMatrix(mat_angle_offset,read_vector);
     angle_offset = mat_angle_offset.transpose();
+
+    read_vector = config[param_name]["T_ic"].as<vector<float>>();
+    initMatrix(mat_ic,read_vector);
+    transform_ic = mat_ic;
+
+    read_vector = config[param_name]["T_ci"].as<vector<float>>();
+    initMatrix(mat_ci,read_vector);
+    transform_ci = mat_ci;
 
     return true;
 }
@@ -106,7 +116,7 @@ inline Eigen::Vector2d CoordSolver::staticAngleOffset(Eigen::Vector2d &angle)
  * @brief 计算目标Yaw,Pitch角度
  * @return Yaw与Pitch
 */
-Eigen::Vector2d CoordSolver::calcYawPitch(Eigen::Vector3d &xyz)
+inline Eigen::Vector2d CoordSolver::calcYawPitch(Eigen::Vector3d &xyz)
 {
     Eigen::Vector2d angle;
 
@@ -118,27 +128,46 @@ Eigen::Vector2d CoordSolver::calcYawPitch(Eigen::Vector3d &xyz)
     return angle;
 }
 
-Eigen::Matrix3d eulerToRotationMatrix(Eigen::Vector3d &theta)
+/**
+ * @brief 相机坐标系至世界坐标系
+ * @param point_camera 相机坐标系下坐标
+ * @param rmat 由陀螺仪四元数解算出的旋转矩阵
+ * @return 世界坐标系下坐标
+ * **/
+inline Eigen::Vector3d CoordSolver::camToWorld(Eigen::Vector3d &point_camera, Eigen::Matrix3d &rmat)
 {
-    Eigen::Matrix3d R_x;
-    Eigen::Matrix3d R_y;
-    Eigen::Matrix3d R_z;
-    // Calculate rotation about x axis
-    R_x <<
-        1,       0,              0,
-        0,       cos(theta[0]),   -sin(theta[0]),
-        0,       sin(theta[0]),   cos(theta[0]);
-    // Calculate rotation about y axis
-    R_y <<
-        cos(theta[1]),    0,      sin(theta[1]),
-        0,               1,      0,
-        -sin(theta[1]),   0,      cos(theta[1]);
-    // Calculate rotation about z axis
-    R_z <<
-        cos(theta[2]),    -sin(theta[2]),      0,
-        sin(theta[2]),    cos(theta[2]),       0,
-        0,               0,                  1;
-    // Combined rotation matrix
-    return R_z * R_y * R_x;
+    //升高维度
+    Eigen::Vector4d point_camera_tmp;
+    Eigen::Vector4d point_imu_tmp;
+    Eigen::Vector3d point_imu;
+    Eigen::Vector3d point_world;
+
+    point_camera_tmp << point_camera[0], point_camera[1], point_camera[2], 1;
+    point_imu_tmp = transform_ic * point_camera_tmp;
+    point_imu << point_imu_tmp[0], point_imu_tmp[1], point_imu_tmp[2];
+
+    return rmat * point_imu;
+}
+
+/**
+ * @brief 世界坐标系至相机坐标系
+ * @param point_world 世界坐标系下坐标
+ * @param rmat 由陀螺仪四元数解算出的旋转矩阵
+ * @return 相机坐标系下坐标
+ * **/
+inline Eigen::Vector3d CoordSolver::worldToCam(Eigen::Vector3d &point_world, Eigen::Matrix3d &rmat)
+{
+    
+    Eigen::Vector4d point_camera_tmp;
+    Eigen::Vector4d point_imu_tmp;
+    Eigen::Vector3d point_imu;
+    Eigen::Vector3d point_camera;
+
+    point_imu = rmat.reverse() * point_world;
+    point_imu_tmp << point_imu[0], point_imu[1], point_imu[2], 1;
+    point_camera_tmp = transform_ci * point_imu_tmp;
+    point_camera << point_camera[0], point_camera[1], point_camera[2];
+
+    return point_camera;
 }
 

@@ -9,22 +9,38 @@ cv::Mat pic_z = cv::Mat::zeros(500, 2000, CV_8UC3);
 
 Predictor::Predictor()
 {
-    YAML::Node config = YAML::LoadFile("/home/tup/Desktop/TUP-Vision-Infantry-2022/params/filter/filter_param.yaml");
-    // pf.initParam(config,"autoaim");
-    pf_x.initParam(config,"autoaim_x");
-    pf_y.initParam(config,"autoaim_y");
-    pf_z.initParam(config,"autoaim_z");
-    fitting_disabled = false;
+}
+
+Predictor Predictor::generate()
+{
+    Predictor new_predictor;
+    new_predictor.pf_x.initParam(pf_x);
+    new_predictor.pf_y.initParam(pf_y);
+    new_predictor.pf_z.initParam(pf_z);
+    new_predictor.fitting_disabled = false;
+
+    return new_predictor;
 }
 
 Predictor::~Predictor()
 {
 }
 
+
+bool Predictor::initParam(string coord_path)
+{
+    YAML::Node config = YAML::LoadFile(coord_path);
+    pf_x.initParam(config,"autoaim_x");
+    pf_y.initParam(config,"autoaim_y");
+    pf_z.initParam(config,"autoaim_z");
+    fitting_disabled = false;
+    
+    return true;
+}
+
 //TODO:融合粒子滤波与拟合
 Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
 {
-
     auto t1=std::chrono::steady_clock::now();
     TargetInfo target = {xyz, (int)xyz.norm(), timestamp};
     

@@ -16,8 +16,10 @@
 #define NMS_THRESH 0.1
 #define BBOX_CONF_THRESH 0.6
 
-static constexpr int INPUT_W = 640;    // Width of input
-static constexpr int INPUT_H = 384;    // Height of input
+// static constexpr int INPUT_W = 640;    // Width of input
+// static constexpr int INPUT_H = 384;    // Height of input
+static constexpr int INPUT_W = 416;    // Width of input
+static constexpr int INPUT_H = 416;    // Height of input
 static constexpr int NUM_CLASSES = 8;  // Number of classes
 static constexpr int NUM_COLORS = 3;   // Number of color
 static constexpr int TOPK = 128;       // TopK
