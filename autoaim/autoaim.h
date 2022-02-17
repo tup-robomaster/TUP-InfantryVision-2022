@@ -8,7 +8,7 @@
 #include "predictor/predictor.h"
 #include "../serial/serialport.h"
 
-const string network_path = "/home/tup/Desktop/TUP-Vision-Infantry-2022/model/colab.xml";
+const string network_path = "/home/tup/Desktop/TUP-Vision-Infantry-2022/model/nano.xml";
 const string camera_param_path = "/home/tup/Desktop/TUP-Vision-Infantry-2022/params/coord_param.yaml";
 const string predict_param_path = "/home/tup/Desktop/TUP-Vision-Infantry-2022/params/filter/filter_param.yaml";
 
@@ -28,13 +28,14 @@ public:
     bool run(Image &src,VisionData &data);       // 自瞄主函数
 private:
     int lost_cnt;
+    bool is_last_target_exist;
     std::multimap<string, Predictor> predictors_map;      //预测器Map
     Point2i roi_offset;
     Point2i last_roi_center;
     Size2d input_size;
     const int max_lost_cnt = 2;//最大丢失目标帧数
     const int max_v = 20;       //两次预测间最大速度(m/s)
-    const int max_delta_t = 300; //使用同一预测器的最大时间间隔(ms)
+    const int max_delta_t = 200; //使用同一预测器的最大时间间隔(ms)
 
     Detector detector;
     Predictor predictor_param_loader;

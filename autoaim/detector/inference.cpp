@@ -14,12 +14,12 @@
 #define file_name_t            std::string
 #define imread_t               cv::imread
 #define NMS_THRESH 0.1
-#define BBOX_CONF_THRESH 0.6
+#define BBOX_CONF_THRESH 0.5
 
-// static constexpr int INPUT_W = 640;    // Width of input
-// static constexpr int INPUT_H = 384;    // Height of input
-static constexpr int INPUT_W = 416;    // Width of input
-static constexpr int INPUT_H = 416;    // Height of input
+static constexpr int INPUT_W = 640;    // Width of input
+static constexpr int INPUT_H = 384;    // Height of input
+// static constexpr int INPUT_W = 416;    // Width of input
+// static constexpr int INPUT_H = 416;    // Height of input
 static constexpr int NUM_CLASSES = 8;  // Number of classes
 static constexpr int NUM_COLORS = 3;   // Number of color
 static constexpr int TOPK = 128;       // TopK
@@ -345,6 +345,10 @@ bool Detector::initModel(string path)
 bool Detector::detect(Mat &src,std::vector<Object>& objects)
 {
     cv::Mat pr_img = letterBoxResize(src,transfrom_matrix);
+#ifdef SHOW_INPUT
+    imshow("network_input",pr_img);
+    waitKey(1);
+#endif //SHOW_INPUT
     cv::Mat pre;
     cv::Mat pre_split[3];
     pr_img.convertTo(pre,CV_32F);

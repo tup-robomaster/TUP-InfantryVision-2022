@@ -27,8 +27,9 @@ Autoaim::Autoaim()
     predictor_param_loader.initParam(predict_param_path);
     coordsolver.loadParam(camera_param_path,"Coord");
     lost_cnt = 0;
-    // input_size = {640,384};
-    input_size = {416,416};
+    is_last_target_exist = false;
+    input_size = {640,384};
+    // input_size = {416,416};
 }
 
 Autoaim::~Autoaim()
@@ -38,9 +39,14 @@ Autoaim::~Autoaim()
 Point2i Autoaim::cropImageByROI(Mat &img)
 {
     // cout<<"lost:"<<lost_cnt<<endl;
-    if (lost_cnt > max_lost_cnt)
+    if (!is_last_target_exist)
     {
-        return Point2f(0,0);
+        //当丢失目标帧数过多或lost_cnt为初值
+        if (lost_cnt > max_lost_cnt || lost_cnt == 0)
+        {
+            // last_roi_center = Point2i(0,0);
+            return Point2i(0,0);
+        }
     }
     //处理X越界
     if (last_roi_center.x <= input_size.width / 2)
@@ -67,7 +73,7 @@ Point2i Autoaim::cropImageByROI(Mat &img)
 */
 Armor Autoaim::chooseTarget(vector<Armor> &armors)
 {
-    //TODO:优化打击逻辑、根据颜色筛选装甲板
+    //TODO:优化打击逻辑
     float max_area = 0;
     int target_idx = 0;
     for(int i = 0; i < armors.size(); i++)
@@ -98,6 +104,7 @@ bool Autoaim::run(Image &src,VisionData &data)
         waitKey(1);
 #endif //SHOW_IMG
         lost_cnt++;
+        is_last_target_exist = false;
         return false;
     }
     auto time_infer = std::chrono::steady_clock::now();
@@ -133,7 +140,7 @@ bool Autoaim::run(Image &src,VisionData &data)
             putText(src.img, "R" + to_string(object.cls),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
         if (object.color == 2)
             putText(src.img, "N" + to_string(object.cls),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
-        for(int i=0;i<4;i++)
+        for(int i = 0; i < 4; i++)
             line(src.img, armor.apex2d[i % 4], armor.apex2d[(i + 1) % 4], Scalar(0,255,0), 1);
 #endif //SHOW_ALL_ARMOR
 
@@ -163,8 +170,9 @@ bool Autoaim::run(Image &src,VisionData &data)
     }
 
 
-    std::vector<std::future<void>> predict_tasks;
+    std::list<std::future<void>> predict_tasks;
     //为装甲板分配或新建最佳预测器
+    // cout<<"walking"<<endl;
     for (auto armor = armors.begin(); armor != armors.end(); ++armor)
     {
         auto predictors_with_same_key = predictors_map.count((*armor).key);
@@ -174,7 +182,7 @@ bool Autoaim::run(Image &src,VisionData &data)
             Predictor predictor = predictor_param_loader.generate();
             auto target_predictor = predictors_map.insert(make_pair((*armor).key, predictor));
             //创建异步预测任务
-            predict_tasks.emplace_back(std::async(std::launch::async, [=, &target_predictor]()
+            predict_tasks.emplace_back(std::async(std::launch::async, [=]()
                                                                             {(*armor).predict = (*target_predictor).second.predict((*armor).center3d, src.timestamp);}));
                 
         }
@@ -188,16 +196,15 @@ bool Autoaim::run(Image &src,VisionData &data)
             if (velocity <= max_v)
             {
                 //创建异步预测任务
-                predict_tasks.emplace_back(std::async(std::launch::async, [=, &candidate]()
+                predict_tasks.emplace_back(std::async(std::launch::async, [=]()
                                                                             {(*armor).predict = (*candidate).second.predict((*armor).center3d, src.timestamp);}));
             }
             else
             {
                 Predictor predictor = predictor_param_loader.generate();
-                predictors_map.insert(make_pair((*armor).key, predictor));
                 auto target_predictor = predictors_map.insert(make_pair((*armor).key, predictor));
                 //创建异步预测任务
-                predict_tasks.emplace_back(std::async(std::launch::async, [=, &target_predictor]()
+                predict_tasks.emplace_back(std::async(std::launch::async, [=]()
                                                                             {(*armor).predict = (*target_predictor).second.predict((*armor).center3d, src.timestamp);}));
             }
         }
@@ -243,7 +250,7 @@ bool Autoaim::run(Image &src,VisionData &data)
             //
             if (is_best_candidate_exist)
             {
-                predict_tasks.emplace_back(std::async(std::launch::async, [=, &best_candidate]()
+                predict_tasks.emplace_back(std::async(std::launch::async, [=]()
                                                                             {(*armor).predict = (*best_candidate).second.predict((*armor).center3d, src.timestamp);}));
             }
             else
@@ -251,15 +258,20 @@ bool Autoaim::run(Image &src,VisionData &data)
                 Predictor predictor = predictor_param_loader.generate();
                 auto target_predictor = predictors_map.insert(make_pair((*armor).key, predictor));
                 //创建异步预测任务
-                predict_tasks.emplace_back(std::async(std::launch::async, [=, &target_predictor]()
+                predict_tasks.emplace_back(std::async(std::launch::async, [=]()
                                                                             {(*armor).predict = (*target_predictor).second.predict((*armor).center3d, src.timestamp);}));
             }
 
         }
     }
-    //等待所有预测任务完成
+    // cout<<"walked"<<endl;
+    // 等待所有预测任务完成
+    // cout<<"total"<<predict_tasks.size()<<endl;
+    int f = 0;
+    // waitKey(20);
     for (auto task = predict_tasks.begin(); task != predict_tasks.end(); ++task)
     {
+        // cout<<"waiting"<<f++<<endl;
         (*task).wait(); 
     }
     auto target = chooseTarget(armors);
@@ -277,6 +289,7 @@ bool Autoaim::run(Image &src,VisionData &data)
         apex_sum +=apex;
     last_roi_center = apex_sum / 4.f;
     lost_cnt = 0;
+    is_last_target_exist = true;
 
 #ifdef SHOW_PREDICT
     auto center2d_src = coordsolver.reproject(target.center3d);

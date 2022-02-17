@@ -11,6 +11,10 @@ Predictor::Predictor()
 {
 }
 
+Predictor::~Predictor()
+{
+}
+
 Predictor Predictor::generate()
 {
     Predictor new_predictor;
@@ -21,12 +25,6 @@ Predictor Predictor::generate()
 
     return new_predictor;
 }
-
-Predictor::~Predictor()
-{
-}
-
-
 bool Predictor::initParam(string coord_path)
 {
     YAML::Node config = YAML::LoadFile(coord_path);
@@ -76,17 +74,15 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
     auto last_dist = history_info.back().dist;
     auto delta_time_estimate = ((last_dist / 100.f) / bullet_speed) * 1000 + delay;
     auto time_estimate = delta_time_estimate + history_info.back().timestamp - history_info.front().timestamp;
-    // //如速度过大,可认为为噪声干扰,进行滑窗滤波滤除
-    if (d_xyz.norm() / (delta_t * 10.f) >= max_v)
+    //如速度过大,可认为为噪声干扰,进行滑窗滤波滤除
+    if (d_xyz.norm() / (delta_t * 10.f) >= max_v && history_info.size() == history_deque_len)
     {
         auto filtered_xyz = shiftWindowFilter();
         target = {filtered_xyz, (int)filtered_xyz.norm(), timestamp};
-        // cout<<"Filled:"<<filtered_xyz<<endl;
-        // cout<<endl;
     }
-    Vector3d result = {0,0,0};
-    Vector3d result_pf = {0,0,0};
-    Vector3d result_fitting = {0,0,0};
+    Eigen::Vector3d result = {0,0,0};
+    Eigen::Vector3d result_pf = {0,0,0};
+    Eigen::Vector3d result_fitting = {0,0,0};
     PredictStatus is_pf_available;
     PredictStatus is_fitting_available;
     //需注意粒子滤波使用相对时间（自上一次检测时所经过ms数），拟合使用绝对时间（自程序启动时所经过ms数）
@@ -96,14 +92,14 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
     }
     else
     {
-        auto get_pf_available = std::async(std::launch::async, [&](){return predict_pf_run(target, result_pf, delta_time_estimate);});
-        auto get_fitting_available = std::async(std::launch::async, [&](){return predict_fitting_run(result_fitting, time_estimate);});
+        auto get_pf_available = std::async(std::launch::async, [=, &result_pf](){return predict_pf_run(target, result_pf, delta_time_estimate);});
+        auto get_fitting_available = std::async(std::launch::async, [=, &result_fitting](){return predict_fitting_run(result_fitting, time_estimate);});
 
         is_pf_available = get_pf_available.get();
         is_fitting_available = get_fitting_available.get();
     }
 
-    //进行融合
+    // 进行融合
     if (is_fitting_available.xyz_status[0] && !fitting_disabled)
         result[0] = result_fitting[0];
     else
@@ -128,15 +124,15 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
     if (cnt < 2000)
     {
         auto x = cnt * 5;
-        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,xyz[0]+ 200),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,xyz[0] + 200),1,cv::Scalar(0,0,255),1);
         cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[0] + 200),1,cv::Scalar(0,255,0),1);
         cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[0]+ 200),1,cv::Scalar(255,255,0),1);
         cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result[0]+ 200),1,cv::Scalar(255,255,255),1);
 
 
         cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,xyz[1] + 200),1,cv::Scalar(0,0,255),1);
-        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[1]+ 200),1,cv::Scalar(0,255,0),1);
-        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[1]+ 200),1,cv::Scalar(255,255,0),1);
+        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[1] + 200),1,cv::Scalar(0,255,0),1);
+        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[1] + 200),1,cv::Scalar(255,255,0),1);
         cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result[1]+ 200),1,cv::Scalar(255,255,255),1);
 
         cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,xyz[2]),1,cv::Scalar(0,0,255),1);
@@ -183,15 +179,14 @@ PredictStatus Predictor::predict_pf_run(TargetInfo target, Vector3d &result, int
 {
     PredictStatus is_available;
     //使用线性运动模型
-    VectorXd measure_vx (1);
-    VectorXd measure_vy (1);
-    VectorXd measure_vz (1);
+    Eigen::VectorXd measure_vx (1);
+    Eigen::VectorXd measure_vy (1);
+    Eigen::VectorXd measure_vz (1);
 
     auto v_xyz = (target.xyz - last_target.xyz) / ((target.timestamp - last_target.timestamp) * 10.f);
     measure_vx << v_xyz[0];
-    measure_vy << v_xyz[1];
+    measure_vy <<  v_xyz[1];
     measure_vz << v_xyz[2];
-
     auto pf_result_vx = std::async(std::launch::async, [&](){return pf_x.predict();});
     auto pf_result_vy = std::async(std::launch::async, [&](){return pf_y.predict();});
     auto pf_result_vz = std::async(std::launch::async, [&](){return pf_z.predict();});
@@ -200,12 +195,13 @@ PredictStatus Predictor::predict_pf_run(TargetInfo target, Vector3d &result, int
     auto result_vy = pf_result_vy.get();
     auto result_vz = pf_result_vz.get();
 
-    //异步修正
-    std::async(std::launch::async, [&](){pf_x.correct(measure_vx);});
-    std::async(std::launch::async, [&](){pf_y.correct(measure_vy);});
-    std::async(std::launch::async, [&](){pf_z.correct(measure_vz);});
 
     result << result_vx[0], result_vy[0], result_vz[0];
+    //异步修正
+    std::async(std::launch::async, [&, measure_vx](){pf_x.correct(measure_vx);});
+    std::async(std::launch::async, [&, measure_vy](){pf_y.correct(measure_vy);});
+    std::async(std::launch::async, [&, measure_vz](){pf_z.correct(measure_vz);});
+
     result = result  * (time_estimated / 1000.f) * 100 + target.xyz;
 
     is_available.xyz_status[0] = pf_x.is_ready;

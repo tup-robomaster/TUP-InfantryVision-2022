@@ -64,7 +64,7 @@ private:
 
     const int max_timespan = 1000;                                       //最大时间跨度，大于该时间重置预测器(ms)
     const int max_cost = 1e1;                                            //回归函数最大Cost
-    const int max_v = 5;                                                //设置最大速度,单位m/s
+    const int max_v = 15;                                                //设置最大速度,单位m/s
     const int history_deque_len = 10;                                   //队列长度   
     const int bullet_speed = 30;                                        //TODO:弹速可变
     const int delay = 50;                                              //发弹延迟

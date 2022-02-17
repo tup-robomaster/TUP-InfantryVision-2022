@@ -6,14 +6,14 @@ bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix,Eigen::MatrixXd &cov)
     default_random_engine e(rd());
     std::vector<normal_distribution<double>> normal_distribution_list;
 
-    for(int i = 0;i<cov.cols();i++)
+    for (int i = 0; i<cov.cols(); i++)
     {
         normal_distribution<double> n(0,cov(i,i));
         normal_distribution_list.push_back(n);
     }
 
 
-    for(int col = 0;col < matrix.cols();col++)
+    for (int col = 0; col < matrix.cols(); col++)
     {
         // cout<<normal_distribution_list[col](e)<<endl;
         for(int row = 0;row < matrix.rows();row++)
@@ -30,11 +30,6 @@ bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix,Eigen::MatrixXd &cov)
 ParticleFilter::ParticleFilter(YAML::Node &config,const string param_name)
 {
     initParam(config,param_name);
-}
-
-
-ParticleFilter::ParticleFilter()
-{
 }
 
 bool ParticleFilter::initParam(YAML::Node &config,const string param_name)
@@ -59,6 +54,14 @@ bool ParticleFilter::initParam(YAML::Node &config,const string param_name)
     return true;
 }
 
+ParticleFilter::ParticleFilter()
+{
+}
+
+ParticleFilter::~ParticleFilter()
+{
+}
+
 bool ParticleFilter::initParam(ParticleFilter parent)
 {
     vector_len = parent.vector_len;
@@ -69,17 +72,13 @@ bool ParticleFilter::initParam(ParticleFilter parent)
     is_ready = false;
 }
 
-ParticleFilter::~ParticleFilter()
-{
-}
-
 Eigen::VectorXd ParticleFilter::predict()
 {
-    auto particles_weighted = matrix_particle.transpose() * matrix_weights;
-    return Eigen::VectorXd(particles_weighted);
+    Eigen::VectorXd particles_weighted = matrix_particle.transpose() * matrix_weights;
+    return particles_weighted;
 }
 
-bool ParticleFilter::correct(Eigen::VectorXd &measure)
+bool ParticleFilter::correct(Eigen::VectorXd measure)
 {
     Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
     Eigen::MatrixXd mat_measure = measure.replicate(1,num_particle).transpose();
@@ -114,22 +113,30 @@ bool ParticleFilter::resample()
     int i = 0;
     double c = matrix_weights(0,0);
     auto r = random(e);
-    auto matrix_particle_tmp = matrix_particle;
+    Eigen::MatrixXd matrix_particle_tmp = matrix_particle;
+    // cout<<&matrix_particle_tmp<<" : "<<&matrix_particle<<endl;
 
     auto n_eff = 1.0 / (matrix_weights.transpose() * matrix_weights).value();
-    if (n_eff < num_particle / 2.0)
+    // if (n_eff < num_particle * 0.75)
+    // {
+    // cout<<"=========STAT==========="<<endl;
+    // cout<<&num_particle<<" : "<<matrix_particle_tmp.size()<<endl;
+    // cout<<&num_particle<<" : "<<matrix_particle.size()<<endl;;
+    for (int m = 1; m <= num_particle; m++)
     {
-        for(int m = 1; m <= num_particle; m++)
+        // assert(matrix_weights.size() == matrix_particle.size());
+        // assert(matrix_particle_tmp.size() == matrix_particle.size());
+        auto u = r + (m - 1) * (1.f / num_particle);
+        // 当 u > c 不进行采样
+        while (u > c)
         {
-            auto u = r + (m - 1) * (1.f / num_particle);
-            if (u > c)
-            {
-                i++;
-                c = c + matrix_weights(i,0);
-            }
-            matrix_particle_tmp.row(m - 1) = matrix_particle.row(i);
+            i++;
+            c = c + matrix_weights(i,0);
         }
+        matrix_particle_tmp.row(m - 1) = matrix_particle.row(i);
     }
+    // cout<<m<<endl;
+    // }
     Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
     randomlizedGaussianColwise(gaussian, process_noise_cov);
     matrix_particle = matrix_particle_tmp + gaussian;

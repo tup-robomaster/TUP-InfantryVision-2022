@@ -25,7 +25,7 @@ public:
     Eigen::VectorXd predict();
     bool initParam(YAML::Node &config,const string param_name);
     bool initParam(ParticleFilter parent);
-    bool correct(Eigen::VectorXd &measure);
+    bool correct(Eigen::VectorXd measure);
     bool is_ready;
 private:
 
