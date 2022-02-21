@@ -28,8 +28,8 @@ Autoaim::Autoaim()
     coordsolver.loadParam(camera_param_path,"Coord");
     lost_cnt = 0;
     is_last_target_exist = false;
-    input_size = {640,384};
-    // input_size = {416,416};
+    // input_size = {640,384};
+    input_size = {416,416};
 }
 
 Autoaim::~Autoaim()

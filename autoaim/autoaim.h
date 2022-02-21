@@ -8,7 +8,7 @@
 #include "predictor/predictor.h"
 #include "../serial/serialport.h"
 
-const string network_path = "/home/tup/Desktop/TUP-Vision-Infantry-2022/model/nano.xml";
+const string network_path = "/home/tup/Desktop/TUP-Vision-Infantry-2022/model/yolox.xml";
 const string camera_param_path = "/home/tup/Desktop/TUP-Vision-Infantry-2022/params/coord_param.yaml";
 const string predict_param_path = "/home/tup/Desktop/TUP-Vision-Infantry-2022/params/filter/filter_param.yaml";
 

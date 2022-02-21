@@ -1,1 +1,1 @@
-#define DRAW_PREDICT //是否显示预测图像(使用时需使视野内仅存在一块装甲板)
+// #define DRAW_PREDICT //是否显示预测图像(使用时需使视野内仅存在一块装甲板)
