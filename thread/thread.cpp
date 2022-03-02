@@ -15,10 +15,10 @@ bool producer(Factory<Image> &factory)
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-    DaHeng.SetExposureTime(10000);
+    DaHeng.SetExposureTime(4000);
     // 设置
     DaHeng.SetGAIN(3, 16);
-    // 是否启用自动曝光
+    // 是否启用自动白平衡
     // DaHeng.Set_BALANCE_AUTO(1);
     while(1)
     {
@@ -32,7 +32,8 @@ bool producer(Factory<Image> &factory)
 
         src.img = img;
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
-        
+        //用于辅助标注
+        // DaHeng.SetExposureTime(1000 + src.timestamp % 100 * 30);
         factory.produce(src);
     }
     return true;

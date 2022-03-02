@@ -8,7 +8,7 @@
 // #define PRINT_TARGET_INFO //是否输出目标信息
 // #define SHOW_FPS    //是否显示FPS
 #define SHOW_PREDICT //是否显示预测
-// #define SHOW_AIM_CROSS//是否绘制十字瞄准线
+#define SHOW_AIM_CROSS//是否绘制十字瞄准线
 #endif // SHOW_IMG
 
 
@@ -17,3 +17,5 @@
 #define USING_PREDICT           //是否启用预测
 //TODO:陀螺仪
 // #define USING_IMU   //是否使用陀螺仪数据
+
+// #define ASSIST_LABEL //辅助数据集标注

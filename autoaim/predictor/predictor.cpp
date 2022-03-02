@@ -36,7 +36,6 @@ bool Predictor::initParam(string coord_path)
     return true;
 }
 
-//TODO:融合粒子滤波与拟合
 Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
 {
     auto t1=std::chrono::steady_clock::now();
@@ -49,8 +48,21 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
         last_target = target;
         return xyz;
     }
+
+    auto d_xyz = target.xyz - last_target.xyz;
+    auto delta_t = timestamp - last_target.timestamp;
+    auto last_dist = history_info.back().dist;
+    auto delta_time_estimate = ((last_dist / 100.f) / bullet_speed) * 1000 + delay;
+    auto time_estimate = delta_time_estimate + history_info.back().timestamp - history_info.front().timestamp;
+    //如速度过大,可认为为噪声干扰,进行滑窗滤波滤除
+    if (d_xyz.norm() / (delta_t * 10.f) >= max_v)
+    {
+        auto filtered_xyz = shiftWindowFilter(history_info.size() - window_size - 2);
+        target = {filtered_xyz, (int)filtered_xyz.norm(), timestamp};
+    }
+
     //当队列长度不足时不使用拟合
-    else if (history_info.size() < history_deque_len)
+    if (history_info.size() < history_deque_len)
     {
         history_info.push_back(target);
         fitting_disabled = true;
@@ -68,24 +80,12 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
         history_info.push_back(target);
         fitting_disabled = false;
     }
-
-    auto d_xyz = target.xyz - last_target.xyz;
-    auto delta_t = timestamp - last_target.timestamp;
-    auto last_dist = history_info.back().dist;
-    auto delta_time_estimate = ((last_dist / 100.f) / bullet_speed) * 1000 + delay;
-    auto time_estimate = delta_time_estimate + history_info.back().timestamp - history_info.front().timestamp;
-    //如速度过大,可认为为噪声干扰,进行滑窗滤波滤除
-    if (d_xyz.norm() / (delta_t * 10.f) >= max_v && history_info.size() == history_deque_len)
-    {
-        auto filtered_xyz = shiftWindowFilter();
-        target = {filtered_xyz, (int)filtered_xyz.norm(), timestamp};
-    }
-    Eigen::Vector3d result = {0,0,0};
-    Eigen::Vector3d result_pf = {0,0,0};
-    Eigen::Vector3d result_fitting = {0,0,0};
+    Eigen::Vector3d result = {0, 0, 0};
+    Eigen::Vector3d result_pf = {0, 0, 0};
+    Eigen::Vector3d result_fitting = {0, 0, 0};
     PredictStatus is_pf_available;
     PredictStatus is_fitting_available;
-    //需注意粒子滤波使用相对时间（自上一次检测时所经过ms数），拟合使用绝对时间（自程序启动时所经过ms数）
+    //需注意粒子滤波使用相对时间（自上一次检测时所经过ms数），拟合使用自首帧所经过时间
     if (fitting_disabled)
     {
         auto is_pf_available = predict_pf_run(target, result_pf, delta_time_estimate);
@@ -99,7 +99,7 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
         is_fitting_available = get_fitting_available.get();
     }
 
-    // 进行融合
+    //进行融合
     if (is_fitting_available.xyz_status[0] && !fitting_disabled)
         result[0] = result_fitting[0];
     else
@@ -151,23 +151,27 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
 }
 
 
- inline Eigen::Vector3d Predictor::shiftWindowFilter()
+inline Eigen::Vector3d Predictor::shiftWindowFilter(int start_idx=0)
 {
-    auto max_iter = history_deque_len - window_size + 1;
-    Eigen::Vector3d total_sum = {0,0,0};
-    for(int i = 0; i < max_iter; i++)
+    //计算最大迭代次数
+    auto max_iter = int(history_info.size() - start_idx) - window_size + 1;
+    Eigen::Vector3d total_sum = {0, 0, 0};
+    // cout<<history_info.size()<<endl;
+    // cout<<max_iter<<endl;
+    // cout<<start_idx<<endl;
+    if (max_iter == 0 || start_idx < 0)
+        return history_info.back().xyz;
+    
+    for (int i = 0; i < max_iter; i++)
     {
-        auto window_sum = [&]()
-        {
-            Vector3d sum = {0,0,0};
-            for(int j = 0; j < window_size; j++)
-                sum = sum + history_info.at(i + j).xyz;
-            return sum / window_size;
-        };
-        total_sum = total_sum + window_sum();
+        Eigen::Vector3d sum = {0,0,0};
+        for (int j = 0; j < window_size; j++)
+            sum += history_info.at(start_idx + i + j).xyz;
+        total_sum += sum / window_size;
     }
     return total_sum / max_iter;
 }
+
 /**
  * @brief 进行一次粒子滤波预测
  * @param target 本次预测目标信息

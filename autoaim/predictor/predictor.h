@@ -52,6 +52,7 @@ public:
     bool initParam(string coord_path);
     Predictor generate();
     Eigen::Vector3d predict(Eigen::Vector3d xyz,  int timestamp);
+    Eigen::Vector3d shiftWindowFilter(int start_idx);
     PredictStatus predict_pf_run(TargetInfo target, Vector3d &result, int time_estimated);
     PredictStatus predict_fitting_run(Vector3d &result, int time_estimated);
 private:
@@ -63,14 +64,13 @@ private:
     std::deque<TargetInfo> history_info;                                //目标队列
 
     const int max_timespan = 1000;                                       //最大时间跨度，大于该时间重置预测器(ms)
-    const int max_cost = 1e1;                                            //回归函数最大Cost
+    const int max_cost = 5e1;                                            //回归函数最大Cost
     const int max_v = 15;                                                //设置最大速度,单位m/s
     const int history_deque_len = 10;                                   //队列长度   
     const int bullet_speed = 30;                                        //TODO:弹速可变
     const int delay = 50;                                              //发弹延迟
-    const int window_size = 5;                                         //滑动窗口大小
+    const int window_size = 3;                                         //滑动窗口大小
 
-    Eigen::Vector3d shiftWindowFilter();
 };
 
 struct CURVE_FITTING_COST

@@ -15,6 +15,12 @@
 using namespace std;
 using namespace cv;
 
+struct PnPInfo
+{
+    Eigen::Vector3d coord;
+    Eigen::Vector3d euler;
+};
+
 class CoordSolver
 {
 public:
@@ -22,7 +28,7 @@ public:
     ~CoordSolver();
 
     bool loadParam(string coord_path,string param_name);
-    Eigen::Vector3d pnp(Point2f apex[4],int id);
+    PnPInfo pnp(Point2f apex[4], int method);
     Eigen::Vector3d staticCoordOffset(Eigen::Vector3d &xyz);
     Eigen::Vector3d camToWorld(Eigen::Vector3d &point_camera, Eigen::Matrix3d &rmat);
     Eigen::Vector3d worldToCam(Eigen::Vector3d &point_world, Eigen::Matrix3d &rmat);

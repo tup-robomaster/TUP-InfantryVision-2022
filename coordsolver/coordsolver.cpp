@@ -48,7 +48,7 @@ bool CoordSolver::loadParam(string coord_path,string param_name)
     return true;
 }
 
-Eigen::Vector3d CoordSolver::pnp(Point2f apex[4], int method)
+PnPInfo CoordSolver::pnp(Point2f apex[4], int method)
 {
     std::vector<Point3d> points_world;
     std::vector<Point2f> points_pic(apex,apex + 4);
@@ -72,12 +72,25 @@ Eigen::Vector3d CoordSolver::pnp(Point2f apex[4], int method)
             {6.6,2.7,0}};
 
     Mat rvec;
+    Mat rmat;
     Mat tvec;
+    Eigen::Matrix3d rmat_eigen;
+    Eigen::Vector3d coord_world = {0, 0, 0};
+    Eigen::Vector3d tvec_eigen;
+    Eigen::Vector3d coord_camera;
 
     solvePnP(points_world, points_pic, intrinsic, dis_coeff, rvec, tvec, false, method);
 
-    Eigen::Vector3d result;
-    cv2eigen(tvec, result);
+    PnPInfo result;
+    //Pc = R * Pw + T
+    Rodrigues(rvec,rmat);
+    cv2eigen(rmat, rmat_eigen);
+    cv2eigen(tvec, tvec_eigen);
+    //转换至相机坐标系(左手坐标系)
+    result.coord = (rmat_eigen * coord_world) + tvec_eigen;
+    result.euler = rotationMatrixToEulerAngles(rmat_eigen) * 180 / CV_PI;
+    if (result.euler[0] <= 0)
+        result.euler[0] += 360;
     return result;
 }
 

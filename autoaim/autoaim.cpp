@@ -4,6 +4,12 @@
 using namespace cv;
 using namespace std;
 
+#ifdef ASSIST_LABEL
+int cnt = 0;
+const string path_prefix = "/home/tup/Desktop/TUP-Vision-Infantry-2022/data/";
+ofstream file;
+#endif //ASSIST_LABEL
+
 //使用海伦公式计算三角形面积
 inline float calcTriangleArea(cv::Point2f pts[3])
 {
@@ -28,8 +34,8 @@ Autoaim::Autoaim()
     coordsolver.loadParam(camera_param_path,"Coord");
     lost_cnt = 0;
     is_last_target_exist = false;
-    // input_size = {640,384};
-    input_size = {416,416};
+    input_size = {640,384};
+    // input_size = {416,416};
 }
 
 Autoaim::~Autoaim()
@@ -99,6 +105,10 @@ bool Autoaim::run(Image &src,VisionData &data)
     auto time_crop=std::chrono::steady_clock::now();
     if (!detector.detect(input, objects))
     {
+#ifdef SHOW_AIM_CROSS
+        line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), Scalar(0,255,0), 1);
+        line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), Scalar(0,255,0), 1);
+#endif //SHOW_AIM_CROSS
 #ifdef SHOW_IMG
         imshow("dst",src.img);
         waitKey(1);
@@ -107,9 +117,14 @@ bool Autoaim::run(Image &src,VisionData &data)
         is_last_target_exist = false;
         return false;
     }
+#ifdef ASSIST_LABEL
+    auto img_name = path_prefix + to_string(cnt) + ".png";
+    imwrite(img_name,input);
+#endif //ASSIST_LABEL
     auto time_infer = std::chrono::steady_clock::now();
     for (auto object : objects)
     {
+
 #ifdef DETECT_RED
         if (object.color != 1)
             continue;
@@ -118,6 +133,7 @@ bool Autoaim::run(Image &src,VisionData &data)
         if (object.color != 0)
             continue;
 #endif //DETECT_BLUE
+
         Armor armor;
         armor.id = object.cls;
         armor.color = object.color;
@@ -144,7 +160,7 @@ bool Autoaim::run(Image &src,VisionData &data)
             line(src.img, armor.apex2d[i % 4], armor.apex2d[(i + 1) % 4], Scalar(0,255,0), 1);
 #endif //SHOW_ALL_ARMOR
 
-        auto center = coordsolver.pnp(armor.apex2d, SOLVEPNP_IPPE);
+        auto center = coordsolver.pnp(armor.apex2d, SOLVEPNP_IPPE).coord;
 
 #ifdef USING_IMU
 #endif //USING_IMU
@@ -159,12 +175,11 @@ bool Autoaim::run(Image &src,VisionData &data)
         for (auto iter = predictors_map.begin(); iter != predictors_map.end();)
         {
             //删除元素后迭代器会失效，需先行获取下一元素
-            auto next = ++iter;
-            iter--;
+            auto next = iter;
             if (src.timestamp - (*iter).second.last_target.timestamp >= max_delta_t)
-            {
-                predictors_map.erase(iter);
-            }
+                next = predictors_map.erase(iter);
+            else
+                ++next;
             iter = next;
         }
     }
@@ -172,7 +187,6 @@ bool Autoaim::run(Image &src,VisionData &data)
 
     std::list<std::future<void>> predict_tasks;
     //为装甲板分配或新建最佳预测器
-    // cout<<"walking"<<endl;
     for (auto armor = armors.begin(); armor != armors.end(); ++armor)
     {
         auto predictors_with_same_key = predictors_map.count((*armor).key);
@@ -264,14 +278,11 @@ bool Autoaim::run(Image &src,VisionData &data)
 
         }
     }
-    // cout<<"walked"<<endl;
     // 等待所有预测任务完成
     // cout<<"total"<<predict_tasks.size()<<endl;
-    int f = 0;
     // waitKey(20);
     for (auto task = predict_tasks.begin(); task != predict_tasks.end(); ++task)
     {
-        // cout<<"waiting"<<f++<<endl;
         (*task).wait(); 
     }
     auto target = chooseTarget(armors);
@@ -282,6 +293,33 @@ bool Autoaim::run(Image &src,VisionData &data)
     auto target = chooseTarget(armors);
     auto predict_info = target.center3d;
 #endif //USING_PREDICT
+
+#ifdef ASSIST_LABEL
+    auto label_name = path_prefix + to_string(cnt) + ".txt";
+    string content;
+
+    int cls = 0;
+    if (target.id == 7)
+        cls = 9 * target.color - 1;
+    if (target.id != 7)
+        cls = target.id + target.color * 9;
+    
+    content.append(to_string(cls) + " ");
+    for (auto apex : target.apex2d)
+    {
+        content.append(to_string((apex.x - roi_offset.x) / input_size.width));
+        content.append(" ");
+        content.append(to_string((apex.y - roi_offset.y) / input_size.height));
+        content.append(" ");
+    }
+    content.pop_back();
+    cout<<to_string(cnt) + " "<<content<<endl;
+    file.open(label_name,std::ofstream::app);
+    file<<content;
+    file.close();
+    cnt++;
+    sleep(0.05);+
+#endif //ASSIST_LABEL
 
     Point2f apex_sum;
     //装甲板中心
@@ -302,9 +340,11 @@ bool Autoaim::run(Image &src,VisionData &data)
         line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), Scalar(0,255,0), 1);
         line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), Scalar(0,255,0), 1);
 #endif //SHOW_FPS
+
     auto angle = coordsolver.getAngle(predict_info);
     auto time_predict = std::chrono::steady_clock::now();
     double dr_full_ms = std::chrono::duration<double,std::milli>(time_predict - time_start).count();
+
 #ifdef SHOW_FPS
     putText(src.img, "FPS:" + to_string(int(1000 / dr_full_ms)), Point2i(20,20), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
 #endif //SHOW_FPS
@@ -312,7 +352,6 @@ bool Autoaim::run(Image &src,VisionData &data)
 #ifdef SHOW_IMG
     imshow("dst",src.img);
     waitKey(1);
-    
 #endif //SHOW_IMG
 
 #ifdef PRINT_LATENCY

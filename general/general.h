@@ -39,3 +39,5 @@ string getParent(string path);
 
 std::vector<string> readLines(string file_path);
 std::vector<string> generatePathTree(string path);
+
+Eigen::Vector3d rotationMatrixToEulerAngles(Eigen::Matrix3d &R);

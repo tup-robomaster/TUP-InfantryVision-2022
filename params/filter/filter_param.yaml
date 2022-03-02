@@ -1,16 +1,16 @@
 
 autoaim_x:
     vector_len: 1
-    num_particle: 500
-    process_noise: [2]
+    num_particle: 700
+    process_noise: [1]
 autoaim_y:
     vector_len: 1
-    num_particle: 500	
-    process_noise: [2]
+    num_particle: 700	
+    process_noise: [1]
 autoaim_z:
     vector_len: 1
-    num_particle: 2000
-    process_noise: [2]
+    num_particle: 2500
+    process_noise: [1]
 
 	
 

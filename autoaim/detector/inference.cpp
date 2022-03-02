@@ -4,9 +4,6 @@
 
 #include "inference.h"
 
-
-
-
 /**
  * @brief Define names based depends on Unicode path support
  */
@@ -14,12 +11,12 @@
 #define file_name_t            std::string
 #define imread_t               cv::imread
 #define NMS_THRESH 0.1
-#define BBOX_CONF_THRESH 0.8
+#define BBOX_CONF_THRESH 0.7
 
-// static constexpr int INPUT_W = 640;    // Width of input
-// static constexpr int INPUT_H = 384;    // Height of input
-static constexpr int INPUT_W = 416;    // Width of input
-static constexpr int INPUT_H = 416;    // Height of input
+static constexpr int INPUT_W = 640;    // Width of input
+static constexpr int INPUT_H = 384;    // Height of input
+// static constexpr int INPUT_W = 416;    // Width of input
+// static constexpr int INPUT_H = 416;    // Height of input
 static constexpr int NUM_CLASSES = 8;  // Number of classes
 static constexpr int NUM_COLORS = 3;   // Number of color
 static constexpr int TOPK = 128;       // TopK
@@ -220,6 +217,7 @@ static void qsort_descent_inplace(std::vector<Object>& objects)
 
     qsort_descent_inplace(objects, 0, objects.size() - 1);
 }
+
 
 static void nms_sorted_bboxes(const std::vector<Object>& faceobjects, std::vector<int>& picked,
                             float nms_threshold)
