@@ -1,0 +1,3 @@
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build/CMakeFiles/rebuild_cache.dir
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build/CMakeFiles/edit_cache.dir
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build/CMakeFiles/Infantry_Vision.dir
