@@ -26,19 +26,13 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 28,
+				"line" : 29,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 70,
-				"parent" : 0
-			},
-			{
-				"command" : 2,
-				"file" : 0,
-				"line" : 17,
+				"line" : 71,
 				"parent" : 0
 			},
 			{
@@ -51,6 +45,12 @@
 				"command" : 2,
 				"file" : 0,
 				"line" : 19,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 20,
 				"parent" : 0
 			}
 		]
@@ -73,6 +73,10 @@
 				{
 					"backtrace" : 2,
 					"define" : "CERES_EXPORT_INTERNAL_SYMBOLS"
+				},
+				{
+					"backtrace" : 2,
+					"define" : "FMT_LOCALE"
 				},
 				{
 					"backtrace" : 2,
@@ -334,6 +338,11 @@
 			},
 			{
 				"fragment" : "-lfftw3",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "/usr/local/lib/libfmt.a",
 				"role" : "libraries"
 			},
 			{

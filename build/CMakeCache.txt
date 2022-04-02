@@ -229,6 +229,9 @@ OpenCV_DIR:PATH=/usr/local/lib/cmake/opencv4
 //The directory containing a CMake configuration file for TBB.
 TBB_DIR:PATH=/opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/external/tbb/cmake
 
+//The directory containing a CMake configuration file for fmt.
+fmt_DIR:PATH=/usr/local/lib/cmake/fmt
+
 //The directory containing a CMake configuration file for glog.
 glog_DIR:PATH=/usr/local/lib/cmake/glog
 

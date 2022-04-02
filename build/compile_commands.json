@@ -1,67 +1,67 @@
 [
 {
   "directory": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/main.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/main.cpp",
+  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/main.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/main.cpp",
   "file": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/main.cpp"
 },
 {
   "directory": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/autoaim/armor_tracker.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/armor_tracker.cpp",
+  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/autoaim/armor_tracker.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/armor_tracker.cpp",
   "file": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/armor_tracker.cpp"
 },
 {
   "directory": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/autoaim/autoaim.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/autoaim.cpp",
+  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/autoaim/autoaim.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/autoaim.cpp",
   "file": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/autoaim.cpp"
 },
 {
   "directory": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/autoaim/detector/inference.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/detector/inference.cpp",
+  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/autoaim/detector/inference.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/detector/inference.cpp",
   "file": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/detector/inference.cpp"
 },
 {
   "directory": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/general/general.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/general/general.cpp",
+  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/general/general.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/general/general.cpp",
   "file": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/general/general.cpp"
 },
 {
   "directory": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/coordsolver/coordsolver.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/coordsolver/coordsolver.cpp",
+  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/coordsolver/coordsolver.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/coordsolver/coordsolver.cpp",
   "file": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/coordsolver/coordsolver.cpp"
 },
 {
   "directory": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/autoaim/predictor/particle_filter.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/predictor/particle_filter.cpp",
+  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/autoaim/predictor/particle_filter.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/predictor/particle_filter.cpp",
   "file": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/predictor/particle_filter.cpp"
 },
 {
   "directory": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/autoaim/predictor/predictor.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/predictor/predictor.cpp",
+  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/autoaim/predictor/predictor.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/predictor/predictor.cpp",
   "file": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/predictor/predictor.cpp"
 },
 {
   "directory": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/thread/thread.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/thread/thread.cpp",
+  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/thread/thread.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/thread/thread.cpp",
   "file": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/thread/thread.cpp"
 },
 {
   "directory": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/camera/DaHengCamera.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/camera/DaHengCamera.cpp",
+  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/camera/DaHengCamera.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/camera/DaHengCamera.cpp",
   "file": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/camera/DaHengCamera.cpp"
 },
 {
   "directory": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/serial/serialport.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/serialport.cpp",
+  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/serial/serialport.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/serialport.cpp",
   "file": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/serialport.cpp"
 },
 {
   "directory": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/serial/wt61pc.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/wt61pc.cpp",
+  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/serial/wt61pc.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/wt61pc.cpp",
   "file": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/wt61pc.cpp"
 },
 {
   "directory": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/serial/CRC_Check.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/CRC_Check.cpp",
+  "command": "/bin/x86_64-linux-gnu-g++-9  -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include   --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations -o CMakeFiles/Infantry_Vision.dir/serial/CRC_Check.cpp.o -c /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/CRC_Check.cpp",
   "file": "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/CRC_Check.cpp"
 }
 ]

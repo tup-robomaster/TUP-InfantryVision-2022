@@ -298,6 +298,7 @@ Infantry_Vision: /opt/intel/openvino_2021.4.752/deployment_tools/inference_engin
 Infantry_Vision: /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/lib/intel64/libinference_engine_c_api.so
 Infantry_Vision: /usr/lib/x86_64-linux-gnu/libyaml-cpp.so.0.6.2
 Infantry_Vision: /usr/local/lib/libceres.a
+Infantry_Vision: /usr/local/lib/libfmt.a
 Infantry_Vision: /usr/local/lib/libopencv_shape.so.4.5.0
 Infantry_Vision: /usr/local/lib/libopencv_highgui.so.4.5.0
 Infantry_Vision: /usr/local/lib/libopencv_datasets.so.4.5.0

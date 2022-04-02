@@ -1278,6 +1278,18 @@
 			"value" : "/opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/external/tbb/cmake"
 		},
 		{
+			"name" : "fmt_DIR",
+			"properties" : 
+			[
+				{
+					"name" : "HELPSTRING",
+					"value" : "The directory containing a CMake configuration file for fmt."
+				}
+			],
+			"type" : "PATH",
+			"value" : "/usr/local/lib/cmake/fmt"
+		},
+		{
 			"name" : "glog_DIR",
 			"properties" : 
 			[

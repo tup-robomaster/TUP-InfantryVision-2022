@@ -39,7 +39,7 @@ bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receiv
 #ifdef USING_USB_CAMERA
     VideoCapture cap("/home/tup/Desktop/red.avi");
 #endif //USING_USB_CAMERA
-
+    fmt::print(fmt::fg(fmt::color::orange), "[CAMERA] 'Set param finished'\n");
 #ifdef SAVE_VIDEO
     /*============ video_writer ===========*/
     const std::string &storage_location = "../data/";

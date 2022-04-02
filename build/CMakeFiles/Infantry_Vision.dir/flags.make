@@ -4,7 +4,7 @@
 # compile CXX with /bin/x86_64-linux-gnu-g++-9
 CXX_FLAGS =  --std=c++17 -Os -pthread -O3 -DNDEBUG   -Wno-error=deprecated-declarations
 
-CXX_DEFINES = -DCERES_EXPORT_INTERNAL_SYMBOLS -DGLOG_CUSTOM_PREFIX_SUPPORT
+CXX_DEFINES = -DCERES_EXPORT_INTERNAL_SYMBOLS -DFMT_LOCALE -DGLOG_CUSTOM_PREFIX_SUPPORT
 
 CXX_INCLUDES = -isystem /usr/local/include/opencv4 -isystem /usr/include/eigen3 -isystem /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/include 
 
