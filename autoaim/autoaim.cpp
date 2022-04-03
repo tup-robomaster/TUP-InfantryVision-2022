@@ -96,7 +96,7 @@ bool Autoaim::updateSpinScore()
         // 若分数过低移除此元素
         if ((*score).second <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
         {
-            cout<<"REMOVEING"<<endl;
+            fmt::print(fmt::fg(fmt::color::red), "[SpinScore] Removing\n");
             spin_status_map.erase((*score).first);
             score = spin_score_map.erase(score);
             continue;
@@ -698,21 +698,21 @@ bool Autoaim::run(Image &src,VisionData &data)
     for (auto armor :armors)
     {
         if (armor.color == 0)
-            putText(src.img, "B" + to_string(armor.id),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+            putText(src.img, fmt::format("B{}",armor.id),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, {255, 0, 0}, 2);
         if (armor.color == 1)
-            putText(src.img, "R" + to_string(armor.id),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+            putText(src.img, fmt::format("R{}",armor.id),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, {0, 0, 255}, 2);
         if (armor.color == 2)
-            putText(src.img, "N" + to_string(armor.id),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+            putText(src.img, fmt::format("N{}",armor.id),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, {255, 255, 255}, 2);
         for(int i = 0; i < 4; i++)
-            line(src.img, armor.apex2d[i % 4], armor.apex2d[(i + 1) % 4], Scalar(0,255,0), 1);
+            line(src.img, armor.apex2d[i % 4], armor.apex2d[(i + 1) % 4], {0,255,0}, 1);
         auto armor_center = coordsolver.reproject(armor.center3d_cam);
-        circle(src.img, armor_center, 4, Scalar(0, 0, 255), 2);
+        circle(src.img, armor_center, 4, {0, 0, 255}, 2);
     }
 #endif //SHOW_ALL_ARMOR
 
 #ifdef SHOW_PREDICT
     auto aiming_2d = coordsolver.reproject(aiming_point);
-    circle(src.img, aiming_2d, 2, Scalar(0, 255, 255), 2);
+    circle(src.img, aiming_2d, 2, {0, 255, 255}, 2);
 #endif //SHOW_PREDICT
 
     auto angle = coordsolver.getAngle(aiming_point,rmat_imu);
@@ -720,7 +720,7 @@ bool Autoaim::run(Image &src,VisionData &data)
     double dr_full_ms = std::chrono::duration<double,std::milli>(time_predict - time_start).count();
 
 #ifdef SHOW_FPS
-    putText(src.img, "FPS:" + to_string(int(1000 / dr_full_ms)), Point2i(20,20), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+    putText(src.img, fmt::format("FPS: {}",int(1000 / dr_full_ms)), {10, 25}, FONT_HERSHEY_SIMPLEX, 1, {0,255,0});
 #endif //SHOW_FPS
 
 #ifdef SHOW_IMG
@@ -735,26 +735,23 @@ bool Autoaim::run(Image &src,VisionData &data)
         double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
         double dr_infer_ms = std::chrono::duration<double,std::milli>(time_infer - time_crop).count();
         double dr_predict_ms = std::chrono::duration<double,std::milli>(time_predict - time_infer).count();
-        cout<<"-----------TIME------------"<<endl;
-        cout<<"Crop: "<<dr_crop_ms<<"ms."<<endl;
-        cout<<"Infer: "<<dr_infer_ms<<"ms."<<endl;
-        cout<<"Predict: "<<dr_predict_ms<<"ms."<<endl;
-        cout<<"Total: "<<dr_full_ms<<"ms."<<endl;
+        fmt::print(fmt::fg(fmt::color::gray), "-----------TIME------------\n");
+        fmt::print(fmt::fg(fmt::color::blue_violet), "Crop: {} ms\n"   ,dr_crop_ms);
+        fmt::print(fmt::fg(fmt::color::golden_rod), "Infer: {} ms\n",dr_infer_ms);
+        fmt::print(fmt::fg(fmt::color::green_yellow), "Predict: {} ms\n",dr_predict_ms);
+        fmt::print(fmt::fg(fmt::color::orange_red), "Total: {} ms\n",dr_full_ms);
     }
 #endif //PRINT_LATENCY
 
 #ifdef PRINT_TARGET_INFO
-    cout<<"-----------INFO------------"<<endl;
-    cout<<"Yaw: "<<angle[0]<<endl;
-    cout<<"Pitch: "<<angle[1]<<endl;
-    // cout<<"Pos X: "<<target.center3d_world[0]<<endl;
-    // cout<<"Pos Y: "<<target.center3d_world[1]<<endl;
-    // cout<<"Pos Z: "<<target.center3d_world[2]<<endl;
-    cout<<"Dist: "<<(float)target.center3d_cam.norm()<<endl;
-    cout<<"Target: "<<target.key<<endl;
-    cout<<"Is Spinning:"<<is_target_spinning<<endl;
+    fmt::print(fmt::fg(fmt::color::gray), "-----------INFO------------\n");
+    fmt::print(fmt::fg(fmt::color::blue_violet), "Yaw: {} \n",angle[0]);
+    fmt::print(fmt::fg(fmt::color::golden_rod), "Pitch: {} \n",angle[1]);
+    fmt::print(fmt::fg(fmt::color::green_yellow), "Dist: {} m\n",(float)target.center3d_cam.norm());
+    fmt::print(fmt::fg(fmt::color::white), "Target: {} \n",target.key);
+    fmt::print(fmt::fg(fmt::color::orange_red), "Is Spinning: {} \n",is_target_spinning);
 #endif //PRINT_TARGET_INFO
 
-    data = {(float)angle[1], (float)angle[0], (float)target.center3d_cam.norm() * 100, 0, 1, is_target_spinning, 1};
+    data = {(float)angle[1], (float)angle[0], (float)target.center3d_cam.norm(), 0, 1, is_target_spinning, 1};
     return true;
 }

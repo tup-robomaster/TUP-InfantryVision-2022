@@ -28,7 +28,7 @@ DaHengCamera::DaHengCamera()
     //检测初始化是否成功
     if (status != GX_STATUS_SUCCESS)
     {
-        cout << "相机库初始化失败!!!" << endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] 相机库初始化失败!\n");
     }
 }
 
@@ -44,19 +44,19 @@ int DaHengCamera::StartDevice(int serial_number)
     status = GXUpdateDeviceList(&nDeviceNum, 1000);
     if (serial_number > nDeviceNum)
     {
-        cout << "设备号错误，超过所枚举数量" << endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] 设备号错误，超过所枚举数量\n");
         return -1;
     }
     //打 开 设 备
     status = GXOpenDeviceByIndex(serial_number, &hDevice);
     if (status == GX_STATUS_SUCCESS)
     {
-        cout << "设备打开成功!" << endl;
+        fmt::print(fmt::fg(fmt::color::green), "[CAMERA] 设备打开成功!\n");
         return nDeviceNum;
     }
     else
     {
-        cout << "设备打开失败!" << endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] 设备打开失败!\n");
         return -1;
     }
 }
@@ -107,42 +107,42 @@ bool DaHengCamera::SetStreamOn()
     status = GXSetAcqusitionBufferNumber(hDevice, 2);
     if (status == GX_STATUS_SUCCESS)
     {
-        cout << "buffer设置成功!" << endl;
+        fmt::print(fmt::fg(fmt::color::green), "[CAMERA] buffer设置成功!\n");
     }
     else
     {
-        cout << "buffer设置失败!" << endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] buffer设置失败!\n");
     }
 
     status = GXSetBool(hDevice, GX_BOOL_CHUNKMODE_ACTIVE, true);
     if (status == GX_STATUS_SUCCESS)
     {
-        cout << "帧信息模式已设置为使能!" << endl;
+        fmt::print(fmt::fg(fmt::color::green), "[CAMERA] 帧信息模式已设置为使能!\n");
     }
     else
     {
-        cout << "帧信息模式设置失败!" << endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] 帧信息模式设置失败!\n");
     }
 
     status = status = GXSetEnum(hDevice, GX_ENUM_CHUNK_SELECTOR, GX_CHUNK_SELECTOR_CHUNK_TIME_STAMP);
     if (status == GX_STATUS_SUCCESS)
     {
-        cout << "时间戳帧信息已启用!" << endl;
+        fmt::print(fmt::fg(fmt::color::green), "[CAMERA] 时间戳帧信息已启用!\n");
     }
     else
     {
-        cout << "时间戳帧信息启用失败!" << endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] 时间戳帧信息启用失败!\n");
     }
     //开 采
     status = GXStreamOn(hDevice);
     if (status == GX_STATUS_SUCCESS)
     {
-        cout << "开始采集图像!" << endl;
+        fmt::print(fmt::fg(fmt::color::green), "[CAMERA] 开始采集图像!\n");
         return true;
     }
     else
     {
-        cout << "采集失败!" << endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] 采集失败!\n");
         return false;
     }
 }
@@ -213,7 +213,7 @@ bool DaHengCamera::GetMat(Mat &Src)
         VxInt32 DxStatus = DxRaw8toRGB24(pFrameBuffer->pImgBuf, pRGB24Buf, pFrameBuffer->nWidth, pFrameBuffer->nHeight, cvtype, nBayerType, bFlip);
         if (DxStatus != DX_OK)
         {
-            cout << "Raw8 to RGB24 failed" <<endl;
+            fmt::print(fmt::fg(fmt::color::red), "[CAMERA] Raw8 to RGB24 failed!\n");
             if (pRGB24Buf != NULL)
             {
                 delete[] pRGB24Buf;
@@ -228,12 +228,12 @@ bool DaHengCamera::GetMat(Mat &Src)
         //     if (DxStatus != DX_OK)
         //         cout << "Contrast Set Failed" <<endl;
         // }
-        // if (set_color)
-        // {
-        //     DxStatus = DxImageImprovment(pRGB24Buf, pRGB24Buf,pFrameBuffer->nWidth, pFrameBuffer->nHeight, nColorCorrectionParam,NULL,pGammaLut);
-        //     if (DxStatus != DX_OK)
-        //         cout << "Color Set Failed" <<endl;
-        // }
+        if (set_color)
+        {
+            DxStatus = DxImageImprovment(pRGB24Buf, pRGB24Buf,pFrameBuffer->nWidth, pFrameBuffer->nHeight, nColorCorrectionParam,NULL,pGammaLut);
+            if (DxStatus != DX_OK)
+                fmt::print(fmt::fg(fmt::color::red), "[CAMERA] Color Set Failed!\n");
+        }
         // if (set_saturation)
         // {
         //     DxStatus = DxSaturation(pRGB24Buf, pRGB24Buf,pFrameBuffer->nWidth * pFrameBuffer->nHeight * 3, saturation_factor);
@@ -253,7 +253,8 @@ bool DaHengCamera::GetMat(Mat &Src)
     }
     else
     {
-        cout << "读取图片缓冲失败" << endl;
+        // cout << "读取图片缓冲失败" << endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] GetMat:读取图片缓冲失败\n");
         status = GXQBuf(hDevice, pFrameBuffer);
         return false;
     }
@@ -285,12 +286,12 @@ bool DaHengCamera::SetResolution(int width_scale, int height_scale)
     status = GXSetInt(hDevice, GX_INT_DECIMATION_VERTICAL, nDecimationV);
     if (status == GX_STATUS_SUCCESS)
     {
-        cout << "分辨率设置成功" << endl;
+        fmt::print(fmt::fg(fmt::color::green), "[CAMERA] 分辨率设置成功\n");
         return true;
     }
     else
     {
-        cout << "分辨率设置失败" << endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] 分辨率设置失败\n");
         return false;
     }
 }
@@ -306,12 +307,12 @@ bool DaHengCamera::SetExposureTime(int ExposureTime)
     status = GXSetFloat(hDevice, GX_FLOAT_EXPOSURE_TIME, ExposureTime);
     if (status == GX_STATUS_SUCCESS)
     {
-        cout << "曝光值设置成功" << endl;
+        fmt::print(fmt::fg(fmt::color::green), "[CAMERA] 曝光值设置成功\n");
         return true;
     }
     else
     {
-        cout << "曝光值设置失败" << endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] 曝光值设置失败\n");
         return false;
     }
 }
@@ -359,12 +360,12 @@ bool DaHengCamera::Set_BALANCE_AUTO(int value)
     status = GXSetEnum(hDevice, GX_ENUM_BALANCE_WHITE_AUTO, value);
     if (status == GX_STATUS_SUCCESS)
     {
-        cout << "自动白平衡设置成功" << endl;
+        fmt::print(fmt::fg(fmt::color::green), "[CAMERA] 自动白平衡设置成功\n");
         return true;
     }
     else
     {
-        cout << "自动白平衡设置失败" << endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] 自动白平衡设置失败\n");
         return false;
     }
 }
@@ -429,12 +430,12 @@ bool DaHengCamera::Set_BALANCE(int value, float value_number)
     }
     status = GXSetFloat(hDevice, GX_FLOAT_BALANCE_RATIO, (float)value_number);
     if (status == GX_STATUS_SUCCESS){
-        cout << "Channl" << value << " Set success!" <<endl;
+        fmt::print(fmt::fg(fmt::color::green), "[CAMERA] 白平衡 {} 设置成功\n",value);
         return true;
     }
     else
     {
-        cout << "Channl" << value << " Set Failed!" <<endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] 白平衡 {} 设置失败\n",value);
         return false;
     }
 }
@@ -464,7 +465,7 @@ bool DaHengCamera::Set_Gamma(bool set_status,double dGammaParam)
         //     return false;
         // }
     
-        cout << "Set Gamma "<< dGammaParam <<" Yes" << endl;
+        fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Gamma {} 设置成功\n",dGammaParam);
 
         do
         {
@@ -492,7 +493,7 @@ bool DaHengCamera::Set_Gamma(bool set_status,double dGammaParam)
     }
     else
     {
-        cout << "NOT Seting Gamma Value!" <<endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] NOT Seting Gamma Value!\n");
         return -1;
     }
 }
@@ -509,12 +510,12 @@ bool DaHengCamera::Set_Contrast(bool set_status,int dContrastParam)
     if(set_status)
     {
         contrast_factor = dContrastParam;
-        cout << "Set Contrast "<< dContrastParam <<" Yes" << endl;
+        fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Contrast {} 设置成功\n",dContrastParam);
         return true;
     }
     else
     {
-        cout << "Using Default Contrast Value!" <<endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] Using Default Contrast Value!\n");
         return -1;
     }
 }
@@ -531,12 +532,12 @@ bool DaHengCamera::Set_Saturation(bool set_status,int dSaturationParam)
     if(set_status)
     {
         saturation_factor = dSaturationParam;
-        cout << "Set Saturation "<< saturation_factor <<" Yes" << endl;
+        fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Saturation {} 设置成功\n",saturation_factor);
         return true;
     }
     else
     {
-        cout << "Using Default Saturation Value!" <<endl;
+        fmt::print(fmt::fg(fmt::color::red), "[CAMERA] Using Default Saturation Value!\n");
         return -1;
     }
 }
@@ -564,5 +565,5 @@ DaHengCamera::~DaHengCamera()
     status = GXCloseDevice(hDevice);
     //释放库
     status = GXCloseLib();
-    cout << "析构" << endl;
+    fmt::print(fmt::fg(fmt::color::red), "[CAMERA] 析构!\n");
 }

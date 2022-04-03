@@ -15,6 +15,9 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 
+#include <fmt/format.h>
+#include <fmt/color.h>
+
 
 using namespace std;
 using namespace cv;

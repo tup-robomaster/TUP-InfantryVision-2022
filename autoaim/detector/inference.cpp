@@ -11,7 +11,7 @@
 #define file_name_t            std::string
 #define imread_t               cv::imread
 #define NMS_THRESH 0.3
-#define CONF_THRESH 0.5
+#define CONF_THRESH 0.6
 #define FFT_CONF_ERROR 0.15
 #define FFT_MIN_IOU 0.9
 
@@ -311,9 +311,10 @@ Detector::~Detector()
 {
 }
 
+//TODO:change to your dir
 bool Detector::initModel(string path)
 {
-    ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "/home/tup/Desktop/TUP-InfantryVision-2022/.cache"}});
+    ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/.cache"}});
     // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
     ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
     // Step 1. Read a model in OpenVINO Intermediate Representation (.xml and

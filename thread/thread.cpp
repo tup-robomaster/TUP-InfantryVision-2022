@@ -17,7 +17,7 @@ bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receiv
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-    DaHeng.SetExposureTime(4000);
+    DaHeng.SetExposureTime(6000);
     // 设置
     DaHeng.SetGAIN(3, 2);
     // 是否启用自动白平衡7
@@ -29,7 +29,7 @@ bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receiv
     // // Gamma
     // DaHeng.Set_Gamma(1,1.0);
     // //Color
-    // DaHeng.Color_Correct(1);
+    DaHeng.Color_Correct(1);
     // //Contrast
     // DaHeng.Set_Contrast(1,10);
     // //Saturation
@@ -39,7 +39,7 @@ bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receiv
 #ifdef USING_USB_CAMERA
     VideoCapture cap("/home/tup/Desktop/red.avi");
 #endif //USING_USB_CAMERA
-    fmt::print(fmt::fg(fmt::color::orange), "[CAMERA] 'Set param finished'\n");
+    fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
 #ifdef SAVE_VIDEO
     /*============ video_writer ===========*/
     const std::string &storage_location = "../data/";
@@ -55,10 +55,16 @@ bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receiv
 #endif //SAVE_VIDEO
     while(1)
     {
+        start_get_img:
         Image src;
 
 #ifdef USING_DAHENG
-        DaHeng.GetMat(src.img);
+        auto DaHeng_stauts = DaHeng.GetMat(src.img);
+        if (!DaHeng_stauts)
+        {
+            goto start_get_img;
+            fmt::print(fmt::fg(fmt::color::red), "[CAMERA] GetMat false return\n");
+        }
         src.timestamp = DaHeng.Get_TIMESTAMP();
 #endif //USING_DAHENG
 

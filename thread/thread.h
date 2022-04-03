@@ -13,8 +13,7 @@
 #include <iostream>
 #include <atomic>
 #include <opencv2/opencv.hpp>
-#include <fmt/format.h>
-#include <fmt/color.h>
+
 // #include <Eigen/Core>
 
 using namespace std;

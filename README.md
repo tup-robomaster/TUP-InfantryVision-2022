@@ -20,3 +20,11 @@ V0.1 Beta 完成自瞄推理部分及粒子滤波器. 2021.11.12
     8.README.md 说明文件
 ## 2.Use
     1.sudo cat /sys/kernel/debug/usb/devices
+
+    2.sudo usermod -aG dialout your-username
+
+    debug:
+
+        ulimit -c
+
+        ulimit -c unlimited
