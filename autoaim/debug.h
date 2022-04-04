@@ -15,7 +15,7 @@
 // #define PRINT_LATENCY //输出运行时间
 #define PRINT_TARGET_INFO //是否输出目标信息
 
-#define USING_PREDICT           //是否启用预测
+// #define USING_PREDICT           //是否启用预测
 
 #define USING_SPIN_DETECT //是否检测陀螺
 

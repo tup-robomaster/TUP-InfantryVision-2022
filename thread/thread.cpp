@@ -7,6 +7,7 @@
 bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
 {
     // sleep(111);
+    start_get_img:
 #ifdef USING_DAHENG
     DaHengCamera DaHeng;
     DaHeng.StartDevice(1);
@@ -55,7 +56,6 @@ bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receiv
 #endif //SAVE_VIDEO
     while(1)
     {
-        start_get_img:
         Image src;
 
 #ifdef USING_DAHENG
