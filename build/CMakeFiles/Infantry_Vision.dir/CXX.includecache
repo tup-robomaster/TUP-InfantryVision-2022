@@ -20,6 +20,12 @@ opencv2/opencv.hpp
 ../general/general.h
 /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/general/general.h
 
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/autoaim.cpp
+autoaim.h
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/autoaim.h
+debug.h
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/debug.h
+
 /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/autoaim.h
 future
 -
@@ -39,6 +45,8 @@ predictor/predictor.h
 /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/general/general.h
 ../serial/serialport.h
 /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/serialport.h
+
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/debug.h
 
 /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/autoaim/detector/debug.h
 
@@ -192,11 +200,23 @@ fmt/format.h
 fmt/color.h
 -
 
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/main.cpp
+./serial/wt61pc.h
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/wt61pc.h
+./thread/thread.h
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/thread/thread.h
+./serial/serialport.h
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/serialport.h
+
 /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/CRC_Check.h
 iostream
 -
 stdint.h
 -
+
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/serialport.cpp
+serialport.h
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/serialport.h
 
 /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/serialport.h
 atomic
@@ -233,6 +253,10 @@ CRC_Check.h
 /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/CRC_Check.h
 ../debug.h
 /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/debug.h
+
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/wt61pc.cpp
+wt61pc.h
+/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/wt61pc.h
 
 /home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/serial/wt61pc.h
 atomic

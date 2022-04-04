@@ -78,7 +78,7 @@ bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receiv
             continue;
 
 #ifdef SAVE_VIDEO
-        writer.write(img);
+        writer.write(src.img);
 #endif //SAVE_VIDEO
 
 #ifdef USING_IMU
