@@ -15,7 +15,8 @@ Autoaim::Autoaim()
 {
     detector.initModel(network_path);
     predictor_param_loader.initParam(predict_param_path);
-    coordsolver.loadParam(camera_param_path,"KE0200110073");
+    coordsolver.loadParam(camera_param_path,"KE0200110076");
+    // cout<<"...."<<endl;
     lost_cnt = 0;
     is_last_target_exists = false;
     last_target_area = 0;
@@ -290,6 +291,15 @@ bool Autoaim::run(Image &src,VisionData &data)
 #ifdef USING_SPIN_DETECT
         updateSpinScore();
 #endif //USING_SPIN_DETECT
+    // if (src.timestamp % 10 == 0)
+    // {
+    //     auto time_infer = std::chrono::steady_clock::now();
+    //     double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
+    //     double dr_infer_ms = std::chrono::duration<double,std::milli>(time_infer - time_crop).count();
+    //     fmt::print(fmt::fg(fmt::color::gray), "-----------TIME------------\n");
+    //     fmt::print(fmt::fg(fmt::color::blue_violet), "Crop: {} ms\n"   ,dr_crop_ms);
+    //     fmt::print(fmt::fg(fmt::color::golden_rod), "Infer: {} ms\n",dr_infer_ms);
+    // }
         lost_cnt++;
         is_last_target_exists = false;
         last_target_area = 0;
@@ -338,8 +348,8 @@ bool Autoaim::run(Image &src,VisionData &data)
         armor.center2d = apex_sum / 4.f;
 
         // auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_ITERATIVE);
-        // auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_IPPE);
-        auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_IPPE_SQUARE);
+        auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_IPPE);
+        // auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_IPPE_SQUARE);
 
         armor.center3d_world = pnp_result.coord_world;
         armor.center3d_cam = pnp_result.coord_cam;
@@ -492,9 +502,9 @@ bool Autoaim::run(Image &src,VisionData &data)
 
                 auto spin_movement = new_armor_center - last_armor_center;
 
-                if (spin_score_map[cnt.first] == 0 && abs(spin_movement) > 5)
+                if (spin_score_map[cnt.first] == 0 && abs(spin_movement) > 0.05)
                     spin_score_map[cnt.first] = 100 * spin_movement / abs(spin_movement);
-                else if (abs(spin_movement) > 5)
+                else if (abs(spin_movement) > 0.05)
                     spin_score_map[cnt.first] = 2 * spin_score_map[cnt.first];
             }
         }
@@ -621,9 +631,9 @@ bool Autoaim::run(Image &src,VisionData &data)
 #endif //USING_PREDICT
 
 #ifndef USING_PREDICT
-    aiming_point = target.center3d_cam;
-#endif //USING_PREDICT
-        
+    aiming_point = coordsolver.worldToCam(target.center3d_world,rmat_imu);
+    // aiming_point = target.center3d_cam;#endif //USING_PREDICT
+#endif //USING_PREDICT        
     }
     ///----------------------------------常规击打---------------------------------------
     else
@@ -652,7 +662,7 @@ bool Autoaim::run(Image &src,VisionData &data)
             aiming_point = coordsolver.worldToCam(aiming_point_world, rmat_imu);
         }
 #else
-        aiming_point = target.center3d_cam;
+    aiming_point = coordsolver.worldToCam(target.center3d_world,rmat_imu);
 #endif //USING_PREDICT
     }
 #ifdef ASSIST_LABEL

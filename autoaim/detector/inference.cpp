@@ -20,7 +20,7 @@
 static constexpr int INPUT_W = 416;    // Width of input
 static constexpr int INPUT_H = 416;    // Height of input
 static constexpr int NUM_CLASSES = 8;  // Number of classes
-static constexpr int NUM_COLORS = 3;   // Number of color
+static constexpr int NUM_COLORS = 4;   // Number of color
 static constexpr int TOPK = 128;       // TopK
 
 static inline int argmax(const float *ptr, int len) 
@@ -314,9 +314,9 @@ Detector::~Detector()
 //TODO:change to your dir
 bool Detector::initModel(string path)
 {
-    ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/.cache"}});
-    // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
-    ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
+    ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "/home/tup/Desktop/TUP-InfantryVision-2022/.cache"}});
+    ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
+    // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
     // Step 1. Read a model in OpenVINO Intermediate Representation (.xml and
     // .bin files) or ONNX (.onnx file) format
     network = ie.ReadNetwork(path);
@@ -342,6 +342,7 @@ bool Detector::initModel(string path)
     // Step 3. Loading a model to the device
     // executable_network = ie.LoadNetwork(network, "MULTI:GPU");
     executable_network = ie.LoadNetwork(network, "GPU");
+    // executable_network = ie.LoadNetwork(network, "CPU");
 
     // Step 4. Create an infer request
     infer_request = executable_network.CreateInferRequest();

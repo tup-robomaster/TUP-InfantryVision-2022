@@ -92,6 +92,8 @@ public:
     int speed, databits, stopbits, parity;
     unsigned char rdata[255];                 // raw_data
     float quat[4]; //四元数
+    float acc[3]; //加速度
+    float gyro[3]; //角速度
     SerialPort(const string ID, const int BUAD);
     SerialPort(char *);
     bool initSerialPort();
@@ -110,10 +112,14 @@ public:
     //  void TransformTarPos(const VisionData &data);
 private:
     unsigned char Tdata[30];                  // transfrom data
-    unsigned char f1[4], f2[4], f3[4], f4[4]; //接收四元数转换数组
+
     string serial_id;
 
     float exchange_data(unsigned char *data); //将4个uchar合并成一个float
+    bool getQuat(unsigned char *data);
+    bool getGyro(unsigned char *data);
+    bool getAcc(unsigned char *data);
+
 };
 
 #endif // SERIALPORT_H

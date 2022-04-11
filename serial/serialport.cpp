@@ -103,53 +103,6 @@ float SerialPort::exchange_data(unsigned char *data)
  *@brief   获取模式命令
  */
 
-bool SerialPort::get_Mode(int &mode, int &sentry_mode, int &base_mode)
-{
-    int bytes;
-    char *name = ttyname(fd);
-    if (name = NULL)printf("tty is null\n");
-    //if (name != NULL)printf("device:%s\n",name);
-    int result = ioctl(fd, FIONREAD, &bytes);
-    if (result == -1)return false;
-
-
-    if (bytes == 0)
-    {
-    //    cout << "缓冲区为空" << endl;
-        return true;
-    }
-    bytes = read(fd, rdata, 22);
-
-    if (rdata[0] == 0xA5 && Verify_CRC8_Check_Sum(rdata, 3))
-    {
-        //判断针头和CRC校验是否正确
-        mode  = (int)rdata[1]; //通过此数据控制线程的开启	0关闭自瞄1开启自瞄2小能量机关3大能量机关
-	    f1[0] = rdata[3];
-        f1[1] = rdata[4];
-        f1[2] = rdata[5];
-        f1[3] = rdata[6];
-        f2[0] = rdata[7];
-        f2[1] = rdata[8];
-        f2[2] = rdata[9];
-        f2[3] = rdata[10];
-        f3[0] = rdata[11];
-        f3[1] = rdata[12];
-        f3[2] = rdata[13];
-        f3[3] = rdata[14];
-        f4[0] = rdata[15];
-        f4[1] = rdata[16];
-        f4[2] = rdata[17];
-        f4[3] = rdata[18];
-
-        quat[0] = exchange_data(f1);
-        quat[1] = exchange_data(f2);
-        quat[2] = exchange_data(f3);
-        quat[3] = exchange_data(f4);
-	//TODO:将输出更变为mode和quat
-    }
-    return true;
-}
-
 bool SerialPort::get_Mode()
 {
     int bytes;
@@ -165,34 +118,96 @@ bool SerialPort::get_Mode()
     //    cout << "缓冲区为空" << endl;
         return true;
     }
-    bytes = read(fd, rdata, 22);
+    bytes = read(fd, rdata, 45);
     // cout<<bytes<<endl;
 
     if (rdata[0] == 0xA5 && Verify_CRC8_Check_Sum(rdata, 3))
     {
-        f1[0] = rdata[3];
-        f1[1] = rdata[4];
-        f1[2] = rdata[5];
-        f1[3] = rdata[6];
-        f2[0] = rdata[7];
-        f2[1] = rdata[8];
-        f2[2] = rdata[9];
-        f2[3] = rdata[10];
-        f3[0] = rdata[11];
-        f3[1] = rdata[12];
-        f3[2] = rdata[13];
-        f3[3] = rdata[14];
-        f4[0] = rdata[15];
-        f4[1] = rdata[16];
-        f4[2] = rdata[17];
-        f4[3] = rdata[18];
+        // f1[0] = rdata[3];
+        // f1[1] = rdata[4];
+        // f1[2] = rdata[5];
+        // f1[3] = rdata[6];
+        // f2[0] = rdata[7];
+        // f2[1] = rdata[8];
+        // f2[2] = rdata[9];
+        // f2[3] = rdata[10];
+        // f3[0] = rdata[11];
+        // f3[1] = rdata[12];
+        // f3[2] = rdata[13];
+        // f3[3] = rdata[14];
+        // f4[0] = rdata[15];
+        // f4[1] = rdata[16];
+        // f4[2] = rdata[17];
+        // f4[3] = rdata[18];
 
-        quat[0] = exchange_data(f1);
-        quat[1] = exchange_data(f2);
-        quat[2] = exchange_data(f3);
-        quat[3] = exchange_data(f4);
+        // quat[0] = exchange_data(f1);
+        // quat[1] = exchange_data(f2);
+        // quat[2] = exchange_data(f3);
+        // quat[3] = exchange_data(f4);
+        getQuat(&rdata[3]);
+        getGyro(&rdata[19]);
+        getAcc(&rdata[31]);
+
 	//TODO:将输出更变为mode和quat
     }
+    return true;
+}
+/**
+ * @brief 解算四元数数据
+ * 
+ * @param data 四元数首地址指针
+ * @return
+ */
+bool SerialPort::getQuat(unsigned char *data)
+{
+    unsigned char* f1 = &data[0];
+    unsigned char* f2 = &data[4];
+    unsigned char* f3 = &data[8];
+    unsigned char* f4 = &data[12];
+
+    quat[0] = exchange_data(f1);
+    quat[1] = exchange_data(f2);
+    quat[2] = exchange_data(f3);
+    quat[3] = exchange_data(f4);
+
+    return true;
+}
+
+/**
+ * @brief 解算角速度数据
+ * 
+ * @param data 角速度首地址指针
+ * @return
+ */
+bool SerialPort::getGyro(unsigned char *data)
+{    
+    unsigned char* f1 = &data[4];
+    unsigned char* f2 = &data[8];
+    unsigned char* f3 = &data[12];
+
+    gyro[0] = exchange_data(f1);
+    gyro[1] = exchange_data(f2);
+    gyro[2] = exchange_data(f3);
+
+    return true;
+}
+
+/**
+ * @brief 解算加速度数据
+ * 
+ * @param data 加速度首地址指针
+ * @return
+ */
+bool SerialPort::getAcc(unsigned char *data)
+{
+    unsigned char* f1 = &data[4];
+    unsigned char* f2 = &data[8];
+    unsigned char* f3 = &data[12];
+
+    gyro[0] = exchange_data(f1);
+    gyro[1] = exchange_data(f2);
+    gyro[2] = exchange_data(f3);
+
     return true;
 }
 

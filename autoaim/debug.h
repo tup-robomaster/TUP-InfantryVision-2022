@@ -1,6 +1,6 @@
 
-#define DETECT_RED
-// #define DETECT_BLUE
+// #define DETECT_RED
+#define DETECT_BLUE
 
 #define SHOW_IMG        //是否显示图像
 #ifdef SHOW_IMG

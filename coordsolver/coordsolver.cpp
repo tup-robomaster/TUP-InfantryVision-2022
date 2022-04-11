@@ -17,6 +17,7 @@ bool CoordSolver::loadParam(string coord_path,string param_name)
     Eigen::MatrixXd mat_ci(4, 4);
     Eigen::MatrixXd mat_coeff(1, 5);
     Eigen::MatrixXd mat_xyz_offset(1,3);
+    Eigen::MatrixXd mat_t_iw(1,3);
     Eigen::MatrixXd mat_angle_offset(1,2);
     
     //初始化弹道补偿参数
@@ -33,6 +34,10 @@ bool CoordSolver::loadParam(string coord_path,string param_name)
     read_vector = config[param_name]["Coeff"].as<vector<float>>();
     initMatrix(mat_coeff,read_vector);
     eigen2cv(mat_coeff,dis_coeff);
+
+    read_vector = config[param_name]["T_iw"].as<vector<float>>();
+    initMatrix(mat_t_iw,read_vector);
+    t_iw = mat_t_iw.transpose();
 
     read_vector = config[param_name]["xyz_offset"].as<vector<float>>();
     initMatrix(mat_xyz_offset,read_vector);
@@ -84,7 +89,7 @@ PnPInfo CoordSolver::pnp(Point2f apex[4], Eigen::Matrix3d rmat_imu, int method)
     Eigen::Vector3d tvec_eigen;
     Eigen::Vector3d coord_camera;
 
-    solvePnP(points_world, points_pic, intrinsic, dis_coeff, rvec, tvec, false, SOLVEPNP_IPPE);
+    solvePnP(points_world, points_pic, intrinsic, dis_coeff, rvec, tvec, false, method);
 
     PnPInfo result;
     //Pc = R * Pw + T
@@ -118,8 +123,8 @@ Eigen::Vector2d CoordSolver::getAngle(Eigen::Vector3d &xyz_cam, Eigen::Matrix3d 
     auto angle_cam = calcYawPitch(xyz_cam);
     // auto dist = xyz_offseted.norm();
     // auto pitch_offset = 6.457e04 * pow(dist,-2.199);
-    auto pitch_offset = dynamicCalcPitchOffset(xyz_world);
-    angle_cam[1] = angle_cam[1] + pitch_offset;
+    // auto pitch_offset = dynamicCalcPitchOffset(xyz_world);
+    // angle_cam[1] = angle_cam[1] + pitch_offset;
     auto angle_offseted = staticAngleOffset(angle_cam);
     return angle_offseted;
 
@@ -183,11 +188,12 @@ inline Eigen::Vector2d CoordSolver::calcYawPitch(Eigen::Vector3d &xyz)
 inline double CoordSolver::dynamicCalcPitchOffset(Eigen::Vector3d &xyz)
 {
     //TODO:根据陀螺仪安装位置调整距离求解方式
-    auto dist_vertical = -xyz[1];
+    auto dist_vertical = xyz[2];
+    auto vertical_tmp = dist_vertical;
     auto dist_horizonal = sqrt(xyz.squaredNorm() - dist_vertical * dist_vertical);
     // auto dist_vertical = xyz[2];
     // auto dist_horizonal = sqrt(xyz.squaredNorm() - dist_vertical * dist_vertical);
-    auto pitch = calcPitch(xyz);
+    auto pitch = atan(dist_vertical / dist_horizonal) * 180 / CV_PI;
     auto pitch_new = pitch;
     auto pitch_offset = 0.0;
     //开始使用龙格库塔法求解弹道补偿
@@ -235,9 +241,9 @@ inline double CoordSolver::dynamicCalcPitchOffset(Eigen::Vector3d &xyz)
         }
         else 
         {
-            auto xyz_tmp = xyz;
-            xyz_tmp[1] -= error;
-            pitch_new = calcPitch(xyz_tmp);
+            vertical_tmp+=error;
+            // xyz_tmp[1] -= error;
+            pitch_new = atan(vertical_tmp / dist_horizonal) * 180 / CV_PI;
         }
     }
     return pitch_new - pitch;
@@ -260,8 +266,9 @@ Eigen::Vector3d CoordSolver::camToWorld(Eigen::Vector3d &point_camera, Eigen::Ma
     point_camera_tmp << point_camera[0], point_camera[1], point_camera[2], 1;
     point_imu_tmp = transform_ci * point_camera_tmp;
     point_imu << point_imu_tmp[0], point_imu_tmp[1], point_imu_tmp[2];
+    point_imu += t_iw;
 
-    return rmat.reverse() * point_imu;
+    return rmat * point_imu;
 }
 
 /**
@@ -278,7 +285,8 @@ Eigen::Vector3d CoordSolver::worldToCam(Eigen::Vector3d &point_world, Eigen::Mat
     Eigen::Vector3d point_imu;
     Eigen::Vector3d point_camera;
 
-    point_imu = rmat * point_world;
+    point_imu = rmat.transpose() * point_world;
+    point_imu -= t_iw;
     point_imu_tmp << point_imu[0], point_imu[1], point_imu[2], 1;
     point_camera_tmp = transform_ic * point_imu_tmp;
     point_camera << point_camera_tmp[0], point_camera_tmp[1], point_camera_tmp[2];

@@ -16,7 +16,7 @@ int main()
     auto time_start = std::chrono::steady_clock::now();
     Factory<Image> autoaim_factory(3);
     Factory<VisionData> data_transmit_factory(5);
-    MessageFilter<Eigen::Quaterniond> data_receiver(50);
+    MessageFilter<IMUData> data_receiver(20);
     SerialPort serial(SERIAL_ID, BAUD);
 #ifdef USING_IMU_C_BOARD
     std::thread serial_watcher(&serialWatcher, ref(serial));

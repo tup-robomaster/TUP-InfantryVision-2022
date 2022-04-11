@@ -53,6 +53,7 @@ private:
     Mat intrinsic;
     Mat dis_coeff;
     Eigen::Vector3d xyz_offset;
+    Eigen::Vector3d t_iw;
     Eigen::Vector2d angle_offset;
     Eigen::Matrix4d transform_ic;
     Eigen::Matrix4d transform_ci;
@@ -60,7 +61,7 @@ private:
     YAML::Node param_node;
 
     const int armor_type_wh_thres = 7;      //大小装甲板长宽比阈值
-    const int bullet_speed = 30;            //TODO:弹速可变
+    const int bullet_speed = 28;            //TODO:弹速可变
     const double k = 0.0389;                //25°C,1atm
     const double g = 9.801;
 };

@@ -4,9 +4,8 @@
  * @brief 生产者线程
  * @param factory 工厂类
 **/
-bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
+bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
 {
-    // sleep(111);
     start_get_img:
 #ifdef USING_DAHENG
     DaHengCamera DaHeng;
@@ -20,7 +19,7 @@ bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receiv
     // 设置曝光事件
     DaHeng.SetExposureTime(6000);
     // 设置
-    DaHeng.SetGAIN(3, 2);
+    DaHeng.SetGAIN(3, 16);
     // 是否启用自动白平衡7
     // DaHeng.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
@@ -60,12 +59,14 @@ bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receiv
 
 #ifdef USING_DAHENG
         auto DaHeng_stauts = DaHeng.GetMat(src.img);
+        auto time_cap = std::chrono::steady_clock::now();
         if (!DaHeng_stauts)
         {
             goto start_get_img;
             fmt::print(fmt::fg(fmt::color::red), "[CAMERA] GetMat false return\n");
         }
-        src.timestamp = DaHeng.Get_TIMESTAMP();
+        src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
+        // src.timestamp = DaHeng.Get_TIMESTAMP();
 #endif //USING_DAHENG
 
 #ifdef USING_USB_CAMERA
@@ -82,8 +83,33 @@ bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receiv
 #endif //SAVE_VIDEO
 
 #ifdef USING_IMU
-        //循环获取四元数
-        while (!receive_factory.consume(src.imu, src.timestamp));
+        //获取四元数
+        IMUData imu_status;
+        if (!receive_factory.consume(imu_status, src.timestamp))
+            continue;
+        //对角速度积分，使用欧拉法估算陀螺仪当前姿态
+        Eigen::Vector4d delta_quat_vec;
+
+        auto quat = imu_status.quat;
+        auto gyro = imu_status.gyro;
+        double w = quat.w();
+        double x = quat.x();
+        double y = quat.y();
+        double z = quat.z();
+        auto delta_t = (src.timestamp - imu_status.timestamp) / 1000.f;
+        delta_quat_vec << -gyro[0] * x - gyro[1] * y - gyro[2] * z,
+                    gyro[0] * w - gyro[1] * z + gyro[2] * y,
+                    gyro[0] * z + gyro[1] * w - gyro[2] * x,
+                    -gyro[0] * y + gyro[1] * x + gyro[2] * w;
+        Eigen::Vector4d quat_vec = quat.coeffs();
+        // cout<<(0.5 * delta_t * delta_quat_vec).norm()<<endl;
+        // cout<<gyro<<endl;
+        // cout<<endl;
+        quat_vec += 0.5 * delta_t * delta_quat_vec; 
+        src.imu = Eigen::Quaterniond(quat_vec).normalized();
+        src.imu = imu_status.quat;
+
+        // cout<<delta_t<<endl;
 #endif //USING_IMU
 
         //用于辅助标注
@@ -99,6 +125,8 @@ bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receiv
 **/
 bool consumer(Factory<Image> &autoaim_factory,Factory<VisionData> &transmit_factory)
 {
+        // cout<<"..."<<endl;
+
     Autoaim autoaim;
     while(1)
     {
@@ -136,7 +164,7 @@ bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory)
 }
 
 #ifdef USING_IMU_C_BOARD
-bool dataReceiver(SerialPort &serial, MessageFilter<Eigen::Quaterniond> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
+bool dataReceiver(SerialPort &serial, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
 {
     while(1)
     {
@@ -152,8 +180,12 @@ bool dataReceiver(SerialPort &serial, MessageFilter<Eigen::Quaterniond> &receive
         auto time_cap = std::chrono::steady_clock::now();
         auto timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // cout<<"Quad: "<<serial.quat[0]<<" "<<serial.quat[1]<<" "<<serial.quat[2]<<" "<<serial.quat[3]<<" "<<endl;
+        // Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
-        receive_factory.produce(quat, timestamp);
+        Eigen::Vector3d acc = {serial.acc[0],serial.acc[1],serial.acc[2]};;
+        Eigen::Vector3d gyro = {serial.gyro[0],serial.gyro[1],serial.gyro[2]};;
+        IMUData imu_status = {acc, gyro, quat, timestamp};
+        receive_factory.produce(imu_status, timestamp);
         // Eigen::Vector3d vec = quad.toRotationMatrix().eulerAngles(2,1,0);
         // cout<<"Euler : "<<vec[0] * 180.f / CV_PI<<" "<<vec[1] * 180.f / CV_PI<<" "<<vec[2] * 180.f / CV_PI<<endl;
         // cout<<"transmitting..."<<endl;
@@ -179,7 +211,7 @@ bool serialWatcher(SerialPort &serial)
 
 
 #ifdef USING_IMU_WIT
-bool dataReceiver(IMUSerial &serial_imu, MessageFilter<Eigen::Quaterniond> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
+bool dataReceiver(IMUSerial &serial_imu, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
 {
     while(1)
     {
@@ -187,26 +219,25 @@ bool dataReceiver(IMUSerial &serial_imu, MessageFilter<Eigen::Quaterniond> &rece
         if (serial_imu.need_init == true)
         {
             // cout<<"offline..."<<endl;
-            sleep(5e-3);
             continue;
         }
         if (!serial_imu.readData())
+        {
             continue;
+        }
         auto time_cap = std::chrono::steady_clock::now();
         auto timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         if (!serial_imu.is_quat_initialized)
         {
-            sleep(5e-3);
             continue;
         }
         Eigen::Quaterniond quat = serial_imu.quat;
-        Eigen::Vector3d acc= serial_imu.acc;
-        receive_factory.produce(quat, timestamp);
+        Eigen::Vector3d acc = serial_imu.acc;
+        Eigen::Vector3d gyro =serial_imu.gyro;
+        IMUData imu_status = {acc, gyro, quat, timestamp};
+
+        receive_factory.produce(imu_status, timestamp);
         Eigen::Vector3d vec = quat.toRotationMatrix().eulerAngles(2,1,0);
-        // cout<<"Acc :"<<acc[0]<<" "<<acc[1]<<" "<<acc[2]<<endl;
-        cout<<"Euler : "<<vec[0] * 180.f / CV_PI<<" "<<vec[1] * 180.f / CV_PI<<" "<<vec[2] * 180.f / CV_PI<<endl;
-        sleep(5e-3);
-        // cout<<"transmitting..."<<endl;
     }
     return true;
 }

@@ -8,24 +8,33 @@
 #include <iterator>
 #include <thread>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 #include <iostream>
 #include <atomic>
 #include <opencv2/opencv.hpp>
-
 // #include <Eigen/Core>
 
 using namespace std;
 using namespace cv;
 
-template<typename T>
+struct IMUData
+{
+    Eigen::Vector3d acc;
+    Eigen::Vector3d gyro;
+    Eigen::Quaterniond quat;
+    int timestamp;
+};
+
+template <typename T>
 class Factory
 {
 private:
     std::deque<T> buffer;
-    atomic_bool is_editing;
     int buffer_size;
+    mutex lock;
+
 public:
     /**
      * @brief 工厂类初始化
@@ -34,48 +43,48 @@ public:
     Factory(int size)
     {
         buffer_size = size;
-        is_editing = false;
     };
     bool produce(T &product);
     bool consume(T &product);
 };
 
-template<typename T>
+template <typename T>
 bool Factory<T>::produce(T &product)
 {
-    //当有其他线程访问时阻塞
-    while(is_editing)
-        sleep(0.0001);
-    is_editing = true;
 
+    lock.lock();
     if (buffer.size() < buffer_size)
         buffer.push_back(product);
     else
     {
         buffer.pop_front();
         buffer.push_back(product);
+    
     }
+    lock.unlock();
 
-    is_editing = false;
     return true;
 }
 
-template<typename T>
+template <typename T>
 bool Factory<T>::consume(T &product)
 {
-    //队列为空时阻塞消费者
-    while (buffer.empty() || is_editing)
-        sleep(0.0001);
-    //当有其他线程访问时阻塞
-    is_editing = true;
-
+    while (1)
+    {
+        lock.lock();
+        if (!buffer.empty())
+            break;
+        lock.unlock();
+        sleep(1e-4);
+    }
     product = buffer.front();
     buffer.pop_front();
-    is_editing = false;
+    lock.unlock();
+
     return true;
 }
 //-----------------------------------------------------------------
-template<typename T>
+template <typename T>
 class MessageFilter
 {
 private:
@@ -86,6 +95,7 @@ private:
     };
     std::deque<Product> buffer;
     atomic_bool is_editing;
+    mutex lock;
     int buffer_size;
 public:
     /**
@@ -101,15 +111,11 @@ public:
     bool consume(T &message, int timestamp);
 };
 
-template<typename T>
+template <typename T>
 bool MessageFilter<T>::produce(T &message, int timestamp)
 {
-    //当有其他线程访问时阻塞
-    while(is_editing)
-        sleep(0.0001);
-    is_editing = true;
-
-    Product product = {message,timestamp};
+    lock.lock();
+    Product product = {message, timestamp};
     if (buffer.size() < buffer_size)
         buffer.push_back(product);
     else
@@ -117,50 +123,64 @@ bool MessageFilter<T>::produce(T &message, int timestamp)
         buffer.pop_front();
         buffer.push_back(product);
     }
+    lock.unlock();
 
-    is_editing = false;
     return true;
 }
 
-template<typename T>
+template <typename T>
 bool MessageFilter<T>::consume(T &message, int timestamp)
 {
     //队列为空时阻塞消费者
-    while (buffer.empty() || is_editing)
-        sleep(0.0001);
-    //当有其他线程访问时阻塞
-    is_editing = true;
-
-    auto it = std::lower_bound(buffer.begin(),buffer.end(),timestamp,[](Product &prev, const int &timestamp)
-                                                            {return prev.timestamp < timestamp;});
+    while (1)
+    {
+        lock.lock();
+        if (!buffer.empty())
+            break;
+        lock.unlock();
+        sleep(1e-3);
+    }
+    auto it = std::lower_bound(buffer.begin(), buffer.end(), timestamp, [](Product &prev, const int &timestamp)
+                               { return prev.timestamp < timestamp; });
     if (it == buffer.end())
     {
-        if(timestamp - (*buffer.end()).timestamp > 100)
-            return false;
-        message = (*buffer.end()).message;
-        buffer.pop_back();
+        //时间戳时间差大于10ms则认为该帧不可用
+        if (abs((buffer.back().timestamp - timestamp)) > 10)
+        {
+            buffer.pop_front();
+            lock.unlock();
+            return false;            
+        }
+        else
+        {
+            message = (buffer.back()).message;
+            buffer.pop_front();
+            lock.unlock();
+            return true;
+        }
     }
     else
     {
         message = (*it).message;
         buffer.erase(it);
     }
-    is_editing = false;
+    lock.unlock();
+    // cout<<(*it).timestamp<<":"<<timestamp<<"|"<<buffer.size()<<endl;
     return true;
 }
 
-bool producer(Factory<Image> &factory, MessageFilter<Eigen::Quaterniond> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start);
-bool consumer(Factory<Image> &autoaim_factory,Factory<VisionData> &transmit_factory);
-bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory);
+bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start);
+bool consumer(Factory<Image> &autoaim_factory, Factory<VisionData> &transmit_factory);
+bool dataTransmitter(SerialPort &serial, Factory<VisionData> &transmit_factory);
 
 #ifdef USING_IMU_C_BOARD
-bool dataReceiver(SerialPort &serial, MessageFilter<Eigen::Quaterniond> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start);
+bool dataReceiver(SerialPort &serial, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start);
 bool serialWatcher(SerialPort &serial);
-#endif //USING_IMU_C_BOARD
+#endif // USING_IMU_C_BOARD
 #ifdef USING_IMU_WIT
-bool dataReceiver(IMUSerial &serial_imu, MessageFilter<Eigen::Quaterniond> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start);
+bool dataReceiver(IMUSerial &serial_imu, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start);
 bool serialWatcher(SerialPort &serial, IMUSerial &serial_imu);
-#endif //USING_IMU_WIT
+#endif // USING_IMU_WIT
 #ifndef USING_IMU
 bool serialWatcher(SerialPort &serial);
-#endif //USING_IMU
+#endif // USING_IMU

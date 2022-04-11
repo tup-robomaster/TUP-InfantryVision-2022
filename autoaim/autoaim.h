@@ -10,9 +10,9 @@
 #include "../general/general.h"
 #include "../serial/serialport.h"
 
-const string network_path = "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/model/0311_416.xml";
-const string camera_param_path = "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/params/coord_param.yaml";
-const string predict_param_path = "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/params/filter/filter_param.yaml";
+const string network_path = "/home/tup/Desktop/TUP-InfantryVision-2022/model/nano_0411.xml";
+const string camera_param_path = "/home/tup/Desktop/TUP-InfantryVision-2022/params/coord_param.yaml";
+const string predict_param_path = "/home/tup/Desktop/TUP-InfantryVision-2022/params/filter/filter_param.yaml";
 
 enum SpinHeading {UNKNOWN, CLOCKWISE, COUNTER_CLOCKWISE};
 
