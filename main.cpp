@@ -14,7 +14,7 @@ const int BAUD_IMU = 460800;
 int main()
 {
     auto time_start = std::chrono::steady_clock::now();
-    Factory<Image> autoaim_factory(3);
+    Factory<Image> buff_factory(3);
     Factory<VisionData> data_transmit_factory(5);
     MessageFilter<IMUData> data_receiver(20);
     SerialPort serial(SERIAL_ID, BAUD);
@@ -27,16 +27,16 @@ int main()
     std::thread serial_watcher(&serialWatcher, ref(serial), ref (serial_imu));
     std::thread receiver(&dataReceiver, ref(serial_imu), ref(data_receiver), time_start);
 #endif //USING_IMU_WIT
-    std::thread autoaim_producer(&producer, ref(autoaim_factory), ref(data_receiver), time_start);
-    std::thread autoaim_consumer(&consumer, ref(autoaim_factory),ref(data_transmit_factory));
+    std::thread buff_producer(&producer, ref(buff_factory), ref(data_receiver), time_start);
+    std::thread buff_consumer(&consumer, ref(buff_factory),ref(data_transmit_factory));
     std::thread transmitter(&dataTransmitter, ref(serial), ref(data_transmit_factory));
 
 #ifndef USING_IMU
     std::thread serial_watcher(&serialWatcher, ref(serial));
 #endif //USING_IMU
 
-    autoaim_producer.join();
-    autoaim_consumer.join();
+    buff_producer.join();
+    buff_consumer.join();
     serial_watcher.join();
     transmitter.join();
 #ifdef USING_IMU

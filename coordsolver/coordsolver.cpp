@@ -61,25 +61,24 @@ bool CoordSolver::loadParam(string coord_path,string param_name)
 PnPInfo CoordSolver::pnp(Point2f apex[4], Eigen::Matrix3d rmat_imu, int method)
 {
     std::vector<Point3d> points_world;
-    std::vector<Point2f> points_pic(apex,apex + 4);
-    std::vector<Point2f> vecotr_apex = {apex[0], apex[1], apex[2], apex[3]};
+    std::vector<Point2f> points_pic(apex,apex + 5);
+    // std::vector<Point2f> points_pic = {apex[0],apex[1],apex[3],apex[4]};
 
-    RotatedRect points_pic_rrect = minAreaRect(vecotr_apex);
-    auto apex_wh_ratio = max(points_pic_rrect.size.height, points_pic_rrect.size.width) / min(points_pic_rrect.size.height, points_pic_rrect.size.width);
+    points_world = {
+        {-0.1125,0.027,0},
+        {-0.1125,-0.027,0},
+        {0,-0.565,-0.05},
+        {0.1125,-0.027,0},
+        {0.1125,0.027,0}};
 
-    //大于长宽比阈值使用大装甲板世界坐标
-    if(apex_wh_ratio > armor_type_wh_thres)
-        points_world = {
-            {-0.1125,0.027,0},
-            {-0.1125,-0.027,0},
-            {0.1125,-0.027,0},
-            {0.1125,0.027,0}};
-    else
-        points_world = {
-            {-0.066,0.027,0},
-            {-0.066,-0.027,0},
-            {0.066,-0.027,0},
-            {0.066,0.027,0}};
+    Mat rvec;
+    Mat rmat;
+    Mat tvec;
+    Eigen::Matrix3d rmat_eigen;
+    Eigen::Vector3d R_center_world = {0,-0.565,-0.05};
+    Eigen::Vector3d tvec_eigen;
+    Eigen::Vector3d coord_camera;
+    // cout<<points_world<<endl;
 
     Mat rvec;
     Mat rmat;
@@ -98,21 +97,14 @@ PnPInfo CoordSolver::pnp(Point2f apex[4], Eigen::Matrix3d rmat_imu, int method)
     cv2eigen(tvec, tvec_eigen);
     //转换至相机坐标系(左手坐标系)
     // result.coord_cam = (rmat_eigen * coord_world) + tvec_eigen;
-    result.coord_cam = tvec_eigen;
-    result.coord_world = camToWorld(result.coord_cam, rmat_imu);
-    result.euler = rotationMatrixToEulerAngles(rmat_eigen);
-
-    // //将角度范围由[-PI,PI]变换至[0，2PI]
-    // if (result.euler[0] <= 0)
-    //     result.euler[0] += CV_2PI;
-    // if (result.euler[1] <= 0)
-    //     result.euler[1] += CV_2PI;
-    // if (result.euler[2] <= 0)
-    //     result.euler[2] += CV_2PI;
+    result.coord_armor_cam = tvec_eigen;
+    result.coord_R_cam = (rmat_eigen * R_center_world) + tvec_eigen;
+    result.coord_armor_world = camToWorld(result.coord_cam, rmat_imu);
+    result.coord_R_world = camToWorld(result.coord_cam, rmat_imu);
+    result.euler = rotationMatrixToEulerAngles(transform_ci.block(0,0,2,2) * rmat_imu * rmat_eigen);
     
     return result;
 }
-
 
 Eigen::Vector2d CoordSolver::getAngle(Eigen::Vector3d &xyz_cam, Eigen::Matrix3d &rmat)
 {

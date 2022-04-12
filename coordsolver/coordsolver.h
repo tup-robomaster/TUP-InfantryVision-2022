@@ -17,8 +17,10 @@ using namespace cv;
 
 struct PnPInfo
 {
-    Eigen::Vector3d coord_cam;
-    Eigen::Vector3d coord_world;
+    Eigen::Vector3d coord_armor_cam;
+    Eigen::Vector3d coord_armor_world;
+    Eigen::Vector3d coord_R_cam;
+    Eigen::Vector3d coord_R_world;
     Eigen::Vector3d euler;
 };
 

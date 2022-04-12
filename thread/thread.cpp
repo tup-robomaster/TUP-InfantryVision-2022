@@ -36,9 +36,9 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
     // DaHeng.Set_Saturation(0,0);
 #endif //USING_DAHENG
 
-#ifdef USING_USB_CAMERA
+#ifdef USING_VIDEO
     VideoCapture cap("/home/tup/Desktop/red.avi");
-#endif //USING_USB_CAMERA
+#endif //USING_VIDEO
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
 #ifdef SAVE_VIDEO
     /*============ video_writer ===========*/
@@ -69,11 +69,11 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
         // src.timestamp = DaHeng.Get_TIMESTAMP();
 #endif //USING_DAHENG
 
-#ifdef USING_USB_CAMERA
+#ifdef USING_VIDEO
         cap >> src.img;
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         waitKey(30);
-#endif //USING_USB_CAMERA
+#endif //USING_VIDEO
 
         if (src.img.empty())
             continue;
@@ -123,18 +123,18 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
  * @brief 消费者线程
  * @param factory 工厂类
 **/
-bool consumer(Factory<Image> &autoaim_factory,Factory<VisionData> &transmit_factory)
+bool consumer(Factory<Image> &buff_factory,Factory<VisionData> &transmit_factory)
 {
         // cout<<"..."<<endl;
 
-    Autoaim autoaim;
+    Buff buff;
     while(1)
     {
         Image dst;
         VisionData data;
 
-        autoaim_factory.consume(dst);
-        if (autoaim.run(dst,data))
+        buff_factory.consume(dst);
+        if (buff.run(dst,data))
         {
             transmit_factory.produce(data);
         }
