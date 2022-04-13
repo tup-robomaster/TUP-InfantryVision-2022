@@ -1,6 +1,6 @@
 
 #include "../camera/DaHengCamera.h"
-#include "../autoaim/autoaim.h"
+#include "../buff/buff.h"
 #include "../serial/serialport.h"
 #include "../serial/wt61pc.h"
 #include "../debug.h"
@@ -170,7 +170,7 @@ bool MessageFilter<T>::consume(T &message, int timestamp)
 }
 
 bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start);
-bool consumer(Factory<Image> &autoaim_factory, Factory<VisionData> &transmit_factory);
+bool consumer(Factory<Image> &buff_factory, Factory<VisionData> &transmit_factory);
 bool dataTransmitter(SerialPort &serial, Factory<VisionData> &transmit_factory);
 
 #ifdef USING_IMU_C_BOARD

@@ -232,7 +232,6 @@ static void nms_sorted_bboxes(std::vector<Object>& faceobjects, std::vector<int>
                             float nms_threshold)
 {
     picked.clear();
-
     const int n = faceobjects.size();
 
     std::vector<float> areas(n);
@@ -254,10 +253,13 @@ static void nms_sorted_bboxes(std::vector<Object>& faceobjects, std::vector<int>
             std::vector<cv::Point2f> apex_b(b.apex, b.apex + 5);
             std::vector<cv::Point2f> apex_inter;
             // intersection over union
+            // float inter_area = intersection_area(a, b);
+            // float union_area = areas[i] + areas[picked[j]] - inter_area;
+            //TODO:此处耗时较长，越1ms，可以尝试使用其他方法计算IOU
             float inter_area = intersectConvexConvex(apex_a,apex_b,apex_inter);
             float union_area = areas[i] + areas[picked[j]] - inter_area;
             float iou = inter_area / union_area;
-            if (iou > nms_threshold)
+            if (iou > nms_threshold || inter_area == 0)
             {
                 keep = 0;
                 //Stored for FFT
@@ -321,9 +323,9 @@ Detector::~Detector()
 //TODO:change to your dir
 bool Detector::initModel(string path)
 {
-    ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "/home/tup/Desktop/Buff/.cache"}});
-    ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
-    // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
+    ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "/home/tup/Desktop/TUP-InfantryVision-2022-buff/.cache"}});
+    // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
+    ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
     // Step 1. Read a model in OpenVINO Intermediate Representation (.xml and
     // .bin files) or ONNX (.onnx file) format
     network = ie.ReadNetwork(path);
@@ -407,7 +409,6 @@ bool Detector::detect(Mat &src,std::vector<Object>& objects)
     const float* net_pred = moutputHolder.as<const PrecisionTrait<Precision::FP32>::value_type*>();
     int img_w = src.cols;
     int img_h = src.rows;
-
     decodeOutputs(net_pred, objects, transfrom_matrix, img_w, img_h);
     for (auto object = objects.begin(); object != objects.end(); ++object)
     {

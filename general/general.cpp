@@ -123,7 +123,6 @@ string getParent(string path)
         return path;
     else
         return path.substr(0,last_slash_idx - 1);
-    
 }
 
 /**
@@ -254,4 +253,18 @@ Eigen::AngleAxisd eulerToAngleAxisd(Eigen::Vector3d euler)
 
     rotVec = roll_angle * yaw_angle * pitch_angle;
     return rotVec;
+}
+
+/**
+ * @brief 将角度限制在[-PI,PI]的范围内
+ * @return 处理后的角度
+*/
+double rangedAngleRad(double &angle)
+{
+    if (fabs(angle) >= CV_PI)
+    {
+        angle -= (angle / fabs(angle)) * CV_2PI;
+        angle = rangedAngleRad(angle);
+    }
+    return angle;
 }

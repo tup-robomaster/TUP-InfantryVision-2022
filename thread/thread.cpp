@@ -34,12 +34,13 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
     // DaHeng.Set_Contrast(1,10);
     // //Saturation
     // DaHeng.Set_Saturation(0,0);
+    fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
 #endif //USING_DAHENG
 
 #ifdef USING_VIDEO
-    VideoCapture cap("/home/tup/Desktop/red.avi");
+    sleep(6);//防止网络加载完成前视频开始播放
+    VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
 #endif //USING_VIDEO
-    fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
 #ifdef SAVE_VIDEO
     /*============ video_writer ===========*/
     const std::string &storage_location = "../data/";
@@ -56,7 +57,6 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
     while(1)
     {
         Image src;
-
 #ifdef USING_DAHENG
         auto DaHeng_stauts = DaHeng.GetMat(src.img);
         auto time_cap = std::chrono::steady_clock::now();
@@ -71,8 +71,10 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
 
 #ifdef USING_VIDEO
         cap >> src.img;
+        auto time_cap = std::chrono::steady_clock::now();
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
-        waitKey(30);
+        waitKey(16.67);
+        // waitKey(33);
 #endif //USING_VIDEO
 
         if (src.img.empty())
@@ -275,7 +277,6 @@ bool serialWatcher(SerialPort &serial)
             serial.need_init = true;
             serial.initSerialPort();
         }
-
     }
 }
 #endif //USING_IMU

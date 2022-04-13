@@ -1,6 +1,6 @@
 // #define USING_DAHENG
 // #define USING_USB_CAMERA
-// #define USING_VIDEO
+#define USING_VIDEO
 
 // #define USING_IMU    //是否使用陀螺仪数据
 #ifdef USING_IMU

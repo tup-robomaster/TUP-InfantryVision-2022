@@ -70,6 +70,8 @@ bool ParticleFilter::initParam(ParticleFilter parent)
     matrix_particle = parent.matrix_particle;
     matrix_weights = parent.matrix_weights;
     is_ready = false;
+
+    return true;
 }
 
 Eigen::VectorXd ParticleFilter::predict()

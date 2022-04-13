@@ -40,6 +40,8 @@ bool initMatrix(Eigen::MatrixXd &matrix,std::vector<T> &vector)
 float calcTriangleArea(cv::Point2f pts[3]);
 float calcTetragonArea(cv::Point2f pts[4]);
 
+double rangedAngleRad(double &angle);
+
 std::string symbolicToReal(string path);
 std::string relativeToFull(string relative,string src);
 string treeToPath(std::vector<string> &tree);
@@ -53,3 +55,4 @@ Eigen::Vector3d rotationMatrixToEulerAngles(Eigen::Matrix3d &R);
 Eigen::Vector3d calcDeltaEuler(Eigen::Vector3d euler1, Eigen::Vector3d euler2);
 Eigen::AngleAxisd eulerToAngleAxisd(Eigen::Vector3d euler);
 Eigen::Matrix3d eulerToRotationMatrix(Eigen::Vector3d &theta);
+

@@ -9,7 +9,7 @@ Buff::Buff()
     detector.initModel(network_path);
     coordsolver.loadParam(camera_param_path,"DEBUG");
     lost_cnt = 0;
-    is_last_target_exist = false;
+    is_last_target_exists = false;
     // input_size = {640,384};
     input_size = {416,416};
 }
@@ -61,27 +61,28 @@ Point2i Buff::cropImageByROI(Mat &img)
 }
 #endif //USING_ROI
 
-/**
- * @brief 从装甲板中选择最终目标
- * 
- * @param armors 装甲板vector
- * @return Armor 所选取的装甲板
- */
-Fan Buff::chooseTargetArmor(vector<Armor> armors)
+/*
+ * @brief 选择击打目标
+ * @param  
+*/
+bool Buff::chooseTarget(vector<Fan> &fans, Fan &target)
 {
-    //TODO:优化打击逻辑
     float max_area = 0;
     int target_idx = 0;
-    for(int i = 0; i < armors.size(); i++)
+    int target_fan_cnt = 0;
+    for (auto fan : fans)
     {
-        auto area = calcTetragonArea(armors[i].apex2d);
-        if (area >= max_area)
+        if (fan.id == 1)
         {
-            max_area = area;
-            target_idx = i;
+            target = fan;
+            target_fan_cnt++;
         }
     }
-    return armors[target_idx];
+
+    if (target_fan_cnt == 1)
+        return true;
+    else
+        return false;
 }
 
 /**
@@ -97,7 +98,7 @@ bool Buff::run(Image &src,VisionData &data)
     auto time_start=std::chrono::steady_clock::now();
     vector<Object> objects;
     vector<Fan> fans;
-    auto input = src.img.clone();
+    auto input = src.img;
     // roi_offset = cropImageByROI(input);
 
 #ifdef USING_IMU
@@ -123,9 +124,6 @@ bool Buff::run(Image &src,VisionData &data)
         imshow("dst",src.img);
         waitKey(1);
 #endif //SHOW_IMG
-#ifdef USING_SPIN_DETECT
-        updateSpinScore();
-#endif //USING_SPIN_DETECT
     // if (src.timestamp % 10 == 0)
     // {
     //     auto time_infer = std::chrono::steady_clock::now();
@@ -140,10 +138,6 @@ bool Buff::run(Image &src,VisionData &data)
         last_target_area = 0;
         return false;
     }
-#ifdef ASSIST_LABEL
-    auto img_name = path_prefix + to_string(cnt) + ".png";
-    imwrite(img_name,input);
-#endif //ASSIST_LABEL
     auto time_infer = std::chrono::steady_clock::now();
     ///------------------------生成扇叶对象----------------------------------------------
     for (auto object : objects)
@@ -169,14 +163,14 @@ bool Buff::run(Image &src,VisionData &data)
             fan.apex2d[i] += Point2f((float)roi_offset.x,(float)roi_offset.y);
         }
 
-        auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_EPNP);
+        auto pnp_result = coordsolver.pnp(fan.apex2d, rmat_imu, SOLVEPNP_EPNP);
         fan.centerR2d = fan.apex2d[2];
 
-        fan.armor3d_cam = result.coord_armor_cam;
-        fan.armor3d_world = result.coord_armor_world;
-        fan.centerR3d_cam = result.coord_R_cam;
-        fan.centerR3d_world = result.coord_R_world;
-        fan.euler = result.euler;
+        fan.armor3d_cam = pnp_result.coord_armor_cam;
+        fan.armor3d_world = pnp_result.coord_armor_world;
+        fan.centerR3d_cam = pnp_result.coord_R_cam;
+        fan.centerR3d_world = pnp_result.coord_R_world;
+        fan.euler = pnp_result.euler;
 
         fans.push_back(fan);
     }
@@ -205,17 +199,17 @@ bool Buff::run(Image &src,VisionData &data)
 
                 //将Roll表示范围由[-180,180]转换至[0，360]
                 if (current_roll <= 0)
-                    current_roll += 360;
+                    current_roll += CV_2PI;
                 if (last_roll <= 0)
-                    last_roll += 360;
+                    last_roll += CV_2PI;
                 //计算delta_theta
-                if ((*fan).euler[0] > 0 && (*fan).euler[0] < 90 && (*iter).last_fan.euler[0] > 270)
-                    delta_theta = 360 + (*fan).euler[0] - (*iter).last_fan.euler[0];
-                else if ((*fan).euler[0] > 270 && (*iter).last_fan.euler[0] > 0 && (*iter).last_fan.euler[0] < 90)
-                    delta_theta = -360 + (*fan).euler[0] - (*iter).last_fan.euler[0];
+                if ((*fan).euler[0] > 0 && (*fan).euler[0] < (0.5 * CV_PI) && (*iter).last_fan.euler[0] > (1.5 * CV_PI))
+                    delta_theta = CV_2PI + (*fan).euler[0] - (*iter).last_fan.euler[0];
+                else if ((*fan).euler[0] > (1.5 * CV_PI) && (*iter).last_fan.euler[0] > 0 && (*iter).last_fan.euler[0] < (0.5 * CV_PI))
+                    delta_theta = -CV_2PI + (*fan).euler[0] - (*iter).last_fan.euler[0];
                 else
                     delta_theta = (*fan).euler[0] - (*iter).last_fan.euler[0];
-                double rotate_speed = (delta_theta / delta_t) * (CV_PI * 1e3 / 180);//计算角速度(rad/s)
+                double rotate_speed = delta_theta / delta_t * 1e3;//计算角速度(rad/s)
                 if (fabs(rotate_speed) <= max_v)
                 {
                     FanTracker fan_tracker = (*iter);
@@ -250,9 +244,23 @@ bool Buff::run(Image &src,VisionData &data)
         waitKey(1);
 #endif //SHOW_IMG
         lost_cnt++;
-        is_last_target_exist = false;
+        is_last_target_exists = false;
         return false;
     }
+
+#ifdef SHOW_ALL_FANS
+    for (auto fan : fans)
+    {
+        if (fan.color == 0)
+            putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+        if (fan.color == 1)
+            putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+        for(int i = 0; i < 5; i++)
+            line(src.img, fan.apex2d[i % 5], fan.apex2d[(i + 1) % 5], Scalar(0,255,0), 1);
+        auto fan_armor_center = coordsolver.reproject(fan.armor3d_cam);
+        circle(src.img, fan_armor_center, 4, {0, 0, 255}, 2);
+    }
+#endif //SHOW_ALL_FANS
 
     int avail_tracker_cnt = 0;
     double rotate_speed_sum = 0;
@@ -275,8 +283,6 @@ bool Buff::run(Image &src,VisionData &data)
         imshow("dst",src.img);
         waitKey(1);
 #endif //SHOW_IMG
-        lost_cnt++;
-        is_last_target_exist = false;
         return false;
     }
     mean_rotate_speed = rotate_speed_sum / avail_tracker_cnt;
@@ -284,7 +290,8 @@ bool Buff::run(Image &src,VisionData &data)
     double theta_offset;
     //FIXME:加入模式切换
     ///------------------------进行预测----------------------------
-    predictor.mode = 1;
+    // predictor.mode = 1;
+    predictor.mode = 0;
     if (!predictor.predict(mean_rotate_speed, int(mean_r_center.norm()), src.timestamp, theta_offset))
     {
 #ifdef SHOW_IMG
@@ -293,45 +300,33 @@ bool Buff::run(Image &src,VisionData &data)
 #endif //SHOW_IMG
         return false;
     }
-        auto time_predict = std::chrono::steady_clock::now();
+    ///------------------------计算击打点----------------------------
     //将角度转化至[-PI,PI范围内]
     theta_offset = rangedAngleRad(theta_offset);
+    // cout<<theta_offset<<endl;
     //由offset生成欧拉角和旋转矩阵
     Eigen::Vector3d hit_point_world = {sin(theta_offset) * fan_length, (cos(theta_offset) - 1) * fan_length,0};
+    // cout<<hit_point_world<<endl;
     Eigen::Vector3d hit_point_cam = {0,0,0};
-    Eigen::Vector3d euler_rad = target.euler * (CV_PI / 180);
+    // Eigen::Vector3d euler_rad = target.euler;
+    Eigen::Vector3d euler_rad = target.euler;
     auto rotMat = eulerToRotationMatrix(euler_rad);
     //Pc = R * Pw + T
-    hit_point_cam = coordsolver.worldToCam((rotMat * hit_point_world) + target.armor3d_world, rmat_imu));
-
-//     auto predict_info = target.predict;
-
-    last_roi_center = center2d_src;
+    hit_point_world = (rotMat * hit_point_world) + target.armor3d_world;
+    hit_point_cam = coordsolver.worldToCam(hit_point_world, rmat_imu);
+    auto r_center_cam = coordsolver.worldToCam(mean_r_center, rmat_imu);
+    auto center2d_src = coordsolver.reproject(r_center_cam);
+    auto target2d = coordsolver.reproject(hit_point_cam);
     lost_cnt = 0;
-    is_last_target_exist = true;
+    last_roi_center = center2d_src;
+    is_last_target_exists = true;
 
 #ifdef SHOW_AIM_CROSS
         line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), Scalar(0,255,0), 1);
         line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), Scalar(0,255,0), 1);
 #endif //SHOW_FPS
 
-#ifdef SHOW_ALL_FANS
-    for (auto fan : fans)
-    {
-        if (fan.color == 0)
-            putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
-        if (fan.color == 1)
-            putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
-        for(int i = 0; i < 5; i++)
-            line(src.img, fan.apex2d[i % 5], fan.apex2d[(i + 1) % 5], Scalar(0,255,0), 1);
-        auto fan_center = coordsolver.reproject(armor.center3d_cam);
-        circle(src.img, fan_center, 4, {0, 0, 255}, 2);
-    }
-#endif //SHOW_ALL_FANS
-
 #ifdef SHOW_PREDICT
-    auto center2d_src = coordsolver.reproject(coordsolver.worldToCam(mean_r_center), rmat_imu);
-    auto target2d = coordsolver.reproject(coordsolver.worldToCam(hit_point_cam), rmat_imu);
     circle(src.img, center2d_src, 5, Scalar(0, 0, 255), 2);
     circle(src.img, target2d, 5, Scalar(0, 255, 0), 2);
 #endif //SHOW_PREDICT
@@ -368,9 +363,9 @@ bool Buff::run(Image &src,VisionData &data)
     fmt::print(fmt::fg(fmt::color::gray), "-----------INFO------------\n");
     fmt::print(fmt::fg(fmt::color::blue_violet), "Yaw: {} \n",angle[0]);
     fmt::print(fmt::fg(fmt::color::golden_rod), "Pitch: {} \n",angle[1]);
-    fmt::print(fmt::fg(fmt::color::green_yellow), "Dist: {} m\n",(float)target.center3d_cam.norm());
+    fmt::print(fmt::fg(fmt::color::green_yellow), "Dist: {} m\n",(float)target.armor3d_cam.norm());
 #endif //PRINT_TARGET_INFO
 
-    data = {(float)angle[1], (float)angle[0], (float)target.center3d_cam.norm(), 0, 1, 1, 1};
+    data = {(float)angle[1], (float)angle[0], (float)target.armor3d_cam.norm(), 0, 1, 1, 1};
     return true;
 }

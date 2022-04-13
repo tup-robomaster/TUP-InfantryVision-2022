@@ -80,14 +80,6 @@ PnPInfo CoordSolver::pnp(Point2f apex[4], Eigen::Matrix3d rmat_imu, int method)
     Eigen::Vector3d coord_camera;
     // cout<<points_world<<endl;
 
-    Mat rvec;
-    Mat rmat;
-    Mat tvec;
-    Eigen::Matrix3d rmat_eigen;
-    Eigen::Vector3d coord_world = {0, 0, 0};
-    Eigen::Vector3d tvec_eigen;
-    Eigen::Vector3d coord_camera;
-
     solvePnP(points_world, points_pic, intrinsic, dis_coeff, rvec, tvec, false, method);
 
     PnPInfo result;
@@ -96,13 +88,15 @@ PnPInfo CoordSolver::pnp(Point2f apex[4], Eigen::Matrix3d rmat_imu, int method)
     cv2eigen(rmat, rmat_eigen);
     cv2eigen(tvec, tvec_eigen);
     //转换至相机坐标系(左手坐标系)
-    // result.coord_cam = (rmat_eigen * coord_world) + tvec_eigen;
     result.coord_armor_cam = tvec_eigen;
     result.coord_R_cam = (rmat_eigen * R_center_world) + tvec_eigen;
-    result.coord_armor_world = camToWorld(result.coord_cam, rmat_imu);
-    result.coord_R_world = camToWorld(result.coord_cam, rmat_imu);
-    result.euler = rotationMatrixToEulerAngles(transform_ci.block(0,0,2,2) * rmat_imu * rmat_eigen);
-    
+    result.coord_armor_world = camToWorld(result.coord_armor_cam, rmat_imu);
+    result.coord_R_world = camToWorld(result.coord_armor_cam, rmat_imu);
+    // result.euler = rotationMatrixToEulerAngles(transform_ci.block(0,0,2,2) * rmat_imu * rmat_eigen);
+    Eigen::Matrix3d rmat_eigen_world = transform_ci.block(0, 0, 3, 3) * rmat_imu * rmat_eigen;
+    // result.euler = rotationMatrixToEulerAngles(rmat_eigen_world);
+    result.euler = rotationMatrixToEulerAngles(rmat_eigen_world);
+    // result.euler = rotationMatrixToEulerAngles(rmat_eigen);
     return result;
 }
 

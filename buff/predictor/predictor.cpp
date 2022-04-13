@@ -70,7 +70,7 @@ bool Predictor::predict(double speed, int dist, int timestamp, double &result)
         rotate_speed_sum += target_info.speed;
     params[3] = rotate_speed_sum / history_info.size();
 
-    //小符模式不需要额外计算
+    //TODO:小符模式不需要额外计算,也可增加判断，小符模式给定恒定转速进行击打
     //若为大符模式且函数未确定
     if (mode == 1 && !is_params_confirmed)
     {
@@ -93,7 +93,7 @@ bool Predictor::predict(double speed, int dist, int timestamp, double &result)
                     new CURVE_FITTING_COST ((float)(target_info.timestamp) / 1e3,
                                                                 (target_info.speed - params[3]) * rotate_sign)
                 ),
-                new ceres::CauchyLoss(0.5),
+                new ceres::CauchyLoss(0.7),
                 params_fitting                 // 待估计参数
             );
         }
