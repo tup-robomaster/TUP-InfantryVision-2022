@@ -20,7 +20,7 @@
 static constexpr int INPUT_W = 416;    // Width of input
 static constexpr int INPUT_H = 416;    // Height of input
 static constexpr int NUM_CLASSES = 8;  // Number of classes
-static constexpr int NUM_COLORS = 4;   // Number of color
+static constexpr int NUM_COLORS = 3;   // Number of color
 static constexpr int TOPK = 128;       // TopK
 
 static inline int argmax(const float *ptr, int len) 
@@ -314,7 +314,7 @@ Detector::~Detector()
 //TODO:change to your dir
 bool Detector::initModel(string path)
 {
-    ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "/home/tup/Desktop/TUP-InfantryVision-2022/.cache"}});
+    ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "/home/tup/Desktop/TUP-InfantryVision-2022-main/.cache"}});
     ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
     // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
     // Step 1. Read a model in OpenVINO Intermediate Representation (.xml and
@@ -363,6 +363,10 @@ bool Detector::detect(Mat &src,std::vector<Object>& objects)
 {
     if (src.empty())
     {
+        fmt::print(fmt::fg(fmt::color::red), "[DETECT] ERROR: 传入了空的src\n");
+#ifdef SAVE_AUTOAIM_LOG
+        LOG(ERROR) << "[DETECT] ERROR: 传入了空的src";
+#endif // SAVE_AUTOAIM_LOG
         return false;
     }
     cv::Mat pr_img = letterBoxResize(src,transfrom_matrix);
@@ -404,110 +408,28 @@ bool Detector::detect(Mat &src,std::vector<Object>& objects)
     decodeOutputs(net_pred, objects, transfrom_matrix, img_w, img_h);
     for (auto object = objects.begin(); object != objects.end(); ++object)
     {
+        //对候选框预测角点进行平均,降低误差
         if ((*object).pts.size() >= 8)
         {
             auto N = (*object).pts.size();
-            // cout<<N<<endl;
             cv::Point2f pts_final[4];
 
-            // for (int i = 0; i < N; i++)
-            // {
-            //     pts_final[i % 4]+=(*object).pts[i];
-            // }
-
-            // for (int i = 0; i < 4; i++)
-            // {
-            //     pts_final[i].x = pts_final[i].x / (N / 4);
-            //     pts_final[i].y = pts_final[i].y / (N / 4);
-            // }
-
-            fftw_complex *in, *tmp, *out;
-            fftw_plan p_fft, p_ifft;
-            in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
-            tmp = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
-            out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
-            p_fft = fftw_plan_dft_1d(N, in, tmp, FFTW_FORWARD, FFTW_ESTIMATE);
-            p_ifft = fftw_plan_dft_1d(N, tmp, out, FFTW_BACKWARD, FFTW_ESTIMATE);
-
-            //FFT for x axis data
             for (int i = 0; i < N; i++)
             {
-                in[i][0] = (*object).pts[i].x;
-                // cout<<"in "<<in[i][0]<<endl;
-                in[i][1] = 0;
+                pts_final[i % 4]+=(*object).pts[i];
             }
-            fftw_execute(p_fft);
-            for (int i = 0; i < N; i++)
-            {
-                //Normalize data
-                tmp[i][0] /=N;
-                tmp[i][1] /=N;
-                // cout<<tmp[i][0]<<" + "<<tmp[i][1]<<endl;
-                //Filter
-                if (abs(tmp[i][0]) < 2)
-                {
-                    tmp[i][0] = 0;
-                    tmp[i][1] = 0;
-                }
-                else
-                {
-                    continue;
-                }
-            }
-            fftw_execute(p_ifft);
-            //Get final pts.x
+
             for (int i = 0; i < 4; i++)
             {
-                // cout<<out[i][0]<<endl;
-                pts_final[i].x = out[i][0];
+                pts_final[i].x = pts_final[i].x / (N / 4);
+                pts_final[i].y = pts_final[i].y / (N / 4);
             }
-
-            //FFT for y axis data
-            for (int i = 0; i < N; i++)
-            {
-                in[i][0] = (*object).pts[i].y;
-                in[i][1] = 0;
-            }
-            fftw_execute(p_fft);
-            for (int i = 0; i < N; i++)
-            {
-                //Normalize data
-                tmp[i][0] /=N;
-                tmp[i][1] /=N;
-                //Filter
-                if (abs(tmp[i][0]) < 2)
-                {
-                    tmp[i][0] = 0;
-                    tmp[i][1] = 0;
-                }
-                else
-                {
-                    continue;
-                }
-            }
-            fftw_execute(p_ifft);
-            //Get final pts.y
-            for (int i = 0; i < 4; i++)
-            {
-                pts_final[i].y = out[i][0];
-            }
-            // cout<<(*object).apex[0]<<pts_final[0]<<endl;
-            // cout<<(*object).apex[1]<<pts_final[1]<<endl;
-            // cout<<(*object).apex[2]<<pts_final[2]<<endl;
-            // cout<<(*object).apex[3]<<pts_final[3]<<endl;
-            // cout<<endl;
 
             (*object).apex[0] = pts_final[0];
             (*object).apex[1] = pts_final[1];
             (*object).apex[2] = pts_final[2];
             (*object).apex[3] = pts_final[3];
 
-            //Destroy variables and plan
-            fftw_free(in);
-            fftw_free(tmp);
-            fftw_free(out);
-            fftw_destroy_plan(p_fft);
-            fftw_destroy_plan(p_ifft);
         }
         (*object).area = (int)(calcTetragonArea((*object).apex));
     }

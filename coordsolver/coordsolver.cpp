@@ -264,7 +264,7 @@ Eigen::Vector3d CoordSolver::camToWorld(Eigen::Vector3d &point_camera, Eigen::Ma
     Eigen::Vector3d point_world;
 
     point_camera_tmp << point_camera[0], point_camera[1], point_camera[2], 1;
-    point_imu_tmp = transform_ci * point_camera_tmp;
+    point_imu_tmp = transform_ic * point_camera_tmp;
     point_imu << point_imu_tmp[0], point_imu_tmp[1], point_imu_tmp[2];
     point_imu += t_iw;
 
@@ -288,7 +288,7 @@ Eigen::Vector3d CoordSolver::worldToCam(Eigen::Vector3d &point_world, Eigen::Mat
     point_imu = rmat.transpose() * point_world;
     point_imu -= t_iw;
     point_imu_tmp << point_imu[0], point_imu[1], point_imu[2], 1;
-    point_camera_tmp = transform_ic * point_imu_tmp;
+    point_camera_tmp = transform_ci * point_imu_tmp;
     point_camera << point_camera_tmp[0], point_camera_tmp[1], point_camera_tmp[2];
 
     return point_camera;

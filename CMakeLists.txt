@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(Infantry_Vision)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++17 -Os -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++17 -Os -pthread -g")
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++17 -pthread")
 find_package(OpenCV 4.5.0)
 set(CMAKE_PREFIX_PATH /opt/intel/openvino_2021.4.752/deployment_tools/inference_engine/share)
@@ -14,6 +14,7 @@ find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(Ceres REQUIRED COMPONENTS EigenSparse)
 find_package(fmt REQUIRED)
+find_package(glog REQUIRED)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIRS})
@@ -33,7 +34,6 @@ add_executable(Infantry_Vision main.cpp
             ${PROJECT_SOURCE_DIR}/autoaim/autoaim.h
             ${PROJECT_SOURCE_DIR}/autoaim/detector/inference.cpp
             ${PROJECT_SOURCE_DIR}/autoaim/detector/inference.h
-            ${PROJECT_SOURCE_DIR}/autoaim//debug.h
             ${PROJECT_SOURCE_DIR}/debug.h
             ${PROJECT_SOURCE_DIR}/general/general.cpp
             ${PROJECT_SOURCE_DIR}/general/general.h
@@ -69,7 +69,7 @@ add_executable(Infantry_Vision main.cpp
 #                         ../general/general.h
 #                         )
 target_link_libraries(Infantry_Vision ${OpenCV_LIBRARIES} ${InferenceEngine_LIBRARIES} ${Eigen3_LIBRARIES}
-                         yaml-cpp gxiapi Ceres::ceres fftw3 fmt::fmt)
+                         yaml-cpp gxiapi Ceres::ceres fftw3 fmt::fmt glog)
 
 # set(LINK_DIR /opt/intel/openvino_2021/deployment_tools/inference_engine/lib/intel64)
 

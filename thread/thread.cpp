@@ -17,7 +17,7 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-    DaHeng.SetExposureTime(6000);
+    DaHeng.SetExposureTime(8000);
     // 设置
     DaHeng.SetGAIN(3, 16);
     // 是否启用自动白平衡7
@@ -37,7 +37,9 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
 #endif //USING_DAHENG
 
 #ifdef USING_USB_CAMERA
-    VideoCapture cap("/home/tup/Desktop/red.avi");
+    VideoCapture cap(0);
+    fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Open USB Camera success\n");
+    auto time_start = std::chrono::steady_clock::now();
 #endif //USING_USB_CAMERA
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
 #ifdef SAVE_VIDEO
@@ -52,6 +54,7 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
     std::string now_string(now);
     std::string path(std::string(storage_location + now_string).append(".avi"));
     auto writer = cv::VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 60.0, cv::Size(1280, 1024));    // Avi form
+    LOG(INFO) << "Save video to " << path;
 #endif //SAVE_VIDEO
     while(1)
     {
@@ -64,6 +67,7 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
         {
             goto start_get_img;
             fmt::print(fmt::fg(fmt::color::red), "[CAMERA] GetMat false return\n");
+            LOG(ERROR) << "[CAMERA] GetMat false return";
         }
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // src.timestamp = DaHeng.Get_TIMESTAMP();
@@ -72,11 +76,15 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
 #ifdef USING_USB_CAMERA
         cap >> src.img;
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
-        waitKey(30);
 #endif //USING_USB_CAMERA
 
         if (src.img.empty())
+        {
+#ifdef SAVE_LOG_ALL
+            LOG(ERROR) << "[CAMERA] Get empty image";
+#endif //SAVE_LOG_ALL
             continue;
+        }
 
 #ifdef SAVE_VIDEO
         writer.write(src.img);
@@ -97,6 +105,7 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
         double y = quat.y();
         double z = quat.z();
         auto delta_t = (src.timestamp - imu_status.timestamp) / 1000.f;
+        // cout<<delta_t<<endl;
         delta_quat_vec << -gyro[0] * x - gyro[1] * y - gyro[2] * z,
                     gyro[0] * w - gyro[1] * z + gyro[2] * y,
                     gyro[0] * z + gyro[1] * w - gyro[2] * x,
@@ -107,7 +116,7 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
         // cout<<endl;
         quat_vec += 0.5 * delta_t * delta_quat_vec; 
         src.imu = Eigen::Quaterniond(quat_vec).normalized();
-        src.imu = imu_status.quat;
+        // src.imu = imu_status.quat;
 
         // cout<<delta_t<<endl;
 #endif //USING_IMU
@@ -175,8 +184,9 @@ bool dataReceiver(SerialPort &serial, MessageFilter<IMUData> &receive_factory, s
             sleep(5e-3);
             continue;
         }
-        
-        serial.get_Mode();
+        //数据读取不成功进行循环
+        while (!serial.get_Mode())
+            ;
         auto time_cap = std::chrono::steady_clock::now();
         auto timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // cout<<"Quad: "<<serial.quat[0]<<" "<<serial.quat[1]<<" "<<serial.quat[2]<<" "<<serial.quat[3]<<" "<<endl;
@@ -186,86 +196,24 @@ bool dataReceiver(SerialPort &serial, MessageFilter<IMUData> &receive_factory, s
         Eigen::Vector3d gyro = {serial.gyro[0],serial.gyro[1],serial.gyro[2]};;
         IMUData imu_status = {acc, gyro, quat, timestamp};
         receive_factory.produce(imu_status, timestamp);
-        // Eigen::Vector3d vec = quad.toRotationMatrix().eulerAngles(2,1,0);
+        // Eigen::Vector3d vec = quat.toRotationMatrix().eulerAngles(2,1,0);
         // cout<<"Euler : "<<vec[0] * 180.f / CV_PI<<" "<<vec[1] * 180.f / CV_PI<<" "<<vec[2] * 180.f / CV_PI<<endl;
         // cout<<"transmitting..."<<endl;
     }
     return true;
 }
-
-bool serialWatcher(SerialPort &serial)
-{
-    while(1)
-    {
-        sleep(0.1);
-        //检测文件夹是否存在或串口需要初始化
-        if (access(serial.device.path.c_str(),F_OK) == -1 || serial.need_init)
-        {
-            serial.need_init = true;
-            serial.initSerialPort();
-        }
-
-    }
-}
 #endif //USING_IMU_C_BOARD
 
-
-#ifdef USING_IMU_WIT
-bool dataReceiver(IMUSerial &serial_imu, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
-{
-    while(1)
-    {
-        //若串口离线则跳过数据发送
-        if (serial_imu.need_init == true)
-        {
-            // cout<<"offline..."<<endl;
-            continue;
-        }
-        if (!serial_imu.readData())
-        {
-            continue;
-        }
-        auto time_cap = std::chrono::steady_clock::now();
-        auto timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
-        if (!serial_imu.is_quat_initialized)
-        {
-            continue;
-        }
-        Eigen::Quaterniond quat = serial_imu.quat;
-        Eigen::Vector3d acc = serial_imu.acc;
-        Eigen::Vector3d gyro =serial_imu.gyro;
-        IMUData imu_status = {acc, gyro, quat, timestamp};
-
-        receive_factory.produce(imu_status, timestamp);
-        Eigen::Vector3d vec = quat.toRotationMatrix().eulerAngles(2,1,0);
-    }
-    return true;
-}
-
-bool serialWatcher(SerialPort &serial, IMUSerial &serial_imu)
-{
-    while(1)
-    {
-        sleep(0.1);
-        //检测文件夹是否存在或串口需要初始化
-        if (access(serial.device.path.c_str(),F_OK) == -1 || serial.need_init)
-        {
-            serial.need_init = true;
-            serial.initSerialPort();
-        }
-        if (access(serial_imu.device.path.c_str(),F_OK) == -1 || serial_imu.need_init)
-        {
-            serial_imu.need_init = true;
-            serial_imu.initSerialPort();
-        }
-
-    }
-}
-#endif //USING_WIT_IMU
-
-#ifndef USING_IMU
 bool serialWatcher(SerialPort &serial)
 {
+    int last = 0;
+
+#ifdef DEBUG_WITHOUT_COM 
+    #ifdef SAVE_TRANSMIT_LOG
+    LOG(WARNING)<<"[SERIAL] Warning: You are not using Serial port";
+    #endif //SAVE_TRANSMIT_LOG
+#endif // DEBUG_WITHOUT_COM
+
     while(1)
     {
         sleep(0.1);
@@ -273,9 +221,89 @@ bool serialWatcher(SerialPort &serial)
         if (access(serial.device.path.c_str(),F_OK) == -1 || serial.need_init)
         {
             serial.need_init = true;
+#ifdef DEBUG_WITHOUT_COM
+            int now = clock()/CLOCKS_PER_SEC;
+            if (now -last > 10)
+            {
+                last = now;
+                fmt::print(fmt::fg(fmt::color::green), "[SERIAL] Warning: You are not using Serial port\n");
+            }
+            serial.withoutSerialPort();
+#else
             serial.initSerialPort();
+#endif //DEBUG_WITHOUT_COM
         }
 
     }
 }
-#endif //USING_IMU
+
+
+// #ifdef USING_IMU_WIT
+// bool dataReceiver(IMUSerial &serial_imu, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
+// {
+//     while(1)
+//     {
+//         //若串口离线则跳过数据发送
+//         if (serial_imu.need_init == true)
+//         {
+//             // cout<<"offline..."<<endl;
+//             continue;
+//         }
+//         if (!serial_imu.readData())
+//         {
+//             continue;
+//         }
+//         auto time_cap = std::chrono::steady_clock::now();
+//         auto timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
+//         if (!serial_imu.is_quat_initialized)
+//         {
+//             continue;
+//         }
+//         Eigen::Quaterniond quat = serial_imu.quat;
+//         Eigen::Vector3d acc = serial_imu.acc;
+//         Eigen::Vector3d gyro =serial_imu.gyro;
+//         IMUData imu_status = {acc, gyro, quat, timestamp};
+
+//         receive_factory.produce(imu_status, timestamp);
+//         Eigen::Vector3d vec = quat.toRotationMatrix().eulerAngles(2,1,0);
+//     }
+//     return true;
+// }
+
+// bool serialWatcher(SerialPort &serial, IMUSerial &serial_imu)
+// {
+//     while(1)
+//     {
+//         sleep(0.1);
+//         //检测文件夹是否存在或串口需要初始化
+//         if (access(serial.device.path.c_str(),F_OK) == -1 || serial.need_init)
+//         {
+//             serial.need_init = true;
+//             serial.initSerialPort();
+//         }
+//         if (access(serial_imu.device.path.c_str(),F_OK) == -1 || serial_imu.need_init)
+//         {
+//             serial_imu.need_init = true;
+//             serial_imu.initSerialPort();
+//         }
+
+//     }
+// }
+// #endif //USING_WIT_IMU
+
+// #ifndef USING_IMU
+// bool serialWatcher(SerialPort &serial)
+// {
+//     while(1)
+//     {
+//         sleep(0.1);
+//         //检测文件夹是否存在或串口需要初始化
+//         if (access(serial.device.path.c_str(),F_OK) == -1 || serial.need_init)
+//         {
+//             serial.need_init = true;
+//             serial.initSerialPort();
+//         }
+
+//     }
+// }
+// #endif //USING_IMU

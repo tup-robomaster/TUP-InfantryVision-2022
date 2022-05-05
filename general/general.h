@@ -18,6 +18,9 @@
 #include <fmt/format.h>
 #include <fmt/color.h>
 
+#include <glog/logging.h>
+
+#include "../debug.h"
 
 using namespace std;
 using namespace cv;

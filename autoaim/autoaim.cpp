@@ -1,9 +1,7 @@
 #include "autoaim.h"
-#include "debug.h"
 
 using namespace cv;
 using namespace std;
-
 
 #ifdef ASSIST_LABEL
 int cnt = 0;
@@ -263,7 +261,7 @@ bool Autoaim::run(Image &src,VisionData &data)
     auto time_start=std::chrono::steady_clock::now();
     vector<Object> objects;
     vector<Armor> armors;
-    auto input = src.img.clone();
+    auto input = src.img;
 
 #ifdef USING_IMU
     Eigen::Matrix3d rmat_imu = src.imu.toRotationMatrix();
@@ -280,8 +278,8 @@ bool Autoaim::run(Image &src,VisionData &data)
     if (!detector.detect(input, objects))
     {
 #ifdef SHOW_AIM_CROSS
-        line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), Scalar(0,255,0), 1);
-        line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), Scalar(0,255,0), 1);
+        line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), {0,255,0}, 1);
+        line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), {0,255,0}, 1);
 #endif //SHOW_AIM_CROSS
 #ifdef SHOW_IMG
         namedWindow("dst",0);
@@ -336,6 +334,8 @@ bool Autoaim::run(Image &src,VisionData &data)
             armor.key = "R" + to_string(object.cls);
         if (object.color == 2)
             armor.key = "N" + to_string(object.cls);
+        if (object.color == 3)
+            armor.key = "P" + to_string(object.cls);
         memcpy(armor.apex2d, object.apex, 4 * sizeof(cv::Point2f));
         for(int i = 0; i < 4; i++)
         {
@@ -457,7 +457,7 @@ bool Autoaim::run(Image &src,VisionData &data)
             //删除元素后迭代器会失效，需先行获取下一元素
             auto next = iter;
             // cout<<(*iter).second.last_timestamp<<"  "<<src.timestamp<<endl;
-            if ((*iter).second.last_timestamp != src.timestamp)
+            if ((*iter).second.last_timestamp - src.timestamp > max_delta_t)
                 next = trackers_map.erase(iter);
             else
                 ++next;
@@ -700,19 +700,21 @@ bool Autoaim::run(Image &src,VisionData &data)
     is_last_target_exists = true;
 
 #ifdef SHOW_AIM_CROSS
-        line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), Scalar(0,255,0), 1);
-        line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), Scalar(0,255,0), 1);
-#endif //SHOW_FPS
+        line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), {0,255,0}, 1);
+        line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), {0,255,0}, 1);
+#endif //SHOW_AIM_CROSS
 
 #ifdef SHOW_ALL_ARMOR
     for (auto armor :armors)
     {
         if (armor.color == 0)
-            putText(src.img, fmt::format("B{}",armor.id),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, {255, 0, 0}, 2);
+            putText(src.img, fmt::format("B{}",armor.id),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, {255, 100, 100}, 2);
         if (armor.color == 1)
             putText(src.img, fmt::format("R{}",armor.id),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, {0, 0, 255}, 2);
         if (armor.color == 2)
             putText(src.img, fmt::format("N{}",armor.id),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, {255, 255, 255}, 2);
+        if (armor.color == 3)
+            putText(src.img, fmt::format("P{}",armor.id),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, {255, 100, 255}, 2);
         for(int i = 0; i < 4; i++)
             line(src.img, armor.apex2d[i % 4], armor.apex2d[(i + 1) % 4], {0,255,0}, 1);
         auto armor_center = coordsolver.reproject(armor.center3d_cam);
@@ -727,6 +729,10 @@ bool Autoaim::run(Image &src,VisionData &data)
 
     auto angle = coordsolver.getAngle(aiming_point,rmat_imu);
     auto time_predict = std::chrono::steady_clock::now();
+
+    double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
+    double dr_infer_ms = std::chrono::duration<double,std::milli>(time_infer - time_crop).count();
+    double dr_predict_ms = std::chrono::duration<double,std::milli>(time_predict - time_infer).count();
     double dr_full_ms = std::chrono::duration<double,std::milli>(time_predict - time_start).count();
 
 #ifdef SHOW_FPS
@@ -734,6 +740,7 @@ bool Autoaim::run(Image &src,VisionData &data)
 #endif //SHOW_FPS
 
 #ifdef SHOW_IMG
+    namedWindow("dst",0);
     imshow("dst",src.img);
     waitKey(1);
 #endif //SHOW_IMG
@@ -742,9 +749,6 @@ bool Autoaim::run(Image &src,VisionData &data)
     //降低输出频率，避免影响帧率
     if (src.timestamp % 10 == 0)
     {
-        double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
-        double dr_infer_ms = std::chrono::duration<double,std::milli>(time_infer - time_crop).count();
-        double dr_predict_ms = std::chrono::duration<double,std::milli>(time_predict - time_infer).count();
         fmt::print(fmt::fg(fmt::color::gray), "-----------TIME------------\n");
         fmt::print(fmt::fg(fmt::color::blue_violet), "Crop: {} ms\n"   ,dr_crop_ms);
         fmt::print(fmt::fg(fmt::color::golden_rod), "Infer: {} ms\n",dr_infer_ms);
@@ -761,6 +765,10 @@ bool Autoaim::run(Image &src,VisionData &data)
     fmt::print(fmt::fg(fmt::color::white), "Target: {} \n",target.key);
     fmt::print(fmt::fg(fmt::color::orange_red), "Is Spinning: {} \n",is_target_spinning);
 #endif //PRINT_TARGET_INFO
+#ifdef SAVE_AUTOAIM_LOG
+    LOG(INFO) << "Crop: " << dr_crop_ms << " ms" << " Infer: " << dr_infer_ms << " ms" << " Predict: " << dr_predict_ms << " ms" << " Total: " << dr_full_ms << " ms";
+    LOG(INFO) << "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)target.center3d_cam.norm() << " Target: " << target.key << " Is Spinning: " << is_target_spinning;
+#endif //SAVE_AUTOAIM_LOG
 
     data = {(float)angle[1], (float)angle[0], (float)target.center3d_cam.norm(), 0, 1, is_target_spinning, 1};
     return true;

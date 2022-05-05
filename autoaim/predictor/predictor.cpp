@@ -54,8 +54,8 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
     auto t1=std::chrono::steady_clock::now();
     TargetInfo target = {xyz, (int)xyz.norm(), timestamp};
     
-    //当队列长度为0不预测，仅更新队列
-    if (history_info.size() == 0)
+    //当队列长度小于2，仅更新队列
+    if (history_info.size() < 2)
     {
         history_info.push_back(target);
         last_target = target;
@@ -67,10 +67,13 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
     auto delta_time_estimate = (last_dist / bullet_speed) * 1e3 + delay;
     auto time_estimate = delta_time_estimate + history_info.back().timestamp - history_info.front().timestamp;
     //如速度过大,可认为为噪声干扰,进行滑窗滤波滤除
+    //FIXME:测距噪声较大，暂未找到较好的方法滤除
     if (((d_xyz.norm() / delta_t) * 1e3) >= max_v)
     {
-        auto filtered_xyz = shiftWindowFilter(history_info.size() - window_size - 2);
+        history_info.push_back(target);
+        auto filtered_xyz = shiftWindowFilter(history_info.size() - window_size - 1);
         target = {filtered_xyz, (int)filtered_xyz.norm(), timestamp};
+        history_info.pop_back();
     }
 
     //当队列长度不足时不使用拟合
@@ -92,6 +95,7 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
         history_info.push_back(target);
         fitting_disabled = false;
     }
+    
 #ifdef DISABLE_FITTING
     fitting_disabled = true;
 #endif //DISABLE_FITTING
@@ -140,9 +144,9 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
     if (cnt < 2000)
     {
         auto x = cnt * 5;
-        cv::circle(pic_x,cv::Point2f((timestamp) / 10,xyz[0] * 100 + 200),1,cv::Scalar(0,0,255),1);
-        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[0] * 100 + 200),1,cv::Scalar(0,255,0),1);
-        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[0] * 100+ 200),1,cv::Scalar(255,255,0),1);
+        cv::circle(pic_x,cv::Point2f((timestamp) / 10,xyz[0] * 100 + 400),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[0] * 100 + 400),1,cv::Scalar(0,255,0),1);
+        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[0] * 100 + 400),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result[0]+ 200),1,cv::Scalar(255,255,255),1);
 
 
@@ -151,8 +155,8 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
         cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[1] * 100 + 200),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result[1]+ 200),1,cv::Scalar(255,255,255),1);
 
-        cv::circle(pic_z,cv::Point2f((timestamp) / 10,xyz[2] * 100),1,cv::Scalar(0,0,255),1);
-        cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[2] * 100),1,cv::Scalar(0,255,0),1);
+        cv::circle(pic_z,cv::Point2f((timestamp) / 10,xyz[2] * 100 + 200),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[2] * 100 + 200),1,cv::Scalar(0,255,0),1);
         cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[2] * 100),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result[2]),1,cv::Scalar(255,255,255),1);
         cnt++;
@@ -185,6 +189,9 @@ inline Eigen::Vector3d Predictor::shiftWindowFilter(int start_idx=0)
             sum += history_info.at(start_idx + i + j).xyz;
         total_sum += sum / window_size;
     }
+    // cout<<history_info.back().xyz<<endl;
+    // cout<<total_sum / max_iter<<endl;
+    // cout<<endl;
     return total_sum / max_iter;
 }
 
@@ -203,7 +210,10 @@ PredictStatus Predictor::predict_pf_run(TargetInfo target, Vector3d &result, int
     Eigen::VectorXd measure_vy (1);
     Eigen::VectorXd measure_vz (1);
 
-    auto v_xyz = (target.xyz - last_target.xyz) / (target.timestamp - last_target.timestamp) * 1e3;
+    //取前两帧位置装甲板，拉长时间，以求降低高频噪声影响
+    auto before_target = history_info.at(history_info.size() - 3);
+
+    auto v_xyz = (target.xyz - before_target.xyz) / (target.timestamp - before_target.timestamp) * 1e3;
 
     measure_vx << v_xyz[0];
     measure_vy <<  v_xyz[1];
@@ -218,13 +228,13 @@ PredictStatus Predictor::predict_pf_run(TargetInfo target, Vector3d &result, int
 
 
     result << result_vx[0], result_vy[0], result_vz[0];
-    // cout<<result_vz[0]<<endl;
 
     //异步修正
     auto correct_x = std::async(std::launch::deferred, [&, measure_vx](){pf_x.correct(measure_vx);});
     auto correct_y = std::async(std::launch::deferred, [&, measure_vy](){pf_y.correct(measure_vy);});
     auto correct_z = std::async(std::launch::deferred, [&, measure_vz](){pf_z.correct(measure_vz);});
 
+    // cout<<result.norm()<<endl;
     result = result  * (time_estimated / 1000.f) + target.xyz;
 
     is_available.xyz_status[0] = pf_x.is_ready;

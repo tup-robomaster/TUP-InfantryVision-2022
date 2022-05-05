@@ -12,11 +12,11 @@ SerialPort::SerialPort(const string ID, const int BAUD)
     // system(std::string("root@233").c_str());
     initSerialPort();
 #ifdef DEBUG_WITHOUT_COM
-    Serial:
-    if(not initSerialPort()){
-        goto Serial;
-    };
+    withoutSerialPort();
+#else
+    initSerialPort();
 #endif //DEBUG_WITHOUT_COM
+}/DEBUG_WITHOUT_COM
 }
 
 /**
@@ -102,16 +102,13 @@ float SerialPort::exchange_data(unsigned char *data)
 /**
  *@brief   获取模式命令
  */
-
 bool SerialPort::get_Mode()
 {
     int bytes;
     char *name = ttyname(fd);
-    if (name = NULL)printf("tty is null\n");
-    //if (name != NULL)printf("device:%s\n",name);
+    if (name = NULL) printf("tty is null\n");
     int result = ioctl(fd, FIONREAD, &bytes);
-    if (result == -1)return false;
-
+    if (result == -1) return false;
 
     if (bytes == 0)
     {
@@ -123,91 +120,13 @@ bool SerialPort::get_Mode()
 
     if (rdata[0] == 0xA5 && Verify_CRC8_Check_Sum(rdata, 3))
     {
-        // f1[0] = rdata[3];
-        // f1[1] = rdata[4];
-        // f1[2] = rdata[5];
-        // f1[3] = rdata[6];
-        // f2[0] = rdata[7];
-        // f2[1] = rdata[8];
-        // f2[2] = rdata[9];
-        // f2[3] = rdata[10];
-        // f3[0] = rdata[11];
-        // f3[1] = rdata[12];
-        // f3[2] = rdata[13];
-        // f3[3] = rdata[14];
-        // f4[0] = rdata[15];
-        // f4[1] = rdata[16];
-        // f4[2] = rdata[17];
-        // f4[3] = rdata[18];
-
-        // quat[0] = exchange_data(f1);
-        // quat[1] = exchange_data(f2);
-        // quat[2] = exchange_data(f3);
-        // quat[3] = exchange_data(f4);
+        mode = rdata[1];
         getQuat(&rdata[3]);
         getGyro(&rdata[19]);
         getAcc(&rdata[31]);
-
-	//TODO:将输出更变为mode和quat
+        Verify_CRC16_Check_Sum(rdata,45);
+        //TODO:接收下位机发送的弹速
     }
-    return true;
-}
-/**
- * @brief 解算四元数数据
- * 
- * @param data 四元数首地址指针
- * @return
- */
-bool SerialPort::getQuat(unsigned char *data)
-{
-    unsigned char* f1 = &data[0];
-    unsigned char* f2 = &data[4];
-    unsigned char* f3 = &data[8];
-    unsigned char* f4 = &data[12];
-
-    quat[0] = exchange_data(f1);
-    quat[1] = exchange_data(f2);
-    quat[2] = exchange_data(f3);
-    quat[3] = exchange_data(f4);
-
-    return true;
-}
-
-/**
- * @brief 解算角速度数据
- * 
- * @param data 角速度首地址指针
- * @return
- */
-bool SerialPort::getGyro(unsigned char *data)
-{    
-    unsigned char* f1 = &data[4];
-    unsigned char* f2 = &data[8];
-    unsigned char* f3 = &data[12];
-
-    gyro[0] = exchange_data(f1);
-    gyro[1] = exchange_data(f2);
-    gyro[2] = exchange_data(f3);
-
-    return true;
-}
-
-/**
- * @brief 解算加速度数据
- * 
- * @param data 加速度首地址指针
- * @return
- */
-bool SerialPort::getAcc(unsigned char *data)
-{
-    unsigned char* f1 = &data[4];
-    unsigned char* f2 = &data[8];
-    unsigned char* f3 = &data[12];
-
-    gyro[0] = exchange_data(f1);
-    gyro[1] = exchange_data(f2);
-    gyro[2] = exchange_data(f3);
-
     return true;
 }
 
@@ -253,9 +172,27 @@ bool SerialPort::initSerialPort()
 		exit(0);
     }
     printf("Open successed\n");
+    LOG(INFO) << "Open "<< alias << " successed";
 
     last_fd = fd;
     need_init = false;
+    return true;
+}
+
+// TODO: finish visual com port
+/**
+ *@brief   初始化数据
+ *@param  fd       类型  int  打开的串口文件句柄
+ *@param  speed    类型  int  波特率
+
+ *@param  databits 类型  int  数据位   取值 为 7 或者8
+
+ *@param  stopbits 类型  int  停止位   取值为 1 或者2
+ *@param  parity   类型  int  效验类型 取值为N,E,O,S
+ *@param  portchar 类型  char* 串口路径
+ */
+bool SerialPort::withoutSerialPort()
+{
     return true;
 }
 
@@ -401,75 +338,6 @@ int SerialPort::set_Bit()
     return (TRUE);
 }
 
-
-////
-//int SerialPort::set_disp_mode(int option)
-//{
-//   int err;
-//   struct termios term;
-//   if(tcgetattr(fd,&term)==-1){
-//     perror("Cannot get the attribution of the terminal");
-//     return 1;
-//   }
-//   if(option)
-//        term.c_lflag|=ECHOFLAGS;   //(ECHO | ECHOE | ECHOK | ECHONL)
-//   else
-//        term.c_lflag &=~ECHOFLAGS;
-//   err=tcsetattr(fd,TCSAFLUSH,&term);
-//   if(err==-1 && err==EINTR){
-//        perror("Cannot set the attribution of the terminal");
-//        return 1;
-//   }
-//   return 0;
-//}
-
-
-////////////////////////////////////////////////////////////
-/**
- *@brief   转换数据并发送
-
- *@param  p        类型  int  x坐标
- *@param  yaw      类型  int  y坐标
- *@param  dis      类型  int  dis  距离
- *@param  unsign   类型  int  空白（可添加数据）
- */
-void SerialPort::TransformDataFirst(int Xpos, int Ypos, int dis)
-{
-
-    Tdata[0] = 0xA5;
-    Tdata[1] = CmdID0;   //command
-
-	Append_CRC8_Check_Sum(Tdata, 3); //CRC8 校验
-
-
-	for (int i = 0; i < 4; i++)
-	{
-		Tdata[3 + i] = Xpos % 10;
-		Xpos = (Xpos - Xpos % 10) / 10;
-    }
-
-	for (int i = 0; i < 4; i++)
-	{
-		Tdata[7 + i] = Ypos % 10;
-		Ypos = (Ypos - Ypos % 10) / 10;
-    }
-
-	for (int i = 0; i < 4; i++)
-	{
-		Tdata[11 + i] = dis % 10;
-		dis = (dis - dis % 10) / 10;
-    }
-
-	Tdata[15] = 0;//通过此端口向下位机发送是否识别到敌方装甲板或能量机关
-    Tdata[16] = 0;
-    Tdata[17] = 0;
-    Tdata[18] = 0;
-    Tdata[19] = 0;
-
-	Append_CRC16_Check_Sum(Tdata, 22); //CRC16校验
-}
-
-
 /**
  *@brief   转换数据并发送
  *@param   data   类型  VisionData(union)  包含pitch,yaw,distance
@@ -508,6 +376,80 @@ void SerialPort::TransformData(const VisionData &data)
 	Append_CRC16_Check_Sum(Tdata, 22);
 
 }
+
+/////////////////////////////////////////////
+/**
+ * @brief 将4个uchar转换为float
+ * 
+ * @param data data首地址指针
+ * @return
+ */
+float SerialPort::exchange_data(unsigned char *data)
+{
+    float float_data;
+    float_data = *((float*)data);
+    return float_data;
+};
+
+/**
+ * @brief 解算四元数数据
+ * 
+ * @param data 四元数首地址指针
+ * @return
+ */
+bool SerialPort::getQuat(unsigned char *data)
+{
+    unsigned char* f1 = &data[0];
+    unsigned char* f2 = &data[4];
+    unsigned char* f3 = &data[8];
+    unsigned char* f4 = &data[12];
+
+    quat[0] = exchange_data(f1);
+    quat[1] = exchange_data(f2);
+    quat[2] = exchange_data(f3);
+    quat[3] = exchange_data(f4);
+
+    return true;
+}
+
+/**
+ * @brief 解算角速度数据
+ * 
+ * @param data 角速度首地址指针
+ * @return
+ */
+bool SerialPort::getGyro(unsigned char *data)
+{    
+    unsigned char* f1 = &data[4];
+    unsigned char* f2 = &data[8];
+    unsigned char* f3 = &data[12];
+
+    gyro[0] = exchange_data(f1);
+    gyro[1] = exchange_data(f2);
+    gyro[2] = exchange_data(f3);
+
+    return true;
+}
+
+/**
+ * @brief 解算加速度数据
+ * 
+ * @param data 加速度首地址指针
+ * @return
+ */
+bool SerialPort::getAcc(unsigned char *data)
+{
+    unsigned char* f1 = &data[4];
+    unsigned char* f2 = &data[8];
+    unsigned char* f3 = &data[12];
+
+    gyro[0] = exchange_data(f1);
+    gyro[1] = exchange_data(f2);
+    gyro[2] = exchange_data(f3);
+
+    return true;
+}
+//////////////////////////////////////////////
 
 //发送数据函数
 void SerialPort::send()
