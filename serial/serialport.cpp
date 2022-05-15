@@ -16,7 +16,6 @@ SerialPort::SerialPort(const string ID, const int BAUD)
 #else
     initSerialPort();
 #endif //DEBUG_WITHOUT_COM
-}/DEBUG_WITHOUT_COM
 }
 
 /**
@@ -91,13 +90,6 @@ Device SerialPort::setDeviceByID(std::vector<Device> devices)
     return Device();
 }
 
-float SerialPort::exchange_data(unsigned char *data)
-{
-    float float_data;
-    float_data = *((float*)data);
-    return float_data;
-};
-
 ////////////////////////////////////////////////////////////////
 /**
  *@brief   获取模式命令
@@ -108,12 +100,13 @@ bool SerialPort::get_Mode()
     char *name = ttyname(fd);
     if (name = NULL) printf("tty is null\n");
     int result = ioctl(fd, FIONREAD, &bytes);
-    if (result == -1) return false;
+    if (result == -1)
+        return false;
 
     if (bytes == 0)
     {
     //    cout << "缓冲区为空" << endl;
-        return true;
+        return false;
     }
     bytes = read(fd, rdata, 45);
     // cout<<bytes<<endl;
@@ -172,7 +165,7 @@ bool SerialPort::initSerialPort()
 		exit(0);
     }
     printf("Open successed\n");
-    LOG(INFO) << "Open "<< alias << " successed";
+    LOG(INFO) << "Open "<< alias << " successed"<<endl;
 
     last_fd = fd;
     need_init = false;
@@ -408,7 +401,7 @@ bool SerialPort::getQuat(unsigned char *data)
     quat[1] = exchange_data(f2);
     quat[2] = exchange_data(f3);
     quat[3] = exchange_data(f4);
-
+    // fmt::print(fmt::fg(fmt::color::white), "quat: {} {} {} {} \n", quat[0], quat[1], quat[2], quat[3]);
     return true;
 }
 
@@ -420,14 +413,15 @@ bool SerialPort::getQuat(unsigned char *data)
  */
 bool SerialPort::getGyro(unsigned char *data)
 {    
-    unsigned char* f1 = &data[4];
-    unsigned char* f2 = &data[8];
-    unsigned char* f3 = &data[12];
+    unsigned char* f1 = &data[0];
+    unsigned char* f2 = &data[4];
+    unsigned char* f3 = &data[8];
 
     gyro[0] = exchange_data(f1);
     gyro[1] = exchange_data(f2);
     gyro[2] = exchange_data(f3);
 
+    // fmt::print(fmt::fg(fmt::color::white), "gyro: {} {} {} \n", gyro[0], gyro[1], gyro[2]);
     return true;
 }
 
@@ -439,14 +433,14 @@ bool SerialPort::getGyro(unsigned char *data)
  */
 bool SerialPort::getAcc(unsigned char *data)
 {
-    unsigned char* f1 = &data[4];
-    unsigned char* f2 = &data[8];
-    unsigned char* f3 = &data[12];
+    unsigned char* f1 = &data[0];
+    unsigned char* f2 = &data[4];
+    unsigned char* f3 = &data[8];
 
-    gyro[0] = exchange_data(f1);
-    gyro[1] = exchange_data(f2);
-    gyro[2] = exchange_data(f3);
-
+    acc[0] = exchange_data(f1);
+    acc[1] = exchange_data(f2);
+    acc[2] = exchange_data(f3);
+    // fmt::print(fmt::fg(fmt::color::white), "acc: {} {} {} \n", acc[0], acc[1], acc[2]);
     return true;
 }
 //////////////////////////////////////////////

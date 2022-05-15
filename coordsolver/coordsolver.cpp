@@ -1,7 +1,7 @@
 #include "coordsolver.h"
 
 CoordSolver::CoordSolver()
-{
+{  
 }
 
 CoordSolver::~CoordSolver()
@@ -57,35 +57,53 @@ bool CoordSolver::loadParam(string coord_path,string param_name)
 
     return true;
 }
-
-PnPInfo CoordSolver::pnp(Point2f apex[4], Eigen::Matrix3d rmat_imu, int method)
+/**
+ * @brief PnP解算目标距离与位姿
+ * 
+ * @param points_pic 目标点,长度为4为装甲板模式,长度为5为大符模式
+ * @param rmat_imu imu旋转矩阵
+ * @param method PnP解算方法
+ * @return PnPInfo 
+ */
+PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Matrix3d &rmat_imu, int method)
 {
+
     std::vector<Point3d> points_world;
-    std::vector<Point2f> points_pic(apex,apex + 4);
-    std::vector<Point2f> vecotr_apex = {apex[0], apex[1], apex[2], apex[3]};
+    std::vector<Point2f> vecotr_apex = {points_pic[0], points_pic[1], points_pic[2], points_pic[3]};
 
-    RotatedRect points_pic_rrect = minAreaRect(vecotr_apex);
-    auto apex_wh_ratio = max(points_pic_rrect.size.height, points_pic_rrect.size.width) / min(points_pic_rrect.size.height, points_pic_rrect.size.width);
+    if (points_pic.size() == 4)
+    {
+        RotatedRect points_pic_rrect = minAreaRect(vecotr_apex);
+        auto apex_wh_ratio = max(points_pic_rrect.size.height, points_pic_rrect.size.width) / min(points_pic_rrect.size.height, points_pic_rrect.size.width);
 
-    //大于长宽比阈值使用大装甲板世界坐标
-    if(apex_wh_ratio > armor_type_wh_thres)
-        points_world = {
-            {-0.1125,0.027,0},
-            {-0.1125,-0.027,0},
-            {0.1125,-0.027,0},
-            {0.1125,0.027,0}};
+        //大于长宽比阈值使用大装甲板世界坐标
+        if(apex_wh_ratio > armor_type_wh_thres)
+            points_world = {
+                {-0.1125,0.027,0},
+                {-0.1125,-0.027,0},
+                {0.1125,-0.027,0},
+                {0.1125,0.027,0}};
+        else
+            points_world = {
+                {-0.066,0.027,0},
+                {-0.066,-0.027,0},
+                {0.066,-0.027,0},
+                {0.066,0.027,0}};
+    }
     else
+    {
         points_world = {
-            {-0.066,0.027,0},
-            {-0.066,-0.027,0},
-            {0.066,-0.027,0},
-            {0.066,0.027,0}};
-
+        {-0.1125,0.027,0},
+        {-0.1125,-0.027,0},
+        {0,-0.565,-0.05},
+        {0.1125,-0.027,0},
+        {0.1125,0.027,0}};
+    }
     Mat rvec;
     Mat rmat;
     Mat tvec;
     Eigen::Matrix3d rmat_eigen;
-    Eigen::Vector3d coord_world = {0, 0, 0};
+    Eigen::Vector3d R_center_world = {0,-0.565,-0.05};
     Eigen::Vector3d tvec_eigen;
     Eigen::Vector3d coord_camera;
 
@@ -96,19 +114,27 @@ PnPInfo CoordSolver::pnp(Point2f apex[4], Eigen::Matrix3d rmat_imu, int method)
     Rodrigues(rvec,rmat);
     cv2eigen(rmat, rmat_eigen);
     cv2eigen(tvec, tvec_eigen);
-    //转换至相机坐标系(左手坐标系)
-    // result.coord_cam = (rmat_eigen * coord_world) + tvec_eigen;
-    result.coord_cam = tvec_eigen;
-    result.coord_world = camToWorld(result.coord_cam, rmat_imu);
-    result.euler = rotationMatrixToEulerAngles(rmat_eigen);
+    if (points_pic.size() == 4)
+    {
+        result.armor_cam = tvec_eigen;
+        result.armor_world = camToWorld(result.armor_cam, rmat_imu);
+        result.euler = rotationMatrixToEulerAngles(rmat_eigen);
+    }
+    else
+    {
+        result.armor_cam = tvec_eigen;
+        result.armor_world = camToWorld(result.armor_cam, rmat_imu);
+        result.R_cam = (rmat_eigen * R_center_world) + tvec_eigen;
+        result.R_world = camToWorld(result.armor_cam, rmat_imu);
+        // result.euler = rotationMatrixToEulerAngles(transform_ci.block(0,0,2,2) * rmat_imu * rmat_eigen);
+        Eigen::Matrix3d rmat_eigen_world = transform_ci.block(0, 0, 3, 3) * rmat_imu * rmat_eigen;
+        // result.euler = rotationMatrixToEulerAngles(rmat_eigen_world);
+        result.euler = rotationMatrixToEulerAngles(rmat_eigen_world);
+        // result.euler = rotationMatrixToEulerAngles(rmat_eigen);
+    }
 
-    // //将角度范围由[-PI,PI]变换至[0，2PI]
-    // if (result.euler[0] <= 0)
-    //     result.euler[0] += CV_2PI;
-    // if (result.euler[1] <= 0)
-    //     result.euler[1] += CV_2PI;
-    // if (result.euler[2] <= 0)
-    //     result.euler[2] += CV_2PI;
+
+
     
     return result;
 }
@@ -123,8 +149,9 @@ Eigen::Vector2d CoordSolver::getAngle(Eigen::Vector3d &xyz_cam, Eigen::Matrix3d 
     auto angle_cam = calcYawPitch(xyz_cam);
     // auto dist = xyz_offseted.norm();
     // auto pitch_offset = 6.457e04 * pow(dist,-2.199);
-    // auto pitch_offset = dynamicCalcPitchOffset(xyz_world);
-    // angle_cam[1] = angle_cam[1] + pitch_offset;
+    auto pitch_offset = dynamicCalcPitchOffset(xyz_world);
+    // cout<<pitch_offset<<endl;
+    angle_cam[1] = angle_cam[1] + pitch_offset;
     auto angle_offseted = staticAngleOffset(angle_cam);
     return angle_offseted;
 
@@ -188,6 +215,7 @@ inline Eigen::Vector2d CoordSolver::calcYawPitch(Eigen::Vector3d &xyz)
 inline double CoordSolver::dynamicCalcPitchOffset(Eigen::Vector3d &xyz)
 {
     //TODO:根据陀螺仪安装位置调整距离求解方式
+    //降维，坐标系Y轴以垂直向上为正方向
     auto dist_vertical = xyz[2];
     auto vertical_tmp = dist_vertical;
     auto dist_horizonal = sqrt(xyz.squaredNorm() - dist_vertical * dist_vertical);
@@ -199,7 +227,7 @@ inline double CoordSolver::dynamicCalcPitchOffset(Eigen::Vector3d &xyz)
     //开始使用龙格库塔法求解弹道补偿
     for (int i = 0; i < max_iter; i++)
     {
-        //TODO:将迭代起点改为世界坐标系下的枪口位置
+        //TODO:可以考虑将迭代起点改为世界坐标系下的枪口位置
         //初始化
         auto x = 0.0;
         auto y = 0.0;
@@ -255,7 +283,7 @@ inline double CoordSolver::dynamicCalcPitchOffset(Eigen::Vector3d &xyz)
  * @param rmat 由陀螺仪四元数解算出的旋转矩阵
  * @return 世界坐标系下坐标
  * **/
-Eigen::Vector3d CoordSolver::camToWorld(Eigen::Vector3d &point_camera, Eigen::Matrix3d &rmat)
+Eigen::Vector3d CoordSolver::camToWorld(const Eigen::Vector3d &point_camera, const Eigen::Matrix3d &rmat)
 {
     //升高维度
     Eigen::Vector4d point_camera_tmp;
@@ -266,8 +294,7 @@ Eigen::Vector3d CoordSolver::camToWorld(Eigen::Vector3d &point_camera, Eigen::Ma
     point_camera_tmp << point_camera[0], point_camera[1], point_camera[2], 1;
     point_imu_tmp = transform_ic * point_camera_tmp;
     point_imu << point_imu_tmp[0], point_imu_tmp[1], point_imu_tmp[2];
-    point_imu += t_iw;
-
+    point_imu -= t_iw;
     return rmat * point_imu;
 }
 
@@ -277,7 +304,7 @@ Eigen::Vector3d CoordSolver::camToWorld(Eigen::Vector3d &point_camera, Eigen::Ma
  * @param rmat 由陀螺仪四元数解算出的旋转矩阵
  * @return 相机坐标系下坐标
  * **/
-Eigen::Vector3d CoordSolver::worldToCam(Eigen::Vector3d &point_world, Eigen::Matrix3d &rmat)
+Eigen::Vector3d CoordSolver::worldToCam(const Eigen::Vector3d &point_world, const Eigen::Matrix3d &rmat)
 {
     
     Eigen::Vector4d point_camera_tmp;
@@ -286,7 +313,7 @@ Eigen::Vector3d CoordSolver::worldToCam(Eigen::Vector3d &point_world, Eigen::Mat
     Eigen::Vector3d point_camera;
 
     point_imu = rmat.transpose() * point_world;
-    point_imu -= t_iw;
+    point_imu += t_iw;
     point_imu_tmp << point_imu[0], point_imu[1], point_imu[2], 1;
     point_camera_tmp = transform_ci * point_imu_tmp;
     point_camera << point_camera_tmp[0], point_camera_tmp[1], point_camera_tmp[2];

@@ -2,11 +2,11 @@
 //                          FIXME:临场调试选项
 //---------------------------------------------------------------------------//
 
-#define DETECT_RED  //红色检测，不启用默认为蓝色检测
+// #define DETECT_RED  //红色检测，不启用默认为蓝色检测
 
 // #define SAVE_VIDEO               // save video
 
-// #define SAVE_LOG_ALL                // save log
+#define SAVE_LOG_ALL                // save log
 
 #define USING_IMU                //是否使用陀螺仪数据
 //===========================================================================//
@@ -20,7 +20,7 @@
 
 #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
 
-// #define DEBUG_WITHOUT_COM           //无串口调试
+#define DEBUG_WITHOUT_COM           //无串口调试
 //===========================================================================//
 
 
@@ -40,13 +40,13 @@
 
 // #define USING_ROI   //Using roi
 
-#define PRINT_LATENCY //输出运行时间
+// #define PRINT_LATENCY //输出运行时间
 
 #define PRINT_TARGET_INFO //是否输出目标信息
 
-// #define USING_PREDICT           //是否启用预测
+#define USING_PREDICT           //是否启用预测
 
-// #define USING_SPIN_DETECT //是否检测陀螺
+#define USING_SPIN_DETECT //是否检测陀螺
 
 #define DISABLE_FITTING //是否禁用曲线拟合
 //===========================================================================//
@@ -58,7 +58,7 @@
 
 // #define ASSIST_LABEL //辅助数据集标注
 
-// #define DRAW_PREDICT //是否显示预测图像(使用时需使视野内仅存在一块装甲板
+#define DRAW_PREDICT //是否显示预测图像(使用时需使视野内仅存在一块装甲板
 //===========================================================================//
 
 
@@ -86,10 +86,16 @@
     #define SHOW_ALL_ARMOR  //是否绘制装甲板
     #define SHOW_FPS    //是否显示FPS
     #define SHOW_PREDICT //是否显示预测
-    // #define SHOW_AIM_CROSS//是否绘制十字瞄准线
+    #define SHOW_AIM_CROSS//是否绘制十字瞄准线
 #endif // SHOW_IMG
 
 #ifndef USING_DAHENG
     #define USING_USB_CAMERA
 #endif // USING_DAHENG
+
+#ifdef DETECT_RED
+    #define DETECT_BUFF_BLUE
+#else
+    #define DETECT_BUFF_RED
+#endif
 //===========================================================================//

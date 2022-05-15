@@ -18,7 +18,6 @@ bool IMUSerial::readData()
         bytes_readed+=bytes;
     }
 
-
     // cout<<"Bytes:"<<bytes_readed<<endl;
     return processData(bytes_readed);
 }

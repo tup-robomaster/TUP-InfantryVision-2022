@@ -1,21 +1,23 @@
 #include "./serial/wt61pc.h"
 #include "./thread/thread.h"
 #include "./serial/serialport.h"
+#include "./general/general.h"
+
+#include "debug.h"
 
 DaHengCamera DaHeng;
-const string SERIAL_ID = "483/5740/200";
-// const string SERIAL_ID = "1a86/7523/263";
+// const string SERIAL_ID = "483/5740/200";
+const string SERIAL_ID = "1a86/7523/263";
 // const string SERIAL_ID = "10c4/ea60/100";
-const string SERIAL_ID_IMU = "1a86/7523/264";
+// const string SERIAL_ID_IMU = "1a86/7523/264";
 const int BAUD = 115200;
-const int BAUD_IMU = 460800;
+// const int BAUD_IMU = 460800;
 
 int main()
 {
-
 #ifdef SAVE_MAIN_LOG
     google::InitGoogleLogging("Main");
-    FLAGS_alsologtostderr = false;  //除了日志文件之外是否需要标准输出
+    FLAGS_alsologtostderr = true;  //除了日志文件之外是否需要标准输出
     FLAGS_colorlogtostderr = true;  //是否启用不同颜色显示
 
     // 下面的函数暂时没有必要开启
@@ -29,16 +31,16 @@ int main()
 #endif //SAVE_MAIN_LOG
 
     auto time_start = std::chrono::steady_clock::now();
-    Factory<Image> autoaim_factory(3);
+    Factory<TaskData> task_factory(3);
     Factory<VisionData> data_transmit_factory(5);
-    MessageFilter<IMUData> data_receiver(20);
+    MessageFilter<MCUData> data_receiver(50);
     SerialPort serial(SERIAL_ID, BAUD);
     
 #ifdef USING_IMU_C_BOARD
     std::thread serial_watcher(&serialWatcher, ref(serial));
     std::thread receiver(&dataReceiver, ref(serial), ref(data_receiver), time_start);
     #ifdef SAVE_MAIN_LOG
-        LOG(INFO) << "serial_watcher(with IMU) start!";
+        LOG(INFO) << "serial_watcher(with IMU) start!"<<endl;;
     #endif //SAVE_MAIN_LOG
 #endif //USING_IMU_C_BOARD
 
@@ -48,14 +50,14 @@ int main()
 //     std::thread receiver(&dataReceiver, ref(serial_imu), ref(data_receiver), time_start);
 // #endif //USING_IMU_WIT
 
-    std::thread autoaim_producer(&producer, ref(autoaim_factory), ref(data_receiver), time_start);
+    std::thread task_producer(&producer, ref(task_factory), ref(data_receiver), time_start);
 #ifdef SAVE_MAIN_LOG
-    LOG(INFO) << "autoaim_producer start!";
+    LOG(INFO) << "task_producer start!";
 #endif //SAVE_MAIN_LOG
 
-    std::thread autoaim_consumer(&consumer, ref(autoaim_factory),ref(data_transmit_factory));
+    std::thread task_consumer(&consumer, ref(task_factory),ref(data_transmit_factory));
 #ifdef SAVE_MAIN_LOG
-        LOG(INFO) << "autoaim_consumer start!";
+        LOG(INFO) << "task_consumer start!";
 #endif //SAVE_MAIN_LOG
 
     std::thread transmitter(&dataTransmitter, ref(serial), ref(data_transmit_factory));
@@ -70,14 +72,14 @@ int main()
     #endif //SAVE_MAIN_LOG
 #endif //USING_IMU
 
-    autoaim_producer.join();
+    task_producer.join();
 #ifdef SAVE_MAIN_LOG
-    LOG(WARNING) << "autoaim_producer end!";
+    LOG(WARNING) << "task_producer end!";
 #endif //SAVE_MAIN_LOG
 
-    autoaim_consumer.join();
+    task_consumer.join();
 #ifdef SAVE_MAIN_LOG
-    LOG(WARNING) << "autoaim_consumer end!";
+    LOG(WARNING) << "task_consumer end!";
 #endif //SAVE_MAIN_LOG
 
     serial_watcher.join();

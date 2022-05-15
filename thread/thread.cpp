@@ -4,7 +4,7 @@
  * @brief 生产者线程
  * @param factory 工厂类
 **/
-bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
+bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
 {
     start_get_img:
 #ifdef USING_DAHENG
@@ -19,7 +19,7 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
     // 设置曝光事件
     DaHeng.SetExposureTime(8000);
     // 设置
-    DaHeng.SetGAIN(3, 16);
+    DaHeng.SetGAIN(3, 14);
     // 是否启用自动白平衡7
     // DaHeng.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
@@ -29,7 +29,7 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
     // // Gamma
     // DaHeng.Set_Gamma(1,1.0);
     // //Color
-    DaHeng.Color_Correct(1);
+    // DaHeng.Color_Correct(1);
     // //Contrast
     // DaHeng.Set_Contrast(1,10);
     // //Saturation
@@ -41,6 +41,13 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Open USB Camera success\n");
     auto time_start = std::chrono::steady_clock::now();
 #endif //USING_USB_CAMERA
+
+#ifdef USING_VIDEO
+    sleep(6);//防止网络加载完成前视频开始播放
+    VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
+    // VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/sample.mp4");
+#endif //USING_VIDEO
+
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
 #ifdef SAVE_VIDEO
     /*============ video_writer ===========*/
@@ -58,7 +65,7 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
 #endif //SAVE_VIDEO
     while(1)
     {
-        Image src;
+        TaskData src;
 
 #ifdef USING_DAHENG
         auto DaHeng_stauts = DaHeng.GetMat(src.img);
@@ -72,6 +79,14 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // src.timestamp = DaHeng.Get_TIMESTAMP();
 #endif //USING_DAHENG
+
+#ifdef USING_VIDEO
+        cap >> src.img;
+        auto time_cap = std::chrono::steady_clock::now();
+        src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
+        // sleep(0.02);
+        waitKey(33.3);
+#endif //USING_VIDEO
 
 #ifdef USING_USB_CAMERA
         cap >> src.img;
@@ -87,43 +102,25 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
         }
 
 #ifdef SAVE_VIDEO
+        //TODO:异步读写加速
+        // auto write_video = std::async(std::launch::async, [&](){writer.write(src.img);});
         writer.write(src.img);
 #endif //SAVE_VIDEO
 
 #ifdef USING_IMU
-        //获取四元数
-        IMUData imu_status;
-        if (!receive_factory.consume(imu_status, src.timestamp))
+        //获取下位机数据
+        MCUData mcu_status;
+        if (!receive_factory.consume(mcu_status, src.timestamp))
             continue;
-        //对角速度积分，使用欧拉法估算陀螺仪当前姿态
-        Eigen::Vector4d delta_quat_vec;
-
-        auto quat = imu_status.quat;
-        auto gyro = imu_status.gyro;
-        double w = quat.w();
-        double x = quat.x();
-        double y = quat.y();
-        double z = quat.z();
-        auto delta_t = (src.timestamp - imu_status.timestamp) / 1000.f;
-        // cout<<delta_t<<endl;
-        delta_quat_vec << -gyro[0] * x - gyro[1] * y - gyro[2] * z,
-                    gyro[0] * w - gyro[1] * z + gyro[2] * y,
-                    gyro[0] * z + gyro[1] * w - gyro[2] * x,
-                    -gyro[0] * y + gyro[1] * x + gyro[2] * w;
-        Eigen::Vector4d quat_vec = quat.coeffs();
-        // cout<<(0.5 * delta_t * delta_quat_vec).norm()<<endl;
-        // cout<<gyro<<endl;
-        // cout<<endl;
-        quat_vec += 0.5 * delta_t * delta_quat_vec; 
-        src.imu = Eigen::Quaterniond(quat_vec).normalized();
-        // src.imu = imu_status.quat;
-
+        src.quat = mcu_status.quat;
+        src.mode = mcu_status.mode;
         // cout<<delta_t<<endl;
 #endif //USING_IMU
 
         //用于辅助标注
         // DaHeng.SetExposureTime(1000 + src.timestamp % 100 * 30);
         factory.produce(src);
+
     }
     return true;
 }
@@ -132,26 +129,54 @@ bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, 
  * @brief 消费者线程
  * @param factory 工厂类
 **/
-bool consumer(Factory<Image> &autoaim_factory,Factory<VisionData> &transmit_factory)
+bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_factory)
 {
-        // cout<<"..."<<endl;
-
     Autoaim autoaim;
+    Buff buff;
+    auto mode = -1;
+    auto last_mode = -1;
     while(1)
     {
-        Image dst;
+        TaskData dst;
         VisionData data;
+        task_factory.consume(dst);
+        mode = dst.mode;
+#ifdef SAVE_TRANSMIT_LOG
+    // cout<<mode<<"..."<<last_mode<<endl;
+    if (mode != last_mode)
+    {
+        LOG(INFO)<<"[TASK] Mode switched to "<< mode <<"."<<endl;
+        last_mode = mode;
+    }
+#endif //SAVE_TRANSMIT_LOG
 
-        autoaim_factory.consume(dst);
-        if (autoaim.run(dst,data))
+        if (mode == 0x01)
         {
-            transmit_factory.produce(data);
+            if (autoaim.run(dst, data))
+            {
+                transmit_factory.produce(data);
+            }
+        }
+        else if (mode == 0x02 || mode == 0x03)
+        {
+            if (buff.run(dst, data))
+            {
+                transmit_factory.produce(data);
+            }   
         }
 
     }
     return true;
 }
 
+/**
+ * @brief 数据发送线程
+ * 
+ * @param serial SerialPort类
+ * @param transmit_factory Factory类
+ * @return true 
+ * @return false 
+ */
 bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory)
 {
     while(1)
@@ -173,8 +198,17 @@ bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory)
 }
 
 #ifdef USING_IMU_C_BOARD
-bool dataReceiver(SerialPort &serial, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
-{
+/**
+ * @brief 数据接收线程
+ * 
+ * @param serial 
+ * @param receive_factory 
+ * @param time_start 
+ * @return true 
+ * @return false 
+ */
+bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
+{ 
     while(1)
     {
         //若串口离线则跳过数据发送
@@ -185,17 +219,22 @@ bool dataReceiver(SerialPort &serial, MessageFilter<IMUData> &receive_factory, s
             continue;
         }
         //数据读取不成功进行循环
+#ifndef DEBUG_WITHOUT_COM
         while (!serial.get_Mode())
             ;
+#endif //DEBUG_WITHOUT_COM
         auto time_cap = std::chrono::steady_clock::now();
         auto timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // cout<<"Quad: "<<serial.quat[0]<<" "<<serial.quat[1]<<" "<<serial.quat[2]<<" "<<serial.quat[3]<<" "<<endl;
         // Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
+        //FIXME:注意此处mode设置
+        // int mode = serial.mode;
+        int mode = 0x03;
         Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         Eigen::Vector3d acc = {serial.acc[0],serial.acc[1],serial.acc[2]};;
         Eigen::Vector3d gyro = {serial.gyro[0],serial.gyro[1],serial.gyro[2]};;
-        IMUData imu_status = {acc, gyro, quat, timestamp};
-        receive_factory.produce(imu_status, timestamp);
+        MCUData mcu_status = {mode, acc, gyro, quat, timestamp};
+        receive_factory.produce(mcu_status, timestamp);
         // Eigen::Vector3d vec = quat.toRotationMatrix().eulerAngles(2,1,0);
         // cout<<"Euler : "<<vec[0] * 180.f / CV_PI<<" "<<vec[1] * 180.f / CV_PI<<" "<<vec[2] * 180.f / CV_PI<<endl;
         // cout<<"transmitting..."<<endl;
@@ -204,11 +243,18 @@ bool dataReceiver(SerialPort &serial, MessageFilter<IMUData> &receive_factory, s
 }
 #endif //USING_IMU_C_BOARD
 
+/**
+ * @brief 串口监视线程
+ * 
+ * @param serial 
+ * @return true 
+ * @return false 
+ */
 bool serialWatcher(SerialPort &serial)
 {
     int last = 0;
-
-#ifdef DEBUG_WITHOUT_COM 
+//TODO:修复无COM调试
+#ifdef DEBUG_WITHOUT_COM
     #ifdef SAVE_TRANSMIT_LOG
     LOG(WARNING)<<"[SERIAL] Warning: You are not using Serial port";
     #endif //SAVE_TRANSMIT_LOG
@@ -223,7 +269,7 @@ bool serialWatcher(SerialPort &serial)
             serial.need_init = true;
 #ifdef DEBUG_WITHOUT_COM
             int now = clock()/CLOCKS_PER_SEC;
-            if (now -last > 10)
+            if (now - last > 10)
             {
                 last = now;
                 fmt::print(fmt::fg(fmt::color::green), "[SERIAL] Warning: You are not using Serial port\n");
@@ -239,7 +285,7 @@ bool serialWatcher(SerialPort &serial)
 
 
 // #ifdef USING_IMU_WIT
-// bool dataReceiver(IMUSerial &serial_imu, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
+// bool dataReceiver(IMUSerial &serial_imu, MessageFilter<MCUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
 // {
 //     while(1)
 //     {
@@ -262,7 +308,7 @@ bool serialWatcher(SerialPort &serial)
 //         Eigen::Quaterniond quat = serial_imu.quat;
 //         Eigen::Vector3d acc = serial_imu.acc;
 //         Eigen::Vector3d gyro =serial_imu.gyro;
-//         IMUData imu_status = {acc, gyro, quat, timestamp};
+//         MCUData imu_status = {acc, gyro, quat, timestamp};
 
 //         receive_factory.produce(imu_status, timestamp);
 //         Eigen::Vector3d vec = quat.toRotationMatrix().eulerAngles(2,1,0);

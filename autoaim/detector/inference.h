@@ -16,7 +16,7 @@ using namespace std;
 using namespace cv;
 using namespace InferenceEngine;
 
-struct Object
+struct ArmorObject
 {
     Point2f apex[4];
     cv::Rect_<float> rect;
@@ -27,20 +27,13 @@ struct Object
     std::vector<cv::Point2f> pts;
 };
 
-struct GridAndStride
-{
-    int grid0;
-    int grid1;
-    int stride;
-};
 
-class Detector
+class ArmorDetector
 {
 public:
-    Detector();
-    ~Detector();
-
-    bool detect(Mat &src,vector<Object>& objects);
+    ArmorDetector();
+    ~ArmorDetector();
+    bool detect(Mat &src,vector<ArmorObject>& objects);
     bool initModel(string path);
 private:
 

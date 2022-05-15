@@ -4,17 +4,6 @@
 
 #include "inference.h"
 
-/**
- * @brief Define names based depends on Unicode path support
- */
-#define tcout                  std::cout
-#define file_name_t            std::string
-#define imread_t               cv::imread
-#define NMS_THRESH 0.3
-#define CONF_THRESH 0.6
-#define FFT_CONF_ERROR 0.15
-#define FFT_MIN_IOU 0.9
-
 // static constexpr int INPUT_W = 640;    // Width of input
 // static constexpr int INPUT_H = 384;    // Height of input
 static constexpr int INPUT_W = 416;    // Width of input
@@ -22,6 +11,10 @@ static constexpr int INPUT_H = 416;    // Height of input
 static constexpr int NUM_CLASSES = 8;  // Number of classes
 static constexpr int NUM_COLORS = 3;   // Number of color
 static constexpr int TOPK = 128;       // TopK
+static constexpr float NMS_THRESH  = 0.3;
+static constexpr float BBOX_CONF_THRESH  = 0.6;
+static constexpr float FFT_CONF_ERROR  = 0.15;
+static constexpr float FFT_MIN_IOU  = 0.9;
 
 static inline int argmax(const float *ptr, int len) 
 {
@@ -38,7 +31,7 @@ static inline int argmax(const float *ptr, int len)
  * @param transform_matrix Transform Matrix of Resize
  * @return Image after resize
  */
-cv::Mat letterBoxResize(cv::Mat& img, Eigen::Matrix<float,3,3> &transform_matrix)
+inline cv::Mat scaledResize(cv::Mat& img, Eigen::Matrix<float,3,3> &transform_matrix)
 {
     float r = std::min(INPUT_W / (img.cols * 1.0), INPUT_H / (img.rows * 1.0));
     int unpad_w = r * img.cols;
@@ -61,7 +54,6 @@ cv::Mat letterBoxResize(cv::Mat& img, Eigen::Matrix<float,3,3> &transform_matrix
 
     return out;
 }
-
 
 /**
  * @brief Generate grids and stride.
@@ -97,7 +89,7 @@ static void generate_grids_and_stride(const int target_w, const int target_h,
  */
 static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, const float* feat_ptr,
                                     Eigen::Matrix<float,3,3> &transform_matrix,float prob_threshold,
-                                    std::vector<Object>& objects)
+                                    std::vector<ArmorObject>& objects)
 {
 
     const int num_anchors = grid_strides.size();
@@ -135,7 +127,7 @@ static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, cons
 
         if (box_prob >= prob_threshold)
         {
-            Object obj;
+            ArmorObject obj;
 
             Eigen::Matrix<float,3,4> apex_norm;
             Eigen::Matrix<float,3,4> apex_dst;
@@ -171,13 +163,13 @@ static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, cons
  * @param b Object b.
  * @return Area of intersection.
  */
-static inline float intersection_area(const Object& a, const Object& b)
+static inline float intersection_area(const ArmorObject& a, const ArmorObject& b)
 {
     cv::Rect_<float> inter = a.rect & b.rect;
     return inter.area();
 }
 
-static void qsort_descent_inplace(std::vector<Object>& faceobjects, int left, int right)
+static void qsort_descent_inplace(std::vector<ArmorObject>& faceobjects, int left, int right)
 {
     int i = left;
     int j = right;
@@ -215,7 +207,7 @@ static void qsort_descent_inplace(std::vector<Object>& faceobjects, int left, in
 }
 
 
-static void qsort_descent_inplace(std::vector<Object>& objects)
+static void qsort_descent_inplace(std::vector<ArmorObject>& objects)
 {
     if (objects.empty())
         return;
@@ -224,7 +216,7 @@ static void qsort_descent_inplace(std::vector<Object>& objects)
 }
 
 
-static void nms_sorted_bboxes(std::vector<Object>& faceobjects, std::vector<int>& picked,
+static void nms_sorted_bboxes(std::vector<ArmorObject>& faceobjects, std::vector<int>& picked,
                             float nms_threshold)
 {
     picked.clear();
@@ -239,12 +231,12 @@ static void nms_sorted_bboxes(std::vector<Object>& faceobjects, std::vector<int>
 
     for (int i = 0; i < n; i++)
     {
-        Object& a = faceobjects[i];
+        ArmorObject& a = faceobjects[i];
 
         int keep = 1;
         for (int j = 0; j < (int)picked.size(); j++)
         {
-            Object& b = faceobjects[picked[j]];
+            ArmorObject& b = faceobjects[picked[j]];
 
             // intersection over union
             float inter_area = intersection_area(a, b);
@@ -278,15 +270,15 @@ static void nms_sorted_bboxes(std::vector<Object>& faceobjects, std::vector<int>
  * @param img_w Width of Image.
  * @param img_h Height of Image.
  */
-static void decodeOutputs(const float* prob, std::vector<Object>& objects,
+static void decodeOutputs(const float* prob, std::vector<ArmorObject>& objects,
                             Eigen::Matrix<float,3,3> &transform_matrix, const int img_w, const int img_h)
 {
-        std::vector<Object> proposals;
+        std::vector<ArmorObject> proposals;
         std::vector<int> strides = {8, 16, 32};
         std::vector<GridAndStride> grid_strides;
 
         generate_grids_and_stride(INPUT_W, INPUT_H, strides, grid_strides);
-        generateYoloxProposals(grid_strides, prob, transform_matrix, CONF_THRESH, proposals);
+        generateYoloxProposals(grid_strides, prob, transform_matrix, BBOX_CONF_THRESH, proposals);
         qsort_descent_inplace(proposals);
 
         if (proposals.size() >= TOPK) 
@@ -302,17 +294,17 @@ static void decodeOutputs(const float* prob, std::vector<Object>& objects,
         }
 }
 
-Detector::Detector()
+ArmorDetector::ArmorDetector()
 {
 
 }
 
-Detector::~Detector()
+ArmorDetector::~ArmorDetector()
 {
 }
 
 //TODO:change to your dir
-bool Detector::initModel(string path)
+bool ArmorDetector::initModel(string path)
 {
     ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "/home/tup/Desktop/TUP-InfantryVision-2022-main/.cache"}});
     ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
@@ -359,7 +351,7 @@ bool Detector::initModel(string path)
     return true;
 }
 
-bool Detector::detect(Mat &src,std::vector<Object>& objects)
+bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
 {
     if (src.empty())
     {
@@ -369,7 +361,7 @@ bool Detector::detect(Mat &src,std::vector<Object>& objects)
 #endif // SAVE_AUTOAIM_LOG
         return false;
     }
-    cv::Mat pr_img = letterBoxResize(src,transfrom_matrix);
+    cv::Mat pr_img = scaledResize(src,transfrom_matrix);
 #ifdef SHOW_INPUT
     namedWindow("network_input",0);
     imshow("network_input",pr_img);

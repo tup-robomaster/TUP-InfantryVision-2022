@@ -4,24 +4,13 @@
 #include <Eigen/Core>
 
 #include "armor_tracker.h"
-#include "detector/inference.h"
-#include "predictor/predictor.h"
+#include "./detector/inference.h"
+#include "./predictor/predictor.h"
 #include "../coordsolver/coordsolver.h"
 #include "../general/general.h"
 #include "../serial/serialport.h"
 
-const string network_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/model/0311_416.xml";
-const string camera_param_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/params/coord_param.yaml";
-const string predict_param_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/params/filter/filter_param.yaml";
-
 enum SpinHeading {UNKNOWN, CLOCKWISE, COUNTER_CLOCKWISE};
-
-struct Image
-{
-    Mat img;
-    Eigen::Quaterniond imu;
-    int timestamp;//单位：ms
-};
 
 class Autoaim
 {
@@ -29,8 +18,12 @@ public:
     Autoaim();
     ~Autoaim();
 
-    bool run(Image &src,VisionData &data);       // 自瞄主函数
+    bool run(TaskData &src,VisionData &data);       // 自瞄主函数
 private:
+    const string network_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/model/0311_416.xml";
+    const string camera_param_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/params/coord_param.yaml";
+    const string predict_param_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/params/filter/filter_param.yaml";
+
     bool is_last_target_exists;
     int lost_cnt;
     int last_timestamp;
@@ -59,10 +52,10 @@ private:
     const int hero_danger_zone = 4;       //英雄危险距离阈值，检测到有小于该距离的英雄直接开始攻击
 
     Armor last_armor;
-    Detector detector;
-    Predictor predictor_param_loader;
-    Predictor predictor;
     CoordSolver coordsolver;
+    ArmorDetector detector;
+    ArmorPredictor predictor_param_loader;
+    ArmorPredictor predictor;
 
     bool updateSpinScore();
     string chooseTargetID(vector<Armor> &armors);

@@ -33,8 +33,7 @@ using namespace std;
 
 //模式
 #define CmdID0 0x00; //关闭视觉
-#define CmdID1 0x01; //识别红色
-#define CmdID2 0x02; //识别蓝色
+#define CmdID1 0x01; //自瞄
 #define CmdID3 0x03; //小符
 #define CmdID4 0x04; //大符
 
@@ -60,12 +59,12 @@ typedef struct
     string path;
 } Device;
 
-//字节数为2的uchar数据类型
-typedef union
-{
-    int16_t d;
-    unsigned char c[2];
-} int16uchar;
+// //字节数为2的uchar数据类型
+// typedef union
+// {
+//     int16_t d;
+//     unsigned char c[2];
+// } int16uchar;
 
 //用于保存目标相关角度和距离信息及瞄准情况
 typedef struct
@@ -89,6 +88,7 @@ public:
     int fd;      //串口号
     int last_fd; //上一次串口号
     int baud;
+    int mode;
     int speed, databits, stopbits, parity;
     unsigned char rdata[255];                 // raw_data
     float quat[4]; //四元数
@@ -98,7 +98,7 @@ public:
     SerialPort(char *);
     bool initSerialPort();
     bool get_Mode();
-    bool get_Mode(int &mode, int &sentry_mode, int &base_mode);
+    bool withoutSerialPort();
     Device getDeviceInfo(string path);
     Device setDeviceByID(std::vector<Device> devices);
     std::vector<Device> listPorts();

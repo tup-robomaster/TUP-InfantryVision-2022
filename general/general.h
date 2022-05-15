@@ -25,6 +25,21 @@
 using namespace std;
 using namespace cv;
 
+struct TaskData
+{
+    int mode;
+    Mat img;
+    Eigen::Quaterniond quat;
+    int timestamp;//单位：ms
+};
+
+struct GridAndStride
+{
+    int grid0;
+    int grid1;
+    int stride;
+};
+
 template<typename T>
 bool initMatrix(Eigen::MatrixXd &matrix,std::vector<T> &vector)
 {
@@ -42,6 +57,7 @@ bool initMatrix(Eigen::MatrixXd &matrix,std::vector<T> &vector)
 
 float calcTriangleArea(cv::Point2f pts[3]);
 float calcTetragonArea(cv::Point2f pts[4]);
+double rangedAngleRad(double &angle);
 
 std::string symbolicToReal(string path);
 std::string relativeToFull(string relative,string src);

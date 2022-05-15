@@ -7,17 +7,17 @@ cv::Mat pic_y = cv::Mat::zeros(500, 2000, CV_8UC3);
 cv::Mat pic_z = cv::Mat::zeros(500, 2000, CV_8UC3);
 #endif //DRAW_PREDICT
 
-Predictor::Predictor()
+ArmorPredictor::ArmorPredictor()
 {
 }
 
-Predictor::~Predictor()
+ArmorPredictor::~ArmorPredictor()
 {
 }
 
-Predictor Predictor::generate()
+ArmorPredictor ArmorPredictor::generate()
 {
-    Predictor new_predictor;
+    ArmorPredictor new_predictor;
     new_predictor.pf_x.initParam(pf_x);
     new_predictor.pf_y.initParam(pf_y);
     new_predictor.pf_z.initParam(pf_z);
@@ -26,7 +26,7 @@ Predictor Predictor::generate()
     return new_predictor;
 }
 
-bool Predictor::initParam(Predictor &predictor_loader)
+bool ArmorPredictor::initParam(ArmorPredictor &predictor_loader)
 {
     history_info.clear();
     pf_x.initParam(predictor_loader.pf_x);
@@ -37,7 +37,7 @@ bool Predictor::initParam(Predictor &predictor_loader)
     return true;
 }
 
-bool Predictor::initParam(string coord_path)
+bool ArmorPredictor::initParam(string coord_path)
 {
     YAML::Node config = YAML::LoadFile(coord_path);
     pf_x.initParam(config,"autoaim_x");
@@ -49,13 +49,13 @@ bool Predictor::initParam(string coord_path)
 }
 
 
-Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
+Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
 {
     auto t1=std::chrono::steady_clock::now();
     TargetInfo target = {xyz, (int)xyz.norm(), timestamp};
     
     //当队列长度小于2，仅更新队列
-    if (history_info.size() < 2)
+    if (history_info.size() < 3)
     {
         history_info.push_back(target);
         last_target = target;
@@ -144,9 +144,9 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
     if (cnt < 2000)
     {
         auto x = cnt * 5;
-        cv::circle(pic_x,cv::Point2f((timestamp) / 10,xyz[0] * 100 + 400),1,cv::Scalar(0,0,255),1);
-        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[0] * 100 + 400),1,cv::Scalar(0,255,0),1);
-        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[0] * 100 + 400),1,cv::Scalar(255,255,0),1);
+        cv::circle(pic_x,cv::Point2f((timestamp) / 10,xyz[0] * 100 + 200),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[0] * 100 + 200),1,cv::Scalar(0,255,0),1);
+        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[0] * 100 + 200),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result[0]+ 200),1,cv::Scalar(255,255,255),1);
 
 
@@ -171,7 +171,7 @@ Eigen::Vector3d Predictor::predict(Eigen::Vector3d xyz, int timestamp)
 }
 
 
-inline Eigen::Vector3d Predictor::shiftWindowFilter(int start_idx=0)
+inline Eigen::Vector3d ArmorPredictor::shiftWindowFilter(int start_idx=0)
 {
     //计算最大迭代次数
     auto max_iter = int(history_info.size() - start_idx) - window_size + 1;
@@ -202,7 +202,7 @@ inline Eigen::Vector3d Predictor::shiftWindowFilter(int start_idx=0)
  * @param time_estimated 本次预测所需的时间提前量
  * @return 预测结果状态
  * **/
-PredictStatus Predictor::predict_pf_run(TargetInfo target, Vector3d &result, int time_estimated)
+ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, Vector3d &result, int time_estimated)
 {
     PredictStatus is_available;
     //使用线性运动模型
@@ -211,7 +211,7 @@ PredictStatus Predictor::predict_pf_run(TargetInfo target, Vector3d &result, int
     Eigen::VectorXd measure_vz (1);
 
     //取前两帧位置装甲板，拉长时间，以求降低高频噪声影响
-    auto before_target = history_info.at(history_info.size() - 3);
+    auto before_target = history_info.at(history_info.size() - 4);
 
     auto v_xyz = (target.xyz - before_target.xyz) / (target.timestamp - before_target.timestamp) * 1e3;
 
@@ -248,7 +248,7 @@ PredictStatus Predictor::predict_pf_run(TargetInfo target, Vector3d &result, int
     return is_available;
 }
 
-PredictStatus Predictor::predict_fitting_run(Vector3d &result, int time_estimated)
+ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &result, int time_estimated)
 {
     double params_x[4] = {1,1,1,0};            // 参数的估计值
     double params_y[4] = {1,1,1,0};            // 参数的估计值

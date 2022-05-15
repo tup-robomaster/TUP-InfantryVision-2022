@@ -1,6 +1,7 @@
 
 #include "../camera/DaHengCamera.h"
 #include "../autoaim/autoaim.h"
+#include "../buff/buff.h"
 #include "../serial/serialport.h"
 #include "../serial/wt61pc.h"
 #include "../debug.h"
@@ -15,14 +16,14 @@
 #include <atomic>
 #include <opencv2/opencv.hpp>
 
-#include <ctime>
 // #include <Eigen/Core>
 
 using namespace std;
 using namespace cv;
 
-struct IMUData
+struct MCUData
 {
+    int mode;
     Eigen::Vector3d acc;
     Eigen::Vector3d gyro;
     Eigen::Quaterniond quat;
@@ -142,6 +143,12 @@ bool MessageFilter<T>::consume(T &message, int timestamp)
         lock.unlock();
         sleep(1e-3);
     }
+    // int cnt = 0;
+    // for (auto info : buffer)
+    // {
+        
+    //     cout<<cnt++<<" : "<<info.timestamp<<endl;
+    // }
     auto it = std::lower_bound(buffer.begin(), buffer.end(), timestamp, [](Product &prev, const int &timestamp)
                                { return prev.timestamp < timestamp; });
     if (it == buffer.end())
@@ -163,24 +170,26 @@ bool MessageFilter<T>::consume(T &message, int timestamp)
     }
     else
     {
+        it--;
         message = (*it).message;
         buffer.erase(it);
     }
     lock.unlock();
     // cout<<(*it).timestamp<<":"<<timestamp<<"|"<<buffer.size()<<endl;
+    // cout<<"///////////////////////////////////"<<endl;
     return true;
 }
 
-bool producer(Factory<Image> &factory, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start);
-bool consumer(Factory<Image> &autoaim_factory, Factory<VisionData> &transmit_factory);
+bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start);
+bool consumer(Factory<TaskData> &task_factory, Factory<VisionData> &transmit_factory);
 bool dataTransmitter(SerialPort &serial, Factory<VisionData> &transmit_factory);
 
 #ifdef USING_IMU_C_BOARD
-bool dataReceiver(SerialPort &serial, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start);
+bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start);
 bool serialWatcher(SerialPort &serial);
 #endif // USING_IMU_C_BOARD
 #ifdef USING_IMU_WIT
-bool dataReceiver(IMUSerial &serial_imu, MessageFilter<IMUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start);
+bool dataReceiver(IMUSerial &serial_imu, MessageFilter<MCUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start);
 bool serialWatcher(SerialPort &serial, IMUSerial &serial_imu);
 #endif // USING_IMU_WIT
 #ifndef USING_IMU

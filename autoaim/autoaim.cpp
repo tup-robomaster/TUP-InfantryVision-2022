@@ -13,7 +13,7 @@ Autoaim::Autoaim()
 {
     detector.initModel(network_path);
     predictor_param_loader.initParam(predict_param_path);
-    coordsolver.loadParam(camera_param_path,"KE0200110076");
+    coordsolver.loadParam(camera_param_path,"KE0200110075");
     // cout<<"...."<<endl;
     lost_cnt = 0;
     is_last_target_exists = false;
@@ -256,15 +256,17 @@ string Autoaim::chooseTargetID(vector<Armor> &armors)
  * @return true 识别成功
  * @return false 识别失败
  */
-bool Autoaim::run(Image &src,VisionData &data)
+bool Autoaim::run(TaskData &src,VisionData &data)
 {
     auto time_start=std::chrono::steady_clock::now();
-    vector<Object> objects;
+    vector<ArmorObject> objects;
     vector<Armor> armors;
     auto input = src.img;
 
 #ifdef USING_IMU
-    Eigen::Matrix3d rmat_imu = src.imu.toRotationMatrix();
+    Eigen::Matrix3d rmat_imu = src.quat.toRotationMatrix();
+    // auto vec = rotationMatrixToEulerAngles(rmat_imu);
+    // cout<<"Euler : "<<vec[0] * 180.f / CV_PI<<" "<<vec[1] * 180.f / CV_PI<<" "<<vec[2] * 180.f / CV_PI<<endl;
 #else
     Eigen::Matrix3d rmat_imu = Eigen::Matrix3d::Identity();
 #endif //USING_IMU
@@ -309,7 +311,7 @@ bool Autoaim::run(Image &src,VisionData &data)
 #endif //ASSIST_LABEL
     auto time_infer = std::chrono::steady_clock::now();
     ///------------------------将对象排序，保留面积较大的对象---------------------------------
-    sort(objects.begin(),objects.end(),[](Object& prev, Object& next)
+    sort(objects.begin(),objects.end(),[](ArmorObject& prev, ArmorObject& next)
                                     {return prev.area > next.area;});
     //若对象较多保留前按面积排序后的前max_armors个
     if (objects.size() > max_armors)
@@ -348,11 +350,13 @@ bool Autoaim::run(Image &src,VisionData &data)
         armor.center2d = apex_sum / 4.f;
 
         // auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_ITERATIVE);
-        auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_IPPE);
+
+        std::vector<Point2f> points_pic(armor.apex2d, armor.apex2d + 4);
+        auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, SOLVEPNP_IPPE);
         // auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_IPPE_SQUARE);
 
-        armor.center3d_world = pnp_result.coord_world;
-        armor.center3d_cam = pnp_result.coord_cam;
+        armor.center3d_world = pnp_result.armor_world;
+        armor.center3d_cam = pnp_result.armor_cam;
         armor.euler = pnp_result.euler;
         armor.area = object.area;
         armors.push_back(armor);
@@ -457,7 +461,7 @@ bool Autoaim::run(Image &src,VisionData &data)
             //删除元素后迭代器会失效，需先行获取下一元素
             auto next = iter;
             // cout<<(*iter).second.last_timestamp<<"  "<<src.timestamp<<endl;
-            if ((*iter).second.last_timestamp - src.timestamp > max_delta_t)
+            if (src.timestamp - (*iter).second.last_timestamp > max_delta_t)
                 next = trackers_map.erase(iter);
             else
                 ++next;
@@ -472,13 +476,14 @@ bool Autoaim::run(Image &src,VisionData &data)
         if (cnt.second == 1)
         {
             auto same_armors_cnt = trackers_map.count(cnt.first);
-            //当存在同时存在两块同类别装甲板时才进入陀螺状态识别
+            //当存在同时存在两块同类别装甲板Tracker时才进入陀螺状态识别
             if (same_armors_cnt == 2)
             {
                 auto candidates = trackers_map.equal_range(cnt.first);
                 double last_armor_center;
+                double last_armor_timestamp;
                 double new_armor_center;
-
+                double new_armor_timestamp;
                 auto candidate = candidates.first;
                 //确定新增装甲板与历史装甲板
                 if ((*candidate).second.is_initialized)
@@ -486,25 +491,31 @@ bool Autoaim::run(Image &src,VisionData &data)
                     last_armor_center = (*candidate).second.last_armor.center3d_cam[0];
                     ++candidate;
                     if (!(*candidate).second.is_initialized)
-                        new_armor_center = (*candidate).second.last_armor.center3d_cam[0];
+                        {
+                            new_armor_center = (*candidate).second.last_armor.center3d_cam[0];
+                            new_armor_timestamp = (*candidate).second.last_timestamp;
+                        }
                     else
                         continue;
                 }
                 else
                 {
                     new_armor_center = (*candidate).second.last_armor.center3d_cam[0];
+                    new_armor_timestamp = (*candidate).second.last_timestamp;
                     ++candidate;
                     if ((*candidate).second.is_initialized)
-                        last_armor_center = (*candidate).second.last_armor.center3d_cam[0];
+                        {
+                            last_armor_center = (*candidate).second.last_armor.center3d_cam[0];
+                            last_armor_timestamp = (*candidate).second.last_timestamp;
+                        }
                     else
                         continue;
                 }
-
                 auto spin_movement = new_armor_center - last_armor_center;
 
-                if (spin_score_map[cnt.first] == 0 && abs(spin_movement) > 0.05)
+                if (spin_score_map[cnt.first] == 0 && abs(spin_movement) > 0.1 && last_armor_timestamp == new_armor_timestamp)
                     spin_score_map[cnt.first] = 100 * spin_movement / abs(spin_movement);
-                else if (abs(spin_movement) > 0.05)
+                else if (abs(spin_movement) > 0.1 && last_armor_timestamp == new_armor_timestamp)
                     spin_score_map[cnt.first] = 2 * spin_score_map[cnt.first];
             }
         }
@@ -537,7 +548,10 @@ bool Autoaim::run(Image &src,VisionData &data)
     else
     {
         spin_status = spin_status_map[target_id];
-        is_target_spinning = true;
+        if (spin_status != UNKNOWN)
+            is_target_spinning = true;
+        else
+            is_target_spinning = false;
     }
     ///----------------------------------反陀螺击打---------------------------------------
     if (spin_status != UNKNOWN)
@@ -628,12 +642,10 @@ bool Autoaim::run(Image &src,VisionData &data)
             // aiming_point = aiming_point_world;
             aiming_point = coordsolver.worldToCam(aiming_point_world, rmat_imu);
         }
+#else
+    // aiming_point = coordsolver.worldToCam(target.center3d_world,rmat_imu);
+    aiming_point = target.center3d_cam;
 #endif //USING_PREDICT
-
-#ifndef USING_PREDICT
-    aiming_point = coordsolver.worldToCam(target.center3d_world,rmat_imu);
-    // aiming_point = target.center3d_cam;#endif //USING_PREDICT
-#endif //USING_PREDICT        
     }
     ///----------------------------------常规击打---------------------------------------
     else
@@ -662,7 +674,8 @@ bool Autoaim::run(Image &src,VisionData &data)
             aiming_point = coordsolver.worldToCam(aiming_point_world, rmat_imu);
         }
 #else
-    aiming_point = coordsolver.worldToCam(target.center3d_world,rmat_imu);
+    // aiming_point = coordsolver.worldToCam(target.center3d_world,rmat_imu);
+    aiming_point = target.center3d_cam;
 #endif //USING_PREDICT
     }
 #ifdef ASSIST_LABEL
@@ -756,7 +769,8 @@ bool Autoaim::run(Image &src,VisionData &data)
         fmt::print(fmt::fg(fmt::color::orange_red), "Total: {} ms\n",dr_full_ms);
     }
 #endif //PRINT_LATENCY
-
+    // cout<<target.center3d_world<<endl;
+    // cout<<endl;
 #ifdef PRINT_TARGET_INFO
     fmt::print(fmt::fg(fmt::color::gray), "-----------INFO------------\n");
     fmt::print(fmt::fg(fmt::color::blue_violet), "Yaw: {} \n",angle[0]);
