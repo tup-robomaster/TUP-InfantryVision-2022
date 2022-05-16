@@ -25,6 +25,10 @@
 using namespace std;
 using namespace cv;
 
+/**
+ * @brief 存储任务所需数据的结构体
+ * 
+ */
 struct TaskData
 {
     int mode;

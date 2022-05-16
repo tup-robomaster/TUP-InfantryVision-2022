@@ -32,6 +32,20 @@ private:
     {
         bool xyz_status[3];
     };
+    // struct CURVE_FITTING_COST
+    // {
+    //     CURVE_FITTING_COST (double x, double y) : _x ( x ), _y ( y ) {}
+    //     // 残差的计算
+    //     template <typename T>
+    //     bool operator() (
+    //         const T* const params,     // 模型参数，有4维
+    //         T* residual ) const     // 残差
+    //     {
+    //         residual[0] = T (_y) - 1e2 * params[0] - 1e4 * params[1] * ceres::cos(params[3] * T (_x)) - 1e4 * params[2] * ceres::sin(params[3] * T (_x)); // f(x) = a0 + a1 * cos(wx) + b1 * sin(wx) 
+    //         return true;
+    //     }
+    //     const double _x, _y;    // x,y数据
+    // };
     struct CURVE_FITTING_COST
     {
         CURVE_FITTING_COST (double x, double y) : _x ( x ), _y ( y ) {}
@@ -41,11 +55,12 @@ private:
             const T* const params,     // 模型参数，有3维
             T* residual ) const     // 残差
         {
-            residual[0] = T (_y) - 1e2 * params[0] - 1e4 * params[1] * ceres::cos(params[3] * T (_x)) - 1e4 * params[2] * ceres::sin(params[3] * T (_x)); // f(x) = a0 + a1 * cos(wx) + b1 * sin(wx) 
+            residual[0] = T (_y) - params[0] * ceres::cos(params[2] * T (_x)) - params[1] * ceres::sin(params[2] * T (_x)); // f(x) = a0 + a1 * cos(wx) + b1 * sin(wx) 
             return true;
         }
         const double _x, _y;    // x,y数据
     };
+
 
 private:
     bool fitting_disabled;                                                  //当前是否禁用拟合
@@ -57,7 +72,7 @@ private:
     std::deque<TargetInfo> history_info;                                //目标队列
 
     const int max_timespan = 1000;                                       //最大时间跨度，大于该时间重置预测器(ms)
-    const int max_cost = 1e-2;                                            //回归函数最大Cost
+    const int max_cost = 1e-3;                                            //回归函数最大Cost
     const int max_v = 8;                                                //设置最大速度,单位m/s
     const int history_deque_len = 10;                                   //队列长度    
     const int bullet_speed = 30;                                        //TODO:弹速可变

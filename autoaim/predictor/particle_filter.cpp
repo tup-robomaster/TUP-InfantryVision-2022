@@ -27,12 +27,43 @@ bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix,Eigen::MatrixXd &cov)
 
     return true;
 }
+/**
+ * @brief Construct a new Particle Filter:: Particle Filter object
+ * 
+ */
+ParticleFilter::ParticleFilter()
+{
+}
 
+/**
+ * @brief Construct a new Particle Filter:: Particle Filter object
+ * 
+ * @param config 
+ * @param param_name 
+ */
 ParticleFilter::ParticleFilter(YAML::Node &config,const string param_name)
 {
     initParam(config,param_name);
 }
 
+/**
+ * @brief Destroy the Particle Filter:: Particle Filter object
+ * 
+ */
+ParticleFilter::~ParticleFilter()
+{
+}
+
+
+
+/**
+ * @brief 从文件中初始化滤波器参数
+ * 
+ * @param config 文件路径
+ * @param param_name 参数组名称
+ * @return true 
+ * @return false 
+ */
 bool ParticleFilter::initParam(YAML::Node &config,const string param_name)
 {
     //初始化向量长度与粒子数
@@ -53,15 +84,12 @@ bool ParticleFilter::initParam(YAML::Node &config,const string param_name)
     
     return true;
 }
-
-ParticleFilter::ParticleFilter()
-{
-}
-
-ParticleFilter::~ParticleFilter()
-{
-}
-
+/**
+ * @brief 从其他滤波器中初始化滤波器参数
+ * @param parent 滤波器
+ * @return true 
+ * @return false 
+ */
 bool ParticleFilter::initParam(ParticleFilter parent)
 {
     vector_len = parent.vector_len;
@@ -74,13 +102,25 @@ bool ParticleFilter::initParam(ParticleFilter parent)
     return true;
 }
 
+/**
+ * @brief 进行一次预测
+ * 
+ * @return Eigen::VectorXd 预测结果 
+ */
 Eigen::VectorXd ParticleFilter::predict()
 {
     Eigen::VectorXd particles_weighted = matrix_particle.transpose() * matrix_weights;
     return particles_weighted;
 }
 
-bool ParticleFilter::correct(Eigen::VectorXd measure)
+/**
+ * @brief 进行一次更新
+ * 
+ * @param measure 测量值
+ * @return true 
+ * @return false 
+ */
+bool ParticleFilter::update(Eigen::VectorXd measure)
 {
     Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
     Eigen::MatrixXd mat_measure = measure.replicate(1,num_particle).transpose();

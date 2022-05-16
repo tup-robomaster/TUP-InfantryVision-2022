@@ -6,7 +6,7 @@ using namespace std;
 Buff::Buff()
 {
     detector.initModel(network_path);
-    coordsolver.loadParam(camera_param_path,"KE0200110075");
+    coordsolver.loadParam(camera_param_path,"KE0200110076");
     lost_cnt = 0;
     is_last_target_exists = false;
     // input_size = {640,384};
@@ -98,7 +98,6 @@ bool Buff::run(TaskData &src,VisionData &data)
     vector<BuffObject> objects;
     vector<Fan> fans;
     auto input = src.img;
-    // roi_offset = cropImageByROI(input);
 
 #ifdef USING_IMU
     Eigen::Matrix3d rmat_imu = src.quat.toRotationMatrix();
@@ -106,6 +105,7 @@ bool Buff::run(TaskData &src,VisionData &data)
     Eigen::Matrix3d rmat_imu = Eigen::Matrix3d::Identity();
 #endif //USING_IMU
 
+//TODO:修复ROI
 #ifdef USING_ROI
     roi_offset = cropImageByROI(input);
 #endif  //USING_ROI
@@ -141,14 +141,14 @@ bool Buff::run(TaskData &src,VisionData &data)
     ///------------------------生成扇叶对象----------------------------------------------
     for (auto object : objects)
     {
-#ifdef DETECT_RED
+#ifdef DETECT_BUFF_RED
         if (object.color != 1)
             continue;
-#endif //DETECT_RED
-#ifdef DETECT_BLUE
+#endif //DETECT_BUFF_RED
+#ifdef DETECT_BUFF_BLUE
         if (object.color != 0)
             continue;
-#endif //DETECT_BLUE
+#endif //DETECT_BUFF_BLUE
         Fan fan;
         fan.id = object.cls;
         fan.color = object.color;
@@ -175,6 +175,7 @@ bool Buff::run(TaskData &src,VisionData &data)
         fans.push_back(fan);
     }
     ///------------------------生成/分配FanTracker----------------------------
+    //TODO:增加防抖
     std::vector<FanTracker> trackers_tmp;
     //为扇叶分配或新建最佳FanTracker
     for (auto fan = fans.begin(); fan != fans.end(); ++fan)
@@ -252,20 +253,6 @@ bool Buff::run(TaskData &src,VisionData &data)
         return false;
     }
 
-#ifdef SHOW_ALL_FANS
-    for (auto fan : fans)
-    {
-        if (fan.color == 0)
-            putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
-        if (fan.color == 1)
-            putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
-        for(int i = 0; i < 5; i++)
-            line(src.img, fan.apex2d[i % 5], fan.apex2d[(i + 1) % 5], Scalar(0,255,0), 1);
-        auto fan_armor_center = coordsolver.reproject(fan.armor3d_cam);
-        circle(src.img, fan_armor_center, 4, {0, 0, 255}, 2);
-    }
-#endif //SHOW_ALL_FANS
-
     int avail_tracker_cnt = 0;
     double rotate_speed_sum = 0;
     double mean_rotate_speed = 0;
@@ -295,7 +282,10 @@ bool Buff::run(TaskData &src,VisionData &data)
     //FIXME:加入模式切换
     ///------------------------进行预测----------------------------
     // predictor.mode = 1;
-    predictor.mode = 0;
+    if (src.mode == 0x03)
+        predictor.mode = 0;
+    else if (src.mode == 0x04)
+        predictor.mode == 1;
     if (!predictor.predict(mean_rotate_speed, int(mean_r_center.norm()), src.timestamp, theta_offset))
     {
 #ifdef SHOW_IMG
@@ -318,13 +308,27 @@ bool Buff::run(TaskData &src,VisionData &data)
     //Pc = R * Pw + T
     hit_point_world = (rotMat * hit_point_world) + target.armor3d_world;
     hit_point_cam = coordsolver.worldToCam(hit_point_world, rmat_imu);
-    // auto r_center_cam = coordsolver.worldToCam(target.centerR3d_cam, rmat_imu);
-    auto r_center_cam = coordsolver.worldToCam(mean_r_center, rmat_imu);
+    auto r_center_cam = coordsolver.worldToCam(target.centerR3d_cam, rmat_imu);
+    // auto r_center_cam = coordsolver.worldToCam(mean_r_center, rmat_imu);
     auto center2d_src = coordsolver.reproject(r_center_cam);
     auto target2d = coordsolver.reproject(hit_point_cam);
     lost_cnt = 0;
     last_roi_center = center2d_src;
     is_last_target_exists = true;
+
+#ifdef SHOW_ALL_FANS
+    for (auto fan : fans)
+    {
+        if (fan.color == 0)
+            putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+        if (fan.color == 1)
+            putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+        for(int i = 0; i < 5; i++)
+            line(src.img, fan.apex2d[i % 5], fan.apex2d[(i + 1) % 5], Scalar(0,255,0), 1);
+        auto fan_armor_center = coordsolver.reproject(fan.armor3d_cam);
+        circle(src.img, fan_armor_center, 4, {0, 0, 255}, 2);
+    }
+#endif //SHOW_ALL_FANS
 
 #ifdef SHOW_AIM_CROSS
         line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), Scalar(0,255,0), 1);
@@ -370,6 +374,11 @@ bool Buff::run(TaskData &src,VisionData &data)
     fmt::print(fmt::fg(fmt::color::golden_rod), "Pitch: {} \n",angle[1]);
     fmt::print(fmt::fg(fmt::color::green_yellow), "Dist: {} m\n",(float)target.armor3d_cam.norm());
 #endif //PRINT_TARGET_INFO
+
+#ifdef SAVE_BUFF_LOG
+    // LOG(INFO) <<"[BUFF] LATENCY: "<< "Crop: " << dr_crop_ms << " ms" << " Infer: " << dr_infer_ms << " ms" << " Predict: " << dr_predict_ms << " ms" << " Total: " << dr_full_ms << " ms";
+    // LOG(INFO) <<"[BUFF] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)target.center3d_cam.norm();
+#endif //SAVE_BUFF_LOG
 
     data = {(float)angle[1], (float)angle[0], (float)target.armor3d_cam.norm(), 0, 1, 1, 1};
     return true;

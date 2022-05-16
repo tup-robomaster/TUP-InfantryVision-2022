@@ -20,7 +20,7 @@ public:
 
     bool run(TaskData &src,VisionData &data);       // 自瞄主函数
 private:
-    const string network_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/model/0311_416.xml";
+    const string network_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/model/opt-0516-001.xml";
     const string camera_param_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/params/coord_param.yaml";
     const string predict_param_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/params/filter/filter_param.yaml";
 

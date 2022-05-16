@@ -16,9 +16,9 @@ static constexpr int NUM_CLASSES = 2;  // Number of classes
 static constexpr int NUM_COLORS = 2;   // Number of color
 static constexpr int TOPK = 128;       // TopK
 static constexpr float NMS_THRESH  = 0.1;
-static constexpr float BBOX_CONF_THRESH  = 0.1;
-static constexpr float FFT_CONF_ERROR  = 0.1;
-static constexpr float FFT_MIN_IOU  = 0.1;
+static constexpr float BBOX_CONF_THRESH = 0.1;
+static constexpr float FFT_CONF_ERROR = 0.1;
+static constexpr float FFT_MIN_IOU = 0.1;
 
 static inline int argmax(const float *ptr, int len) 
 {
@@ -251,7 +251,7 @@ static void nms_sorted_bboxes(std::vector<BuffObject>& faceobjects, std::vector<
             // intersection over union
             // float inter_area = intersection_area(a, b);
             // float union_area = areas[i] + areas[picked[j]] - inter_area;
-            //TODO:此处耗时较长，越1ms，可以尝试使用其他方法计算IOU
+            //TODO:此处耗时较长，大约1ms，可以尝试使用其他方法计算IOU与多边形面积
             float inter_area = intersectConvexConvex(apex_a,apex_b,apex_inter);
             float union_area = areas[i] + areas[picked[j]] - inter_area;
             float iou = inter_area / union_area;

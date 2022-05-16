@@ -6,8 +6,8 @@
 #include "debug.h"
 
 DaHengCamera DaHeng;
-// const string SERIAL_ID = "483/5740/200";
-const string SERIAL_ID = "1a86/7523/263";
+const string SERIAL_ID = "483/5740/200";
+// const string SERIAL_ID = "1a86/7523/263";
 // const string SERIAL_ID = "10c4/ea60/100";
 // const string SERIAL_ID_IMU = "1a86/7523/264";
 const int BAUD = 115200;
@@ -17,7 +17,7 @@ int main()
 {
 #ifdef SAVE_MAIN_LOG
     google::InitGoogleLogging("Main");
-    FLAGS_alsologtostderr = true;  //除了日志文件之外是否需要标准输出
+    FLAGS_alsologtostderr = false;  //除了日志文件之外是否需要标准输出
     FLAGS_colorlogtostderr = true;  //是否启用不同颜色显示
 
     // 下面的函数暂时没有必要开启

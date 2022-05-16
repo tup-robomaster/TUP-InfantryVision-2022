@@ -9,12 +9,12 @@
 static constexpr int INPUT_W = 416;    // Width of input
 static constexpr int INPUT_H = 416;    // Height of input
 static constexpr int NUM_CLASSES = 8;  // Number of classes
-static constexpr int NUM_COLORS = 3;   // Number of color
+static constexpr int NUM_COLORS = 4;   // Number of color
 static constexpr int TOPK = 128;       // TopK
-static constexpr float NMS_THRESH  = 0.3;
-static constexpr float BBOX_CONF_THRESH  = 0.6;
-static constexpr float FFT_CONF_ERROR  = 0.15;
-static constexpr float FFT_MIN_IOU  = 0.9;
+static constexpr float NMS_THRESH = 0.3;
+static constexpr float BBOX_CONF_THRESH = 0.6;
+static constexpr float FFT_CONF_ERROR = 0.15;
+static constexpr float FFT_MIN_IOU = 0.9;
 
 static inline int argmax(const float *ptr, int len) 
 {
@@ -307,8 +307,8 @@ ArmorDetector::~ArmorDetector()
 bool ArmorDetector::initModel(string path)
 {
     ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "/home/tup/Desktop/TUP-InfantryVision-2022-main/.cache"}});
-    ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
-    // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
+    // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
+    ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
     // Step 1. Read a model in OpenVINO Intermediate Representation (.xml and
     // .bin files) or ONNX (.onnx file) format
     network = ie.ReadNetwork(path);
@@ -387,6 +387,7 @@ bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
     }
 
     infer_request.Infer();
+    // infer_request.GetPerformanceCounts();
     // -----------------------------------------------------------------------------------------------------
     // --------------------------- Step 8. Process output----------------
     // const Blob::Ptr output_blob = infer_request.GetBlob(output_name);

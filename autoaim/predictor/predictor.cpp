@@ -210,7 +210,7 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     Eigen::VectorXd measure_vy (1);
     Eigen::VectorXd measure_vz (1);
 
-    //取前两帧位置装甲板，拉长时间，以求降低高频噪声影响
+    //取隔两帧前的装甲板，拉长时间，以求降低高频噪声影响
     auto before_target = history_info.at(history_info.size() - 4);
 
     auto v_xyz = (target.xyz - before_target.xyz) / (target.timestamp - before_target.timestamp) * 1e3;
@@ -230,9 +230,9 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     result << result_vx[0], result_vy[0], result_vz[0];
 
     //异步修正
-    auto correct_x = std::async(std::launch::deferred, [&, measure_vx](){pf_x.correct(measure_vx);});
-    auto correct_y = std::async(std::launch::deferred, [&, measure_vy](){pf_y.correct(measure_vy);});
-    auto correct_z = std::async(std::launch::deferred, [&, measure_vz](){pf_z.correct(measure_vz);});
+    auto update_x = std::async(std::launch::deferred, [&, measure_vx](){pf_x.update(measure_vx);});
+    auto update_y = std::async(std::launch::deferred, [&, measure_vy](){pf_y.update(measure_vy);});
+    auto update_z = std::async(std::launch::deferred, [&, measure_vz](){pf_z.update(measure_vz);});
 
     // cout<<result.norm()<<endl;
     result = result  * (time_estimated / 1000.f) + target.xyz;
@@ -241,9 +241,9 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     is_available.xyz_status[1] = pf_y.is_ready;
     is_available.xyz_status[2] = pf_z.is_ready;
 
-    correct_x.wait();
-    correct_y.wait();
-    correct_z.wait();
+    update_x.wait();
+    update_y.wait();
+    update_z.wait();
 
     return is_available;
 }
@@ -270,31 +270,42 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
     options_y.linear_solver_type = ceres::DENSE_QR;  // 增量方程如何求解
     options_z.linear_solver_type = ceres::DENSE_QR;  // 增量方程如何求解
 
+    //求直流分量
+    Eigen::Vector3d sum = {0,0,0};
+    for (auto target_info : history_info)
+    {
+        sum += target_info.xyz;
+    }
+    auto dc = sum / history_info.size();
+    params_x[0] = dc[0];
+    params_y[0] = dc[1];
+    params_z[0] = dc[2];
+
     for (auto target_info : history_info)
     {
         problem_x.AddResidualBlock (     // 向问题中添加误差项
         // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 4> ( 
-                new CURVE_FITTING_COST ( target_info.timestamp - history_info.front().timestamp, target_info.xyz[0])
+            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 3> ( 
+                new CURVE_FITTING_COST ( target_info.timestamp - history_info.front().timestamp, target_info.xyz[0] - params_x[0])
             ),
             nullptr,            // 核函数，这里不使用，为空
-            params_x                 // 待估计参数
+            &params_x[1]                 // 待估计参数
         );
         problem_y.AddResidualBlock (     // 向问题中添加误差项
         // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 4> ( 
-                new CURVE_FITTING_COST ( target_info.timestamp - history_info.front().timestamp, target_info.xyz[1])
+            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 3> ( 
+                new CURVE_FITTING_COST ( target_info.timestamp - history_info.front().timestamp, target_info.xyz[1] - params_y[0])
             ),
             nullptr,            // 核函数，这里不使用，为空
-            params_y                 // 待估计参数
+            &params_y[1]                 // 待估计参数
         );
         problem_z.AddResidualBlock (     // 向问题中添加误差项
         // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 4> ( 
-                new CURVE_FITTING_COST ( target_info.timestamp - history_info.front().timestamp, target_info.xyz[2])
+            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 3> ( 
+                new CURVE_FITTING_COST ( target_info.timestamp - history_info.front().timestamp, target_info.xyz[2] - params_z[0])
             ),
             nullptr,            // 核函数，这里不使用，为空
-            params_z                 // 待估计参数
+            &params_z[1]                // 待估计参数
         );
     }
 
@@ -310,6 +321,7 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
     auto x_cost = summary_x.final_cost;
     auto y_cost = summary_y.final_cost;
     auto z_cost = summary_z.final_cost;
+    // cout<<x_cost<<endl;
 
     PredictStatus is_available;
 
@@ -318,9 +330,9 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
     is_available.xyz_status[2] = (z_cost <= max_cost);
     // cout<<z_cost<<endl;
 
-    auto x_pred = 1e2 * params_x[0] + 1e4 * params_x[1] * cos(params_x[3] * time_estimated) + 1e4 * params_x[2] * sin(params_x[3] * time_estimated);
-    auto y_pred = 1e2 * params_y[0] + 1e4 * params_y[1] * cos(params_y[3] * time_estimated) + 1e4 * params_y[2] * sin(params_y[3] * time_estimated);
-    auto z_pred = 1e2 * params_z[0] + 1e4 * params_z[1] * cos(params_z[3] * time_estimated) + 1e4 * params_z[2] * sin(params_z[3] * time_estimated);
+    auto x_pred = params_x[0] + params_x[1] * cos(params_x[3] * time_estimated) + params_x[2] * sin(params_x[3] * time_estimated);
+    auto y_pred = params_y[0] + params_y[1] * cos(params_y[3] * time_estimated) + params_y[2] * sin(params_y[3] * time_estimated);
+    auto z_pred = params_z[0] + params_z[1] * cos(params_z[3] * time_estimated) + params_z[2] * sin(params_z[3] * time_estimated);
 
     result = {x_pred,y_pred,z_pred};
     return is_available;

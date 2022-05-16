@@ -110,7 +110,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 #ifdef USING_IMU
         //获取下位机数据
         MCUData mcu_status;
-        if (!receive_factory.consume(mcu_status, src.timestamp))
+        if (!receive_factory.consume(mcu_status, src.timestamp - 1))
             continue;
         src.quat = mcu_status.quat;
         src.mode = mcu_status.mode;
@@ -157,7 +157,7 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
                 transmit_factory.produce(data);
             }
         }
-        else if (mode == 0x02 || mode == 0x03)
+        else if (mode == 0x03 || mode == 0x04)
         {
             if (buff.run(dst, data))
             {
@@ -225,11 +225,11 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
 #endif //DEBUG_WITHOUT_COM
         auto time_cap = std::chrono::steady_clock::now();
         auto timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
-        // cout<<"Quad: "<<serial.quat[0]<<" "<<serial.quat[1]<<" "<<serial.quat[2]<<" "<<serial.quat[3]<<" "<<endl;
+        // cout<<"Quat: "<<serial.quat[0]<<" "<<serial.quat[1]<<" "<<serial.quat[2]<<" "<<serial.quat[3]<<" "<<endl;
         // Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         //FIXME:注意此处mode设置
         // int mode = serial.mode;
-        int mode = 0x03;
+        int mode = 0x01;
         Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         Eigen::Vector3d acc = {serial.acc[0],serial.acc[1],serial.acc[2]};;
         Eigen::Vector3d gyro = {serial.gyro[0],serial.gyro[1],serial.gyro[2]};;
@@ -253,7 +253,6 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
 bool serialWatcher(SerialPort &serial)
 {
     int last = 0;
-//TODO:修复无COM调试
 #ifdef DEBUG_WITHOUT_COM
     #ifdef SAVE_TRANSMIT_LOG
     LOG(WARNING)<<"[SERIAL] Warning: You are not using Serial port";

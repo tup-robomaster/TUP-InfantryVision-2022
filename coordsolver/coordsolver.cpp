@@ -1,13 +1,28 @@
 #include "coordsolver.h"
 
+/**
+ * @brief Construct a new Coord Solver:: Coord Solver object
+ * 
+ */
 CoordSolver::CoordSolver()
 {  
 }
 
+/**
+ * @brief Destroy the Coord Solver:: Coord Solver object
+ * 
+ */
 CoordSolver::~CoordSolver()
 {   
 }
 
+/**
+ * @brief 加载CoordSolver参数
+ * 
+ * @param coord_path 参数文件路径
+ * @param param_name 参数组名称
+ * @return bool 加载是否成功
+ */
 bool CoordSolver::loadParam(string coord_path,string param_name)
 {
     YAML::Node config = YAML::LoadFile(coord_path);
@@ -57,6 +72,7 @@ bool CoordSolver::loadParam(string coord_path,string param_name)
 
     return true;
 }
+
 /**
  * @brief PnP解算目标距离与位姿
  * 
@@ -71,6 +87,7 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
     std::vector<Point3d> points_world;
     std::vector<Point2f> vecotr_apex = {points_pic[0], points_pic[1], points_pic[2], points_pic[3]};
 
+    //长度为4进入装甲板模式
     if (points_pic.size() == 4)
     {
         RotatedRect points_pic_rrect = minAreaRect(vecotr_apex);
@@ -90,7 +107,8 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
                 {0.066,-0.027,0},
                 {0.066,0.027,0}};
     }
-    else
+    //长度为5进入大符模式
+    else if (points_pic.size() == 5)
     {
         points_world = {
         {-0.1125,0.027,0},
@@ -125,27 +143,29 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
         result.armor_cam = tvec_eigen;
         result.armor_world = camToWorld(result.armor_cam, rmat_imu);
         result.R_cam = (rmat_eigen * R_center_world) + tvec_eigen;
-        result.R_world = camToWorld(result.armor_cam, rmat_imu);
+        result.R_world = camToWorld(result.R_cam, rmat_imu);
         // result.euler = rotationMatrixToEulerAngles(transform_ci.block(0,0,2,2) * rmat_imu * rmat_eigen);
-        Eigen::Matrix3d rmat_eigen_world = transform_ci.block(0, 0, 3, 3) * rmat_imu * rmat_eigen;
+        Eigen::Matrix3d rmat_eigen_world = rmat_imu * transform_ic.block(0, 0, 3, 3) * rmat_eigen;
         // result.euler = rotationMatrixToEulerAngles(rmat_eigen_world);
         result.euler = rotationMatrixToEulerAngles(rmat_eigen_world);
-        // result.euler = rotationMatrixToEulerAngles(rmat_eigen);
     }
-
-
-
     
     return result;
 }
 
-
+/**
+ * @brief 计算目标位置所需补偿
+ * 
+ * @param xyz_cam 目标相机坐标系下位置
+ * @param rmat IMU旋转矩阵
+ * @return Eigen::Vector2d yaw,pitch
+ */
 Eigen::Vector2d CoordSolver::getAngle(Eigen::Vector3d &xyz_cam, Eigen::Matrix3d &rmat)
 {
     // cout<<xyz_cam<<endl;
     // cout<<endl;
-    auto xyz_world = camToWorld(xyz_cam,rmat);
-    // auto xyz_offseted = staticCoordOffset(xyz);
+    auto xyz_offseted = staticCoordOffset(xyz_cam);
+    auto xyz_world = camToWorld(xyz_offseted,rmat);
     auto angle_cam = calcYawPitch(xyz_cam);
     // auto dist = xyz_offseted.norm();
     // auto pitch_offset = 6.457e04 * pow(dist,-2.199);
@@ -157,6 +177,12 @@ Eigen::Vector2d CoordSolver::getAngle(Eigen::Vector3d &xyz_cam, Eigen::Matrix3d 
 
 }
 
+/**
+ * @brief 重投影
+ * 
+ * @param xyz 目标三维坐标
+ * @return cv::Point2f 图像坐标系上坐标(x,y)
+ */
 cv::Point2f CoordSolver::reproject(Eigen::Vector3d &xyz)
 {
     Eigen::Matrix3d mat_intrinsic;
@@ -166,11 +192,23 @@ cv::Point2f CoordSolver::reproject(Eigen::Vector3d &xyz)
     return cv::Point2f(result[0], result[1]);
 }
 
+/**
+ * @brief 静态坐标补偿
+ * 
+ * @param xyz 待补偿坐标
+ * @return Eigen::Vector3d 补偿后坐标
+ */
 inline Eigen::Vector3d CoordSolver::staticCoordOffset(Eigen::Vector3d &xyz)
 {
     return xyz + xyz_offset;
 }
 
+/**
+ * @brief 静态角度补偿
+ * 
+ * @param angle 待补偿角度
+ * @return Eigen::Vector2d 补偿后角度
+ */
 inline Eigen::Vector2d CoordSolver::staticAngleOffset(Eigen::Vector2d &angle)
 {
     return angle + angle_offset;
