@@ -110,7 +110,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 #ifdef USING_IMU
         //获取下位机数据
         MCUData mcu_status;
-        if (!receive_factory.consume(mcu_status, src.timestamp - 1))
+        if (!receive_factory.consume(mcu_status, src.timestamp - 4))
             continue;
         src.quat = mcu_status.quat;
         src.mode = mcu_status.mode;

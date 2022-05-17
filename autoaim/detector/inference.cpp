@@ -386,7 +386,10 @@ bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
         blob_data += img_offset;
     }
 
+    // auto t1 = std::chrono::steady_clock::now();
     infer_request.Infer();
+    // auto t2 = std::chrono::steady_clock::now();
+    // cout<<(float)(std::chrono::duration<double,std::milli>(t2 - t1).count())<<endl;
     // infer_request.GetPerformanceCounts();
     // -----------------------------------------------------------------------------------------------------
     // --------------------------- Step 8. Process output----------------

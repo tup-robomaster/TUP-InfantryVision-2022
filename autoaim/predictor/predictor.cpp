@@ -211,9 +211,13 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     Eigen::VectorXd measure_vz (1);
 
     //取隔两帧前的装甲板，拉长时间，以求降低高频噪声影响
-    auto before_target = history_info.at(history_info.size() - 4);
+    auto before_target_next = history_info.at(history_info.size() - 3);
+    auto before_target_prior = history_info.at(history_info.size() - 2);
 
-    auto v_xyz = (target.xyz - before_target.xyz) / (target.timestamp - before_target.timestamp) * 1e3;
+    auto v_xyz_prior = (target.xyz - before_target_prior.xyz) / (target.timestamp - before_target_prior.timestamp) * 1e3;
+    auto v_xyz_next = (target.xyz - before_target_next.xyz) / (target.timestamp - before_target_next.timestamp) * 1e3;
+
+    auto v_xyz = (2 * v_xyz_next + v_xyz_prior) / 3; 
 
     measure_vx << v_xyz[0];
     measure_vy <<  v_xyz[1];

@@ -90,7 +90,7 @@ bool Autoaim::updateSpinScore()
             spin_status = UNKNOWN;
         else
             spin_status = spin_status_map[(*score).first];
-        // cout<<(*score).first<<"--"<<(*score).second<<" "<<spin_status<<endl;
+        cout<<(*score).first<<"--"<<(*score).second<<" "<<spin_status<<endl;
 
         // 若分数过低移除此元素
         if ((*score).second <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
@@ -301,6 +301,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     //     fmt::print(fmt::fg(fmt::color::golden_rod), "Infer: {} ms\n",dr_infer_ms);
     // }
         lost_cnt++;
+        cout<<lost_cnt<<endl;
         is_last_target_exists = false;
         last_target_area = 0;
         return false;
@@ -489,6 +490,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                 if ((*candidate).second.is_initialized)
                 {
                     last_armor_center = (*candidate).second.last_armor.center3d_cam[0];
+                    last_armor_timestamp = (*candidate).second.last_timestamp;
                     ++candidate;
                     if (!(*candidate).second.is_initialized)
                         {
@@ -512,10 +514,10 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                         continue;
                 }
                 auto spin_movement = new_armor_center - last_armor_center;
-
-                if (spin_score_map[cnt.first] == 0 && abs(spin_movement) > 0.1 && last_armor_timestamp == new_armor_timestamp)
+                // cout<<last_armor_timestamp<<" : "<<new_armor_timestamp<<endl;
+                if (spin_score_map[cnt.first] == 0 && abs(spin_movement) > 0.05 && last_armor_timestamp == new_armor_timestamp)
                     spin_score_map[cnt.first] = 100 * spin_movement / abs(spin_movement);
-                else if (abs(spin_movement) > 0.1 && last_armor_timestamp == new_armor_timestamp)
+                else if (abs(spin_movement) > 0.05 && last_armor_timestamp == new_armor_timestamp)
                     spin_score_map[cnt.first] = 2 * spin_score_map[cnt.first];
             }
         }
@@ -707,6 +709,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     //获取装甲板中心与装甲板面积以下一次ROI截取使用
     last_roi_center = target.center2d;
     last_armor = target;
+    lost_cnt = 0;
     last_timestamp = src.timestamp;
     last_target_area = target.area;
     last_aiming_point = aiming_point;
