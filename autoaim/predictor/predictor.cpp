@@ -21,6 +21,7 @@ ArmorPredictor ArmorPredictor::generate()
     new_predictor.pf_x.initParam(pf_x);
     new_predictor.pf_y.initParam(pf_y);
     new_predictor.pf_z.initParam(pf_z);
+    new_predictor.pf_pos.initParam(pf_pos);
     new_predictor.fitting_disabled = false;
 
     return new_predictor;
@@ -40,9 +41,9 @@ bool ArmorPredictor::initParam(ArmorPredictor &predictor_loader)
 bool ArmorPredictor::initParam(string coord_path)
 {
     YAML::Node config = YAML::LoadFile(coord_path);
-    pf_x.initParam(config,"autoaim_x");
-    pf_y.initParam(config,"autoaim_y");
-    pf_z.initParam(config,"autoaim_z");
+    pf_x.initParam(config,"velocity_x");
+    pf_y.initParam(config,"velocity_y");
+    pf_z.initParam(config,"velocity_z");
     fitting_disabled = false;
     
     return true;
@@ -54,7 +55,7 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     auto t1=std::chrono::steady_clock::now();
     TargetInfo target = {xyz, (int)xyz.norm(), timestamp};
     
-    //当队列长度小于2，仅更新队列
+    //当队列长度小于3，仅更新队列
     if (history_info.size() < 3)
     {
         history_info.push_back(target);
@@ -64,17 +65,18 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     auto d_xyz = target.xyz - last_target.xyz;
     auto delta_t = timestamp - last_target.timestamp;
     auto last_dist = history_info.back().dist;
-    auto delta_time_estimate = (last_dist / bullet_speed) * 1e3 + delay;
+    // auto delta_time_estimate = (last_dist / bullet_speed) * 1e3 + delay;
+    auto delta_time_estimate = (last_dist / bullet_speed) * 1e3 + delay + timestamp - last_target.timestamp;
     auto time_estimate = delta_time_estimate + history_info.back().timestamp - history_info.front().timestamp;
     //如速度过大,可认为为噪声干扰,进行滑窗滤波滤除
-    //FIXME:测距噪声较大，暂未找到较好的方法滤除
-    if (((d_xyz.norm() / delta_t) * 1e3) >= max_v)
-    {
-        history_info.push_back(target);
-        auto filtered_xyz = shiftWindowFilter(history_info.size() - window_size - 1);
-        target = {filtered_xyz, (int)filtered_xyz.norm(), timestamp};
-        history_info.pop_back();
-    }
+    // //FIXME:测距噪声较大，暂未找到较好的方法滤除
+    // if (((d_xyz.norm() / delta_t) * 1e3) >= max_v)
+    // {
+    //     history_info.push_back(target);
+    //     auto filtered_xyz = shiftWindowFilter(history_info.size() - window_size - 1);
+    //     target = {filtered_xyz, (int)filtered_xyz.norm(), timestamp};
+    //     history_info.pop_back();
+    // }
 
     //当队列长度不足时不使用拟合
     if (history_info.size() < history_deque_len)
@@ -211,16 +213,16 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     Eigen::VectorXd measure_vz (1);
 
     //取隔两帧前的装甲板，拉长时间，以求降低高频噪声影响
-    auto before_target_next = history_info.at(history_info.size() - 3);
-    auto before_target_prior = history_info.at(history_info.size() - 2);
+    auto before_target_next = history_info.at(history_info.size() - 4);
+    auto before_target_prior = history_info.at(history_info.size() - 3);
 
     auto v_xyz_prior = (target.xyz - before_target_prior.xyz) / (target.timestamp - before_target_prior.timestamp) * 1e3;
     auto v_xyz_next = (target.xyz - before_target_next.xyz) / (target.timestamp - before_target_next.timestamp) * 1e3;
 
-    auto v_xyz = (2 * v_xyz_next + v_xyz_prior) / 3; 
+    auto v_xyz = (v_xyz_next + v_xyz_prior) / 2; 
 
     measure_vx << v_xyz[0];
-    measure_vy <<  v_xyz[1];
+    measure_vy << v_xyz[1];
     measure_vz << v_xyz[2];
     auto pf_result_vx = std::async(std::launch::deferred, [&](){return pf_x.predict();});
     auto pf_result_vy = std::async(std::launch::deferred, [&](){return pf_y.predict();});

@@ -9,7 +9,6 @@ ArmorTracker::ArmorTracker(Armor src, int src_timestamp)
     last_armor = src;
     last_timestamp = src_timestamp;
     is_initialized = false;
-
     history_info.push_back(src);
 }
 

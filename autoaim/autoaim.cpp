@@ -90,7 +90,7 @@ bool Autoaim::updateSpinScore()
             spin_status = UNKNOWN;
         else
             spin_status = spin_status_map[(*score).first];
-        cout<<(*score).first<<"--"<<(*score).second<<" "<<spin_status<<endl;
+        // cout<<(*score).first<<"--"<<(*score).second<<" "<<spin_status<<endl;
 
         // 若分数过低移除此元素
         if ((*score).second <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
@@ -205,26 +205,33 @@ Eigen::Vector4d FitSpaceCircle(std::vector<Eigen::Vector3d> pts)
 }
 
 /**
- * @brief 从装甲板中选择最终目标
+ * @brief 从ArmorTracker选出最佳Tracker
  * 
- * @param armors 装甲板vector
- * @return Armor 所选取的装甲板
+ * @param trackers Trackers
+ * @param timestamp 本次时间戳 
+ * @return ArmorTracker* 选中的ArmorTracker
  */
-Armor Autoaim::chooseTargetArmor(vector<Armor> armors)
+ArmorTracker* Autoaim::chooseTargetTracker(vector<ArmorTracker*> trackers, int timestamp)
 {
     //TODO:优化打击逻辑
+    //TODO:本逻辑为哨兵逻辑
     float max_area = 0;
     int target_idx = 0;
-    for(int i = 0; i < armors.size(); i++)
+
+    //若存在上次tracker则直接返回,若不存在则装甲板面积最大的Tracker
+    for (int i = 0; i < trackers.size(); i++)
     {
-        auto area = calcTetragonArea(armors[i].apex2d);
-        if (area >= max_area)
+        //若该Tracker为上次Tracker且本次仍在更新,则直接使用
+        if (trackers[i]->last_selected_timestamp == last_timestamp && trackers[i]->last_timestamp == timestamp)
+            return trackers[i];
+        else if (trackers[i]->last_armor.area >= max_area && trackers[i]->last_timestamp == timestamp)
         {
-            max_area = area;
+            max_area = trackers[i]->last_armor.area;
             target_idx = i;
         }
     }
-    return armors[target_idx];
+    return trackers[target_idx];
+
 }
 
 /**
@@ -233,8 +240,15 @@ Armor Autoaim::chooseTargetArmor(vector<Armor> armors)
  * @param armors 
  * @return string 
  */
-string Autoaim::chooseTargetID(vector<Armor> &armors)
+string Autoaim::chooseTargetID(vector<Armor> &armors, int timestamp)
 {
+    //TODO:自瞄逻辑修改
+    bool is_last_id_exists = false;
+    string target_key;
+    //该选择逻辑主要存在两层约束:
+    //英雄约束与上次目标约束
+    //若检测到危险距离内的英雄直接退出循环
+    //若检测到存在上次击打目标,时间较短,且该目标运动较小,则将其选为候选目标,若遍历结束未发现危险距离内的英雄则将其ID选为目标ID.
     for (auto armor : armors)
     {
         //若视野中存在英雄且距离小于危险距离，直接选为目标
@@ -242,9 +256,18 @@ string Autoaim::chooseTargetID(vector<Armor> &armors)
         {
             return armor.key;
         }
+        //若存在上次击打目标,时间较短,且该目标运动较小则将其选为候选目标,若遍历结束未发现危险距离内的英雄则将其ID选为目标ID.
+        else if (armor.id == last_armor.id && abs(armor.center3d_world.norm() - last_armor.center3d_world.norm()) < 0.1 && abs(timestamp - last_timestamp) < 30)
+        {
+            is_last_id_exists = true;
+            target_key = armor.key;
+        }
     }
     //若不存在则返回面积最大的装甲板序号，即队列首元素序号
-    return (*armors.begin()).key;
+    if (is_last_id_exists)
+        return target_key;
+    else
+        return (*armors.begin()).key;
 }
 
 
@@ -301,7 +324,6 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     //     fmt::print(fmt::fg(fmt::color::golden_rod), "Infer: {} ms\n",dr_infer_ms);
     // }
         lost_cnt++;
-        cout<<lost_cnt<<endl;
         is_last_target_exists = false;
         last_target_area = 0;
         return false;
@@ -531,7 +553,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     // }
 #endif //USING_SPIN_DETECT
     ///-----------------------------判断击打车辆------------------------------------------
-    auto target_id = chooseTargetID(armors);
+    auto target_id = chooseTargetID(armors, src.timestamp);
     auto ID_candiadates = trackers_map.equal_range(target_id);
     ///---------------------------获取最终装甲板序列---------------------------------------
     bool is_target_spinning;
@@ -563,6 +585,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         for (auto iter = ID_candiadates.first; iter != ID_candiadates.second; ++iter)
         {
             final_armors.push_back((*iter).second.last_armor);
+            final_trackers.push_back(&(*iter).second);
             //若Tracker未完成初始化，不考虑使用
             // if (!(*iter).second.is_initialized || (*iter).second.history_info.size() < 3)
             // {
@@ -654,10 +677,12 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     {
         for (auto iter = ID_candiadates.first; iter != ID_candiadates.second; ++iter)
         {
-            final_armors.push_back((*iter).second.last_armor);
+            // final_armors.push_back((*iter).second.last_armor);
+            final_trackers.push_back(&(*iter).second);
         }
-        //选取最大的装甲板进行击打
-        target = chooseTargetArmor(final_armors);
+        //进行目标选择
+        auto tracker = chooseTargetTracker(final_trackers, src.timestamp);
+        target = tracker->last_armor;
 
 #ifdef USING_PREDICT
         auto delta_t = src.timestamp - last_timestamp;

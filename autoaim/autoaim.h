@@ -45,7 +45,6 @@ private:
 
     int anti_spin_judge_high_thres = 1e4;//大于该阈值认为该车已开启陀螺
     int anti_spin_judge_low_thres = 5e3;//小于该阈值认为该车已关闭陀螺
-    int anti_spin_max_r_multiple = 2;
 
     const double no_crop_thres = 2e-3;      //禁用ROI裁剪的装甲板占图像面积最大面积比值
 
@@ -58,7 +57,7 @@ private:
     ArmorPredictor predictor;
 
     bool updateSpinScore();
-    string chooseTargetID(vector<Armor> &armors);
-    Armor chooseTargetArmor(vector<Armor> armors);
+    string chooseTargetID(vector<Armor> &armors, int timestamp);
+    ArmorTracker* chooseTargetTracker(vector<ArmorTracker*> trackers, int timestamp);
     Point2i cropImageByROI(Mat &img);
 };

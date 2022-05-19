@@ -1,7 +1,14 @@
 #include "particle_filter.h"
 
-
-bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix,Eigen::MatrixXd &cov)
+/**
+ * @brief 生成正态分布矩阵
+ * 
+ * @param matrix 
+ * @param cov 
+ * @return true 
+ * @return false 
+ */
+bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix, Eigen::MatrixXd &cov)
 {
     std::random_device rd;
     default_random_engine e(rd());
@@ -27,6 +34,7 @@ bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix,Eigen::MatrixXd &cov)
 
     return true;
 }
+
 /**
  * @brief Construct a new Particle Filter:: Particle Filter object
  * 
@@ -47,7 +55,7 @@ ParticleFilter::ParticleFilter(YAML::Node &config,const string param_name)
 }
 
 /**
- * @brief Destroy the Particle Filter:: Particle Filter object
+ * @brief 
  * 
  */
 ParticleFilter::~ParticleFilter()
