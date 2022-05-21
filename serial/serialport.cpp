@@ -10,7 +10,7 @@ SerialPort::SerialPort(const string ID, const int BAUD)
     // system(std::string("echo root@233|sudo chmod 777 /dev/ttyUSB0").c_str());
     // cout << system(std::string("pwd").c_str()) << endl;
     // system(std::string("root@233").c_str());
-    initSerialPort();
+
 #ifdef DEBUG_WITHOUT_COM
     withoutSerialPort();
 #else

@@ -66,10 +66,10 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     while(1)
     {
         TaskData src;
+        auto time_cap = std::chrono::steady_clock::now();
 
 #ifdef USING_DAHENG
         auto DaHeng_stauts = DaHeng.GetMat(src.img);
-        auto time_cap = std::chrono::steady_clock::now();
         if (!DaHeng_stauts)
         {
             goto start_get_img;
@@ -145,7 +145,7 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
     // cout<<mode<<"..."<<last_mode<<endl;
     if (mode != last_mode)
     {
-        LOG(INFO)<<"[TASK] Mode switched to "<< mode <<"."<<endl;
+        LOG(INFO)<<"[TASK] Mode switched to "<< mode;
         last_mode = mode;
     }
 #endif //SAVE_TRANSMIT_LOG

@@ -13,10 +13,10 @@ const string SERIAL_ID = "483/5740/200";
 const int BAUD = 115200;
 // const int BAUD_IMU = 460800;
 
-int main()
+int main(int argc,char* argv[])
 {
 #ifdef SAVE_MAIN_LOG
-    google::InitGoogleLogging("Main");
+    google::InitGoogleLogging(argv[0]);
     FLAGS_alsologtostderr = false;  //除了日志文件之外是否需要标准输出
     FLAGS_colorlogtostderr = true;  //是否启用不同颜色显示
 
@@ -25,9 +25,9 @@ int main()
     // FLAGS_max_log_size = 10;  //日志文件大小(单位：MB)
     // FLAGS_stop_logging_if_full_disk = true; //磁盘满时是否记录到磁盘
 
-    google::SetLogDestination(google::GLOG_INFO,"../log/info/");  //设置日志级别
-    google::SetLogDestination(google::GLOG_WARNING,"../log/warning/");
-    google::SetLogDestination(google::GLOG_ERROR,"../log/error/");
+    google::SetLogDestination(google::GLOG_INFO,"/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/log/info/");  //设置日志级别
+    google::SetLogDestination(google::GLOG_WARNING,"/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/log/warning/");
+    google::SetLogDestination(google::GLOG_ERROR,"/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/log/error/");
 #endif //SAVE_MAIN_LOG
 
     auto time_start = std::chrono::steady_clock::now();
@@ -44,11 +44,6 @@ int main()
     #endif //SAVE_MAIN_LOG
 #endif //USING_IMU_C_BOARD
 
-// #ifdef USING_IMU_WIT
-//     IMUSerial serial_imu(SERIAL_ID_IMU, BAUD_IMU);
-//     std::thread serial_watcher(&serialWatcher, ref(serial), ref (serial_imu));
-//     std::thread receiver(&dataReceiver, ref(serial_imu), ref(data_receiver), time_start);
-// #endif //USING_IMU_WIT
 
     std::thread task_producer(&producer, ref(task_factory), ref(data_receiver), time_start);
 #ifdef SAVE_MAIN_LOG
@@ -105,3 +100,9 @@ int main()
 
     return 0;
 }
+
+// #ifdef USING_IMU_WIT
+//     IMUSerial serial_imu(SERIAL_ID_IMU, BAUD_IMU);
+//     std::thread serial_watcher(&serialWatcher, ref(serial), ref (serial_imu));
+//     std::thread receiver(&dataReceiver, ref(serial_imu), ref(data_receiver), time_start);
+// #endif //USING_IMU_WIT

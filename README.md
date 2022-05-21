@@ -9,7 +9,7 @@ https://github.com/google/glog/releases/tag/v0.5.0
 
 https://github.com/ceres-solver/ceres-solver/releases/tag/2.1.0
 
- https://github.com/lava/matplotlib-cpp
+https://github.com/lava/matplotlib-cpp
 ### 更新内容
 V1.0 合并更新debug.h，优化输出，添加日志记录，优化相机驱动，解耦串口，增加小陀螺判断，修复USB相机调用bug	
 V0.7 Beta 改善预测功能（使用拟合与粒子滤波），增添ROI 2022.1.27  
