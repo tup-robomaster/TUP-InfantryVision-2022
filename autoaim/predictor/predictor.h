@@ -72,7 +72,7 @@ private:
     std::deque<TargetInfo> history_info;                                //目标队列
 
     const int max_timespan = 1000;                                       //最大时间跨度，大于该时间重置预测器(ms)
-    const int max_cost = 1e-3;                                            //回归函数最大Cost
+    const double max_cost = 1e-3;                                            //回归函数最大Cost
     const int max_v = 8;                                                //设置最大速度,单位m/s
     const int history_deque_len = 10;                                   //队列长度    
     const int bullet_speed = 30;                                        //TODO:弹速可变

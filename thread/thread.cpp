@@ -6,8 +6,8 @@
 **/
 bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
 {
-    start_get_img:
 #ifdef USING_DAHENG
+    start_get_img:
     DaHengCamera DaHeng;
     DaHeng.StartDevice(1);
     // 设置分辨率
@@ -38,15 +38,10 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
 #ifdef USING_USB_CAMERA
     VideoCapture cap(0);
+    // VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Open USB Camera success\n");
-    auto time_start = std::chrono::steady_clock::now();
+    // auto time_start = std::chrono::steady_clock::now();
 #endif //USING_USB_CAMERA
-
-#ifdef USING_VIDEO
-    sleep(6);//防止网络加载完成前视频开始播放
-    VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
-    // VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/sample.mp4");
-#endif //USING_VIDEO
 
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
 #ifdef SAVE_VIDEO
@@ -80,17 +75,10 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         // src.timestamp = DaHeng.Get_TIMESTAMP();
 #endif //USING_DAHENG
 
-#ifdef USING_VIDEO
-        cap >> src.img;
-        auto time_cap = std::chrono::steady_clock::now();
-        src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
-        // sleep(0.02);
-        waitKey(33.3);
-#endif //USING_VIDEO
-
 #ifdef USING_USB_CAMERA
         cap >> src.img;
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
+        // waitKey(33.3);
 #endif //USING_USB_CAMERA
 
         if (src.img.empty())
@@ -184,6 +172,7 @@ bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory)
         VisionData transmit;
         transmit_factory.consume(transmit);
         //若串口离线则跳过数据发送
+        //TODO:使用无串口的模式时会导致此线程死循环，浪费CPU性能
         if (serial.need_init == true)
         {
             // cout<<"offline..."<<endl;
@@ -278,7 +267,6 @@ bool serialWatcher(SerialPort &serial)
             serial.initSerialPort();
 #endif //DEBUG_WITHOUT_COM
         }
-
     }
 }
 

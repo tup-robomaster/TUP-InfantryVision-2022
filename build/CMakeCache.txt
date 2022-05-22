@@ -209,7 +209,7 @@ CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 Ceres_DIR:PATH=/usr/local/lib/cmake/Ceres
 
 //The directory containing a CMake configuration file for Eigen3.
-Eigen3_DIR:PATH=/usr/lib/cmake/eigen3
+Eigen3_DIR:PATH=/usr/local/share/eigen3/cmake
 
 //Value Computed by CMake
 Infantry_Vision_BINARY_DIR:STATIC=/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/build
@@ -221,7 +221,7 @@ Infantry_Vision_SOURCE_DIR:STATIC=/home/dishierweidu/Desktop/TUP-InfantryVision-
 InferenceEngine_DIR:PATH=/opt/intel/openvino_2021/deployment_tools/inference_engine/share
 
 //The directory containing a CMake configuration file for OpenCV.
-OpenCV_DIR:PATH=/usr/local/lib/cmake/opencv4
+OpenCV_DIR:PATH=/opt/intel/openvino_2021/opencv/cmake
 
 //Path to a file.
 PYTHON_INCLUDE_DIR:PATH=/usr/include/python3.8
@@ -420,7 +420,7 @@ CMAKE_UNAME:INTERNAL=/usr/bin/uname
 //ADVANCED property for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
 //Details about finding OpenCV
-FIND_PACKAGE_MESSAGE_DETAILS_OpenCV:INTERNAL=[/usr/local][v4.5.0(4.5.0)]
+FIND_PACKAGE_MESSAGE_DETAILS_OpenCV:INTERNAL=[/opt/intel/openvino_2021.4.752/opencv][v4.5.3(4.5.0)]
 //Details about finding Python3
 FIND_PACKAGE_MESSAGE_DETAILS_Python3:INTERNAL=[/home/dishierweidu/.local/lib/python3.8/site-packages/numpy/core/include][cfound components: NumPy Interpreter Development ][v3.8.8()]
 //Details about finding PythonLibs

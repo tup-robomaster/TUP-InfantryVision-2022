@@ -4,7 +4,7 @@ bool IMUSerial::readData()
 {
     int bytes;
     char *name = ttyname(fd);
-    if (name = NULL)printf("tty is null\n");
+    if (name == NULL)printf("tty is null\n");
     //if (name != NULL)printf("device:%s\n",name);
     int result = ioctl(fd, FIONREAD, &bytes);
     if (result == -1)return false;

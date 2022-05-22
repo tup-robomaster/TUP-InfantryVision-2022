@@ -285,7 +285,7 @@ bool Buff::run(TaskData &src,VisionData &data)
     if (src.mode == 0x03)
         predictor.mode = 0;
     else if (src.mode == 0x04)
-        predictor.mode == 1;
+        predictor.mode = 1;
     if (!predictor.predict(mean_rotate_speed, int(mean_r_center.norm()), src.timestamp, theta_offset))
     {
 #ifdef SHOW_IMG

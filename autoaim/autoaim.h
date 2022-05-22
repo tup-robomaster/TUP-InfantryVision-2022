@@ -20,9 +20,9 @@ public:
 
     bool run(TaskData &src,VisionData &data);       // 自瞄主函数
 private:
-    const string network_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/model/opt-0517-001.xml";
-    const string camera_param_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/params/coord_param.yaml";
-    const string predict_param_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/params/filter/filter_param.yaml";
+    const string network_path = "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/model/opt-0517-001.xml";
+    const string camera_param_path = "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/params/coord_param.yaml";
+    const string predict_param_path = "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/params/filter/filter_param.yaml";
 
     bool is_last_target_exists;
     int lost_cnt;

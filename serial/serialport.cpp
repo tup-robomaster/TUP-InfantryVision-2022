@@ -98,7 +98,7 @@ bool SerialPort::get_Mode()
 {
     int bytes;
     char *name = ttyname(fd);
-    if (name = NULL) printf("tty is null\n");
+    if (name == NULL) printf("tty is null\n");
     int result = ioctl(fd, FIONREAD, &bytes);
     if (result == -1)
         return false;
