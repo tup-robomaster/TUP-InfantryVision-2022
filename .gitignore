@@ -46,9 +46,9 @@ Infantry_Vision
 
 #Logs
 *.log
-*.WARNING
-*.ERROR
-*.INFO
+# *.WARNING
+# *.ERROR
+# *.INFO
 
 #CMake
 CMakeFiles

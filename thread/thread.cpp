@@ -17,7 +17,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-    DaHeng.SetExposureTime(8000);
+    DaHeng.SetExposureTime(3500);
     // 设置
     DaHeng.SetGAIN(3, 14);
     // 是否启用自动白平衡7
@@ -35,17 +35,27 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // //Saturation
     // DaHeng.Set_Saturation(0,0);
 #endif //USING_DAHENG
+    
+#ifdef USING_DAHENG
+    fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
+    #ifdef SAVE_LOG_ALL
+        LOG(INFO) << "[CAMERA] Set param finished";
+    #endif //SAVE_LOG_ALL
+#endif //USING_DAHENG
 
 #ifdef USING_USB_CAMERA
     VideoCapture cap(0);
     // VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Open USB Camera success\n");
+    #ifdef SAVE_LOG_ALL
+        LOG(INFO) << "[CAMERA] Open USB Camera success";
+    #endif //SAVE_LOG_ALL
     // auto time_start = std::chrono::steady_clock::now();
 #endif //USING_USB_CAMERA
 
-    fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
 #ifdef SAVE_VIDEO
     /*============ video_writer ===========*/
+    int frame_cnt = 0;
     const std::string &storage_location = "../data/";
     char now[64];
     std::time_t tt;
@@ -90,9 +100,13 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         }
 
 #ifdef SAVE_VIDEO
-        //TODO:异步读写加速
-        // auto write_video = std::async(std::launch::async, [&](){writer.write(src.img);});
-        writer.write(src.img);
+        frame_cnt++;
+        if(frame_cnt % 10 == 0)
+        {
+            //TODO:异步读写加速
+            // auto write_video = std::async(std::launch::async, [&](){writer.write(src.img);});
+            writer.write(src.img);
+        }
 #endif //SAVE_VIDEO
 
 #ifdef USING_IMU
@@ -129,6 +143,7 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
         VisionData data;
         task_factory.consume(dst);
         mode = dst.mode;
+        mode = 0x01;
 #ifdef SAVE_TRANSMIT_LOG
     // cout<<mode<<"..."<<last_mode<<endl;
     if (mode != last_mode)
@@ -176,7 +191,7 @@ bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory)
         if (serial.need_init == true)
         {
             // cout<<"offline..."<<endl;
-            sleep(5e-3);
+            usleep(5000);
             continue;
         }
         serial.TransformData(transmit);
@@ -250,7 +265,7 @@ bool serialWatcher(SerialPort &serial)
 
     while(1)
     {
-        sleep(0.1);
+        sleep(1);
         //检测文件夹是否存在或串口需要初始化
         if (access(serial.device.path.c_str(),F_OK) == -1 || serial.need_init)
         {

@@ -90,7 +90,7 @@ bool Autoaim::updateSpinScore()
             spin_status = UNKNOWN;
         else
             spin_status = spin_status_map[(*score).first];
-        cout<<(*score).first<<"--"<<(*score).second<<" "<<spin_status<<endl;
+        // cout<<(*score).first<<"--"<<(*score).second<<" "<<spin_status<<endl;
 
         // 若分数过低移除此元素
         if ((*score).second <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
@@ -301,7 +301,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     //     fmt::print(fmt::fg(fmt::color::golden_rod), "Infer: {} ms\n",dr_infer_ms);
     // }
         lost_cnt++;
-        cout<<lost_cnt<<endl;
+        // cout<<lost_cnt<<endl;
         is_last_target_exists = false;
         last_target_area = 0;
         return false;

@@ -18,7 +18,7 @@
 //                              硬件设备选项
 //---------------------------------------------------------------------------//
 
-#define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+// #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
 
 #define DEBUG_WITHOUT_COM           //无串口调试
 //===========================================================================//
@@ -48,7 +48,7 @@
 
 #define USING_SPIN_DETECT //是否检测陀螺
 
-#define DISABLE_FITTING //是否禁用曲线拟合
+// #define DISABLE_FITTING //是否禁用曲线拟合
 //===========================================================================//
 
 
@@ -88,7 +88,7 @@
     #define SHOW_ALL_FANS   //是否绘制所有扇叶
     #define SHOW_FPS    //是否显示FPS
     #define SHOW_PREDICT //是否显示预测
-    #define SHOW_AIM_CROSS//是否绘制十字瞄准线
+    // #define SHOW_AIM_CROSS//是否绘制十字瞄准线
 #endif // SHOW_IMG
 
 #ifndef USING_DAHENG
