@@ -21,6 +21,7 @@
 *.smod
 
 # Compiled Static libraries
+build/
 *.lai
 *.la
 *.a
@@ -46,6 +47,7 @@ Infantry_Vision
 
 #Logs
 *.log
+log/
 # *.WARNING
 # *.ERROR
 # *.INFO
