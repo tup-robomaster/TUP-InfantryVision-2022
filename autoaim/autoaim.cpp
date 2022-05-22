@@ -21,6 +21,12 @@ Autoaim::Autoaim()
     input_size = {416,416};
     auto predictor_tmp = predictor_param_loader.generate();
     predictor.initParam(predictor_param_loader);
+
+    fmt::print(fmt::fg(fmt::color::pale_violet_red), "[AUTOAIM] Autoaim init model success! Size: {} {}\n", input_size.height, input_size.width);
+
+#ifdef SAVE_AUTOAIM_LOG
+    LOG(INFO)<<"[AUTOAIM] Autoaim init model success! Size: "<<input_size.height<<" "<<input_size.width;
+#endif //SAVE_AUTOAIM_LOG
 }
 
 Autoaim::~Autoaim()
@@ -704,7 +710,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     file<<content;
     file.close();
     cnt++;
-    sleep(0.05);
+    usleep(5000);
 #endif //ASSIST_LABEL
     //获取装甲板中心与装甲板面积以下一次ROI截取使用
     last_roi_center = target.center2d;

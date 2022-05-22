@@ -148,7 +148,8 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
     // cout<<mode<<"..."<<last_mode<<endl;
     if (mode != last_mode)
     {
-        LOG(INFO)<<"[TASK] Mode switched to "<< mode;
+        LOG(INFO)<<"[CONSUMER] Mode switched to "<< mode;
+        fmt::print(fmt::fg(fmt::color::pale_violet_red), "[CONSUMER] Mode switched to {}\n", mode);
         last_mode = mode;
     }
 #endif //SAVE_TRANSMIT_LOG
@@ -219,7 +220,7 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
         if (serial.need_init == true)
         {
             // cout<<"offline..."<<endl;
-            sleep(5e-3);
+            usleep(5000);
             continue;
         }
         //数据读取不成功进行循环
