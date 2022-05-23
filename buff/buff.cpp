@@ -6,11 +6,17 @@ using namespace std;
 Buff::Buff()
 {
     detector.initModel(network_path);
-    coordsolver.loadParam(camera_param_path,"KE0200110076");
+    coordsolver.loadParam(camera_param_path,camera_name);
     lost_cnt = 0;
     is_last_target_exists = false;
     // input_size = {640,384};
     input_size = {416,416};
+
+    fmt::print(fmt::fg(fmt::color::pale_violet_red), "[BUFF] Buff init model success! Size: {} {}\n", input_size.height, input_size.width);
+
+#ifdef SAVE_BUFF_LOG
+    LOG(INFO)<<"[AUTOAIM] Buff init model success! Size: "<<input_size.height<<" "<<input_size.width;
+#endif //SAVE_BUFF_LOG
 }
 
 Buff::~Buff()

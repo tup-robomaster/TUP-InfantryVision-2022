@@ -1,6 +1,4 @@
-
 #include <iostream>
-
 #include <ctime>
 #include <future>
 #include <random>

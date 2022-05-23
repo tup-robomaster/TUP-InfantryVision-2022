@@ -20,8 +20,8 @@ public:
 
     bool run(TaskData &src,VisionData &data);       // 自瞄主函数
 private:
-    const string network_path = "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/model/buff.xml";
-    const string camera_param_path = "/home/dishierweidu/Desktop/TUP-InfantryVision-2022-main/params/coord_param.yaml";
+    const string network_path = "../model/buff.xml";
+    const string camera_param_path = "../params/coord_param.yaml";
     
     bool is_last_target_exists;
     int lost_cnt;

@@ -28,10 +28,10 @@ struct Armor
 class ArmorTracker
 {
 public:
-    Armor prev_armor;               //上一次装甲板
+    Armor pre_armor;               //上一次装甲板
     Armor last_armor;            //本次装甲板
     bool is_initialized;
-    int prev_timestamp;             //上次装甲板时间戳
+    int pre_timestamp;             //上次装甲板时间戳
     int last_timestamp;          //本次装甲板时间戳
     const int max_history_len = 4;  //历史信息队列最大长度
     double velocity;
