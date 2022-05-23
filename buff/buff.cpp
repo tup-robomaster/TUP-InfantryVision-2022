@@ -245,15 +245,19 @@ bool Buff::run(TaskData &src,VisionData &data)
         }
     }
     trackers = trackers_tmp;
+
     ///------------------------检测待激活扇叶是否存在----------------------------
     Fan target;
     bool is_target_exists = chooseTarget(fans, target);
+
     if (!is_target_exists)
     {
+
 #ifdef SHOW_IMG
         imshow("dst",src.img);
         waitKey(1);
 #endif //SHOW_IMG
+
         lost_cnt++;
         is_last_target_exists = false;
         return false;
@@ -264,6 +268,7 @@ bool Buff::run(TaskData &src,VisionData &data)
     double mean_rotate_speed = 0;
     Eigen::Vector3d r_center_sum = {0, 0, 0};
     Eigen::Vector3d mean_r_center = {0, 0, 0};
+
     //计算平均转速与平均R字中心坐标
     for(auto tracker: trackers)
     {
@@ -282,16 +287,21 @@ bool Buff::run(TaskData &src,VisionData &data)
 #endif //SHOW_IMG
         return false;
     }
+    
     mean_rotate_speed = rotate_speed_sum / avail_tracker_cnt;
     mean_r_center = r_center_sum / avail_tracker_cnt;
     double theta_offset;
+
     //FIXME:加入模式切换
     ///------------------------进行预测----------------------------
     // predictor.mode = 1;
-    if (src.mode == 0x03)
+    if (src.mode == 3)
+        //进入小能量机关识别模式
         predictor.mode = 0;
-    else if (src.mode == 0x04)
+    else if (src.mode == 4)
+        //进入大能量机关识别模式
         predictor.mode = 1;
+
     if (!predictor.predict(mean_rotate_speed, int(mean_r_center.norm()), src.timestamp, theta_offset))
     {
 #ifdef SHOW_IMG
@@ -300,6 +310,7 @@ bool Buff::run(TaskData &src,VisionData &data)
 #endif //SHOW_IMG
         return false;
     }
+
     ///------------------------计算击打点----------------------------
     //将角度转化至[-PI,PI范围内]
     theta_offset = rangedAngleRad(theta_offset);

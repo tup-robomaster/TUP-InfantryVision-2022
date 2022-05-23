@@ -17,7 +17,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-    DaHeng.SetExposureTime(3500);
+    DaHeng.SetExposureTime(1000);
     // 设置
     DaHeng.SetGAIN(3, 14);
     // 是否启用自动白平衡7
@@ -41,6 +41,9 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     #ifdef SAVE_LOG_ALL
         LOG(INFO) << "[CAMERA] Set param finished";
     #endif //SAVE_LOG_ALL
+
+    int width = 1280;
+    int height = 1024;
 #endif //USING_DAHENG
 
 #ifdef USING_USB_CAMERA
@@ -50,6 +53,9 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     #ifdef SAVE_LOG_ALL
         LOG(INFO) << "[CAMERA] Open USB Camera success";
     #endif //SAVE_LOG_ALL
+
+    int width=cap.get(CAP_PROP_FRAME_WIDTH);
+    int height=cap.get(CAP_PROP_FRAME_HEIGHT);
     // auto time_start = std::chrono::steady_clock::now();
 #endif //USING_USB_CAMERA
 
@@ -65,9 +71,13 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     strftime(now, 64, "%Y-%m-%d_%H_%M_%S", ttime);  // 以时间为名字
     std::string now_string(now);
     std::string path(std::string(storage_location + now_string).append(".avi"));
-    auto writer = cv::VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 60.0, cv::Size(1280, 1024));    // Avi form
-    LOG(INFO) << "Save video to " << path;
+    auto writer = cv::VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 30.0, cv::Size(width, height));    // Avi form
+    
+    #ifdef SAVE_LOG_ALL
+        LOG(INFO) << "[SAVE_VIDEO] Save video to " << path;
+    #endif //SAVE_LOG_ALL
 #endif //SAVE_VIDEO
+
     while(1)
     {
         TaskData src;
@@ -77,9 +87,13 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         auto DaHeng_stauts = DaHeng.GetMat(src.img);
         if (!DaHeng_stauts)
         {
-            goto start_get_img;
             fmt::print(fmt::fg(fmt::color::red), "[CAMERA] GetMat false return\n");
-            LOG(ERROR) << "[CAMERA] GetMat false return";
+
+            #ifdef SAVE_LOG_ALL
+                LOG(ERROR) << "[CAMERA] GetMat false return";
+            #endif //SAVE_LOG_ALL
+
+            goto start_get_img;
         }
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // src.timestamp = DaHeng.Get_TIMESTAMP();
@@ -103,6 +117,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         frame_cnt++;
         if(frame_cnt % 10 == 0)
         {
+            frame_cnt = 0;
             //TODO:异步读写加速
             // auto write_video = std::async(std::launch::async, [&](){writer.write(src.img);});
             writer.write(src.img);
@@ -122,7 +137,6 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         //用于辅助标注
         // DaHeng.SetExposureTime(1000 + src.timestamp % 100 * 30);
         factory.produce(src);
-
     }
     return true;
 }
@@ -143,7 +157,8 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
         VisionData data;
         task_factory.consume(dst);
         mode = dst.mode;
-        mode = 0x01;
+        mode = 1;   //默认进入自瞄模式
+
 #ifdef SAVE_TRANSMIT_LOG
     // cout<<mode<<"..."<<last_mode<<endl;
     if (mode != last_mode)
@@ -154,21 +169,21 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
     }
 #endif //SAVE_TRANSMIT_LOG
 
-        if (mode == 0x01)
+        if (mode == 1)
         {
             if (autoaim.run(dst, data))
             {
                 transmit_factory.produce(data);
             }
         }
-        else if (mode == 0x03 || mode == 0x04)
+        //进入能量机关打击模式，3为小能量机关，4为大能量机关
+        else if (mode == 3 || mode == 4)
         {
             if (buff.run(dst, data))
             {
                 transmit_factory.produce(data);
             }   
         }
-
     }
     return true;
 }
@@ -192,6 +207,11 @@ bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory)
         if (serial.need_init == true)
         {
             // cout<<"offline..."<<endl;
+            #ifndef DEBUG_WITHOUT_COM
+                #ifdef SAVE_LOG_ALL
+                    LOG(ERROR) << "[TRANSMITTER] Serial offline, trying to reconnect...";
+                #endif //SAVE_LOG_ALL
+            #endif //DEBUG_WITHOUT_COM
             usleep(5000);
             continue;
         }
@@ -234,7 +254,7 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
         // Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         //FIXME:注意此处mode设置
         // int mode = serial.mode;
-        int mode = 0x01;
+        int mode = 1;
         Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         Eigen::Vector3d acc = {serial.acc[0],serial.acc[1],serial.acc[2]};;
         Eigen::Vector3d gyro = {serial.gyro[0],serial.gyro[1],serial.gyro[2]};;

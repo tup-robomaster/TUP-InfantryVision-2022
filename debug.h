@@ -4,7 +4,7 @@
 
 // #define DETECT_RED  //红色检测，不启用默认为蓝色检测
 
-// #define SAVE_VIDEO               // save video
+#define SAVE_VIDEO               // save video
 
 #define SAVE_LOG_ALL                // save log
 
@@ -18,7 +18,7 @@
 //                              硬件设备选项
 //---------------------------------------------------------------------------//
 
-// #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+#define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
 
 #define DEBUG_WITHOUT_COM           //无串口调试
 //===========================================================================//

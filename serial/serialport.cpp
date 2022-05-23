@@ -165,7 +165,10 @@ bool SerialPort::initSerialPort()
 		exit(0);
     }
     printf("Open successed\n");
-    LOG(INFO) << "Open "<< alias << " successed"<<endl;
+
+#ifdef SAVE_LOG_ALL
+    LOG(INFO) << "[SERIAL] Open "<< alias << " successed"<<endl;
+#endif //SAVE_LOG_ALL
 
     last_fd = fd;
     need_init = false;
