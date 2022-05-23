@@ -157,10 +157,12 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
         VisionData data;
         task_factory.consume(dst);
         mode = dst.mode;
-        mode = 1;   //默认进入自瞄模式
+
+#ifdef DEBUG_WITHOUT_COM
+        mode = 1;
+#endif //DEBUG_WITHOUT_COM
 
 #ifdef SAVE_TRANSMIT_LOG
-    // cout<<mode<<"..."<<last_mode<<endl;
     if (mode != last_mode)
     {
         LOG(INFO)<<"[CONSUMER] Mode switched to "<< mode;
@@ -252,9 +254,8 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
         auto timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // cout<<"Quat: "<<serial.quat[0]<<" "<<serial.quat[1]<<" "<<serial.quat[2]<<" "<<serial.quat[3]<<" "<<endl;
         // Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
-        //FIXME:注意此处mode设置
-        // int mode = serial.mode;
-        int mode = 1;
+
+        int mode = serial.mode;
         Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         Eigen::Vector3d acc = {serial.acc[0],serial.acc[1],serial.acc[2]};;
         Eigen::Vector3d gyro = {serial.gyro[0],serial.gyro[1],serial.gyro[2]};;
