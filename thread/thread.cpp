@@ -6,8 +6,8 @@
 **/
 bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
 {
-    start_get_img:
 #ifdef USING_DAHENG
+    start_get_img:
     DaHengCamera DaHeng;
     DaHeng.StartDevice(1);
     // 设置分辨率
@@ -38,9 +38,17 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
 #ifdef USING_USB_CAMERA
     VideoCapture cap(0);
+    // VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Open USB Camera success\n");
-    auto time_start = std::chrono::steady_clock::now();
+    #ifdef SAVE_LOG_ALL
+        LOG(INFO) << "[CAMERA] Open USB Camera success";
+    #endif //SAVE_LOG_ALL
+
+    int width=cap.get(CAP_PROP_FRAME_WIDTH);
+    int height=cap.get(CAP_PROP_FRAME_HEIGHT);
+    // auto time_start = std::chrono::steady_clock::now();
 #endif //USING_USB_CAMERA
+
 
 #ifdef USING_VIDEO
     sleep(6);//防止网络加载完成前视频开始播放
@@ -51,6 +59,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
 #ifdef SAVE_VIDEO
     /*============ video_writer ===========*/
+    int frame_cnt = 0;
     const std::string &storage_location = "../data/";
     char now[64];
     std::time_t tt;
@@ -60,21 +69,28 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     strftime(now, 64, "%Y-%m-%d_%H_%M_%S", ttime);  // 以时间为名字
     std::string now_string(now);
     std::string path(std::string(storage_location + now_string).append(".avi"));
-    auto writer = cv::VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 60.0, cv::Size(1280, 1024));    // Avi form
-    LOG(INFO) << "Save video to " << path;
+    auto writer = cv::VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 30.0, cv::Size(width, height));    // Avi form
+    
+    #ifdef SAVE_LOG_ALL
+        LOG(INFO) << "[SAVE_VIDEO] Save video to " << path;
+    #endif //SAVE_LOG_ALL
 #endif //SAVE_VIDEO
     while(1)
     {
         TaskData src;
+        auto time_cap = std::chrono::steady_clock::now();
 
 #ifdef USING_DAHENG
         auto DaHeng_stauts = DaHeng.GetMat(src.img);
-        auto time_cap = std::chrono::steady_clock::now();
         if (!DaHeng_stauts)
         {
-            goto start_get_img;
             fmt::print(fmt::fg(fmt::color::red), "[CAMERA] GetMat false return\n");
-            LOG(ERROR) << "[CAMERA] GetMat false return";
+
+            #ifdef SAVE_LOG_ALL
+                LOG(ERROR) << "[CAMERA] GetMat false return";
+            #endif //SAVE_LOG_ALL
+
+            goto start_get_img;
         }
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // src.timestamp = DaHeng.Get_TIMESTAMP();
@@ -102,9 +118,14 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         }
 
 #ifdef SAVE_VIDEO
-        //TODO:异步读写加速
-        // auto write_video = std::async(std::launch::async, [&](){writer.write(src.img);});
-        writer.write(src.img);
+        frame_cnt++;
+        if(frame_cnt % 10 == 0)
+        {
+            frame_cnt = 0;
+            //TODO:异步读写加速
+            // auto write_video = std::async(std::launch::async, [&](){writer.write(src.img);});
+            writer.write(src.img);
+        }
 #endif //SAVE_VIDEO
 
 #ifdef USING_IMU
@@ -120,7 +141,6 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         //用于辅助标注
         // DaHeng.SetExposureTime(1000 + src.timestamp % 100 * 30);
         factory.produce(src);
-
     }
     return true;
 }
@@ -141,30 +161,36 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
         VisionData data;
         task_factory.consume(dst);
         mode = dst.mode;
+
+#ifdef DEBUG_WITHOUT_COM
+        mode = 1;
+#endif //DEBUG_WITHOUT_COM
+
 #ifdef SAVE_TRANSMIT_LOG
     // cout<<mode<<"..."<<last_mode<<endl;
     if (mode != last_mode)
     {
-        LOG(INFO)<<"[TASK] Mode switched to "<< mode <<"."<<endl;
+        LOG(INFO)<<"[CONSUMER] Mode switched to "<< mode;
+        fmt::print(fmt::fg(fmt::color::pale_violet_red), "[CONSUMER] Mode switched to {}\n", mode);
         last_mode = mode;
     }
 #endif //SAVE_TRANSMIT_LOG
 
-        if (mode == 0x01)
+        if (mode == 1)
         {
             if (autoaim.run(dst, data))
             {
                 transmit_factory.produce(data);
             }
         }
-        else if (mode == 0x03 || mode == 0x04)
+        //进入能量机关打击模式，3为小能量机关，4为大能量机关
+        else if (mode == 3 || mode == 4)
         {
             if (buff.run(dst, data))
             {
                 transmit_factory.produce(data);
             }   
         }
-
     }
     return true;
 }
@@ -184,10 +210,16 @@ bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory)
         VisionData transmit;
         transmit_factory.consume(transmit);
         //若串口离线则跳过数据发送
+        //TODO:使用无串口的模式时会导致此线程死循环，浪费CPU性能
         if (serial.need_init == true)
         {
             // cout<<"offline..."<<endl;
-            sleep(5e-3);
+            #ifndef DEBUG_WITHOUT_COM
+                #ifdef SAVE_LOG_ALL
+                    LOG(ERROR) << "[TRANSMITTER] Serial offline, trying to reconnect...";
+                #endif //SAVE_LOG_ALL
+            #endif //DEBUG_WITHOUT_COM
+            usleep(5000);
             continue;
         }
         serial.TransformData(transmit);
@@ -215,7 +247,7 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
         if (serial.need_init == true)
         {
             // cout<<"offline..."<<endl;
-            sleep(5e-3);
+            usleep(5000);
             continue;
         }
         //数据读取不成功进行循环
@@ -228,8 +260,8 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
         // cout<<"Quat: "<<serial.quat[0]<<" "<<serial.quat[1]<<" "<<serial.quat[2]<<" "<<serial.quat[3]<<" "<<endl;
         // Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         //FIXME:注意此处mode设置
-        // int mode = serial.mode;
-        int mode = 0x01;
+        int mode = serial.mode;
+        // int mode = 1;
         Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         Eigen::Vector3d acc = {serial.acc[0],serial.acc[1],serial.acc[2]};;
         Eigen::Vector3d gyro = {serial.gyro[0],serial.gyro[1],serial.gyro[2]};;
@@ -261,7 +293,7 @@ bool serialWatcher(SerialPort &serial)
 
     while(1)
     {
-        sleep(0.1);
+        sleep(1);
         //检测文件夹是否存在或串口需要初始化
         if (access(serial.device.path.c_str(),F_OK) == -1 || serial.need_init)
         {
@@ -278,7 +310,6 @@ bool serialWatcher(SerialPort &serial)
             serial.initSerialPort();
 #endif //DEBUG_WITHOUT_COM
         }
-
     }
 }
 

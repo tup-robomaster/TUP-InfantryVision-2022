@@ -54,10 +54,6 @@ ParticleFilter::ParticleFilter(YAML::Node &config,const string param_name)
     initParam(config,param_name);
 }
 
-/**
- * @brief 
- * 
- */
 ParticleFilter::~ParticleFilter()
 {
 }

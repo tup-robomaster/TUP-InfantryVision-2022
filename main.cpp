@@ -13,10 +13,10 @@ const string SERIAL_ID = "483/5740/200";
 const int BAUD = 115200;
 // const int BAUD_IMU = 460800;
 
-int main()
+int main(int argc,char* argv[])
 {
 #ifdef SAVE_MAIN_LOG
-    google::InitGoogleLogging("Main");
+    google::InitGoogleLogging(argv[0]);
     FLAGS_alsologtostderr = false;  //除了日志文件之外是否需要标准输出
     FLAGS_colorlogtostderr = true;  //是否启用不同颜色显示
 
@@ -40,7 +40,7 @@ int main()
     std::thread serial_watcher(&serialWatcher, ref(serial));
     std::thread receiver(&dataReceiver, ref(serial), ref(data_receiver), time_start);
     #ifdef SAVE_MAIN_LOG
-        LOG(INFO) << "serial_watcher(with IMU) start!"<<endl;;
+        LOG(INFO) << "[MAIN] serial_watcher(with IMU) start!"<<endl;
     #endif //SAVE_MAIN_LOG
 #endif //USING_IMU_C_BOARD
 
@@ -52,50 +52,50 @@ int main()
 
     std::thread task_producer(&producer, ref(task_factory), ref(data_receiver), time_start);
 #ifdef SAVE_MAIN_LOG
-    LOG(INFO) << "task_producer start!";
+    LOG(INFO) << "[MAIN] task_producer start!";
 #endif //SAVE_MAIN_LOG
 
     std::thread task_consumer(&consumer, ref(task_factory),ref(data_transmit_factory));
 #ifdef SAVE_MAIN_LOG
-        LOG(INFO) << "task_consumer start!";
+        LOG(INFO) << "[MAIN] task_consumer start!";
 #endif //SAVE_MAIN_LOG
 
     std::thread transmitter(&dataTransmitter, ref(serial), ref(data_transmit_factory));
 #ifdef SAVE_MAIN_LOG
-        LOG(INFO) << "transmitter start!";
+        LOG(INFO) << "[MAIN] transmitter start!";
 #endif //SAVE_MAIN_LOG
 
 #ifndef USING_IMU
     std::thread serial_watcher(&serialWatcher, ref(serial));
     #ifdef SAVE_MAIN_LOG
-        LOG(INFO) << "serial_watcher(without IMU) start!";
+        LOG(INFO) << "[MAIN] serial_watcher(without IMU) start!";
     #endif //SAVE_MAIN_LOG
 #endif //USING_IMU
 
     task_producer.join();
 #ifdef SAVE_MAIN_LOG
-    LOG(WARNING) << "task_producer end!";
+    LOG(WARNING) << "[MAIN] task_producer end!";
 #endif //SAVE_MAIN_LOG
 
     task_consumer.join();
 #ifdef SAVE_MAIN_LOG
-    LOG(WARNING) << "task_consumer end!";
+    LOG(WARNING) << "[MAIN] task_consumer end!";
 #endif //SAVE_MAIN_LOG
 
     serial_watcher.join();
 #ifdef SAVE_MAIN_LOG
-    LOG(WARNING) << "serial_watcher end!";
+    LOG(WARNING) << "[MAIN] serial_watcher end!";
 #endif //SAVE_MAIN_LOG
 
     transmitter.join();
 #ifdef SAVE_MAIN_LOG
-    LOG(WARNING) << "transmitter end!";
+    LOG(WARNING) << "[MAIN] transmitter end!";
 #endif //SAVE_MAIN_LOG
 
 #ifdef USING_IMU
     receiver.join();
     #ifdef SAVE_MAIN_LOG    
-        LOG(WARNING) << "IMU receiver end!";
+        LOG(WARNING) << "[MAIN] IMU receiver end!";
     #endif //SAVE_MAIN_LOG
 #endif //USING_IMU
 

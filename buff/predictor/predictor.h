@@ -61,7 +61,7 @@ private:
     const int max_v = 3;                                                  //设置最大速度,单位rad/s
     const int max_a = 3;                                                  //设置最大角加速度,单位rad/s^2
     const int history_deque_len = 80;                                       //队列长度   
-    const int bullet_speed = 30;                                            //TODO:弹速可变
+    const int bullet_speed = 28;                                            //TODO:弹速可变
     const int delay = 200;                                                  //发弹延迟
     const int window_size = 2;                                              //滑动窗口大小
 

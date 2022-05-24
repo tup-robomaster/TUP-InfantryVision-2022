@@ -13,7 +13,7 @@ Autoaim::Autoaim()
 {
     detector.initModel(network_path);
     predictor_param_loader.initParam(predict_param_path);
-    coordsolver.loadParam(camera_param_path,"KE0200110076");
+    coordsolver.loadParam(camera_param_path,camera_name);
     // cout<<"...."<<endl;
     lost_cnt = 0;
     is_last_target_exists = false;
@@ -21,6 +21,12 @@ Autoaim::Autoaim()
     input_size = {416,416};
     auto predictor_tmp = predictor_param_loader.generate();
     predictor.initParam(predictor_param_loader);
+
+    fmt::print(fmt::fg(fmt::color::pale_violet_red), "[AUTOAIM] Autoaim init model success! Size: {} {}\n", input_size.height, input_size.width);
+
+#ifdef SAVE_AUTOAIM_LOG
+    LOG(INFO)<<"[AUTOAIM] Autoaim init model success! Size: "<<input_size.height<<" "<<input_size.width;
+#endif //SAVE_AUTOAIM_LOG
 }
 
 Autoaim::~Autoaim()
@@ -422,8 +428,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         else if (predictors_with_same_key == 1)
         {
             auto candidate = trackers_map.find((*armor).key);
-            auto delta_t = src.timestamp - (*candidate).second.prev_timestamp;
-            auto delta_dist = ((*armor).center3d_world - (*candidate).second.prev_armor.center3d_world).norm();
+            auto delta_t = src.timestamp - (*candidate).second.pre_timestamp;
+            auto delta_dist = ((*armor).center3d_world - (*candidate).second.pre_armor.center3d_world).norm();
             auto velocity = (delta_dist / delta_t) * 1e3;
             //若匹配则使用此ArmorTracker
             if (velocity <= max_v)
@@ -540,7 +546,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                 if (spin_score_map[cnt.first] == 0 && abs(spin_movement) > 0.05 && last_armor_timestamp == new_armor_timestamp)
                     spin_score_map[cnt.first] = 100 * spin_movement / abs(spin_movement);
                 else if (abs(spin_movement) > 0.05 && last_armor_timestamp == new_armor_timestamp)
-                    spin_score_map[cnt.first] = 2 * spin_score_map[cnt.first];
+                    spin_score_map[cnt.first] = anti_spin_max_r_multiple * spin_score_map[cnt.first];
             }
         }
     }
@@ -729,7 +735,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     file<<content;
     file.close();
     cnt++;
-    sleep(0.05);
+    usleep(5000);
 #endif //ASSIST_LABEL
     //获取装甲板中心与装甲板面积以下一次ROI截取使用
     last_roi_center = target.center2d;

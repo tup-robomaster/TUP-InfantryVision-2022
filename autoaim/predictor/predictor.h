@@ -69,7 +69,6 @@ private:
     ParticleFilter pf_x;                                                  //粒子滤波
     ParticleFilter pf_y;                                                  //粒子滤波
     ParticleFilter pf_z;                                                  //粒子滤波
-    ParticleFilter pf_pos;                                                //粒子滤波
     std::deque<TargetInfo> history_info;                                  //目标队列
 
     const int max_timespan = 1000;                                        //最大时间跨度，大于该时间重置预测器(ms)

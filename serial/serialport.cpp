@@ -10,7 +10,6 @@ SerialPort::SerialPort(const string ID, const int BAUD)
     // system(std::string("echo root@233|sudo chmod 777 /dev/ttyUSB0").c_str());
     // cout << system(std::string("pwd").c_str()) << endl;
     // system(std::string("root@233").c_str());
-    initSerialPort();
 #ifdef DEBUG_WITHOUT_COM
     withoutSerialPort();
 #else
@@ -98,7 +97,7 @@ bool SerialPort::get_Mode()
 {
     int bytes;
     char *name = ttyname(fd);
-    if (name = NULL) printf("tty is null\n");
+    if (name == NULL) printf("tty is null\n");
     int result = ioctl(fd, FIONREAD, &bytes);
     if (result == -1)
         return false;
@@ -165,7 +164,10 @@ bool SerialPort::initSerialPort()
 		exit(0);
     }
     printf("Open successed\n");
-    LOG(INFO) << "Open "<< alias << " successed"<<endl;
+
+#ifdef SAVE_LOG_ALL
+    LOG(INFO) << "[SERIAL] Open "<< alias << " successed"<<endl;
+#endif //SAVE_LOG_ALL
 
     last_fd = fd;
     need_init = false;

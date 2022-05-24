@@ -21,6 +21,7 @@
 *.smod
 
 # Compiled Static libraries
+build/
 *.lai
 *.la
 *.a
@@ -46,9 +47,11 @@ Infantry_Vision
 
 #Logs
 *.log
-*.WARNING
-*.ERROR
-*.INFO
+log/
+# *.WARNING
+# *.ERROR
+# *.INFO
+
 
 #CMake
 CMakeFiles

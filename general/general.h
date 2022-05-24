@@ -24,6 +24,7 @@
 
 using namespace std;
 using namespace cv;
+const string camera_name = "KE0200110076";
 
 /**
  * @brief 存储任务所需数据的结构体

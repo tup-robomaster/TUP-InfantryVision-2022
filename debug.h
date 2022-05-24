@@ -79,9 +79,6 @@
     #define USING_IMU_C_BOARD   //使用C板陀螺仪
 #endif // USING_IMU
 
-#ifndef DETECT_RED
-    #define DETECT_BLUE
-#endif  //DETECT_RED
 
 #ifdef SHOW_IMG
     #define SHOW_ALL_ARMOR  //是否绘制装甲板
@@ -95,6 +92,9 @@
     #define USING_USB_CAMERA
 #endif // USING_DAHENG
 
+#ifndef DETECT_RED
+    #define DETECT_BLUE
+#endif  //DETECT_RED
 #ifdef DETECT_RED
     #define DETECT_BUFF_BLUE
 #else

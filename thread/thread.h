@@ -78,7 +78,7 @@ bool Factory<T>::consume(T &product)
         if (!buffer.empty())
             break;
         lock.unlock();
-        sleep(1e-4);
+        usleep(1e3)
     }
     product = buffer.front();
     buffer.pop_front();
@@ -141,7 +141,7 @@ bool MessageFilter<T>::consume(T &message, int timestamp)
         if (!buffer.empty())
             break;
         lock.unlock();
-        sleep(1e-3);
+        usleep(1e3);
     }
     // int cnt = 0;
     // for (auto info : buffer)

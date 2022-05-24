@@ -21,7 +21,6 @@ ArmorPredictor ArmorPredictor::generate()
     new_predictor.pf_x.initParam(pf_x);
     new_predictor.pf_y.initParam(pf_y);
     new_predictor.pf_z.initParam(pf_z);
-    new_predictor.pf_pos.initParam(pf_pos);
     new_predictor.fitting_disabled = false;
 
     return new_predictor;
@@ -41,9 +40,9 @@ bool ArmorPredictor::initParam(ArmorPredictor &predictor_loader)
 bool ArmorPredictor::initParam(string coord_path)
 {
     YAML::Node config = YAML::LoadFile(coord_path);
-    pf_x.initParam(config,"velocity_x");
-    pf_y.initParam(config,"velocity_y");
-    pf_z.initParam(config,"velocity_z");
+    pf_x.initParam(config,"autoaim_x");
+    pf_y.initParam(config,"autoaim_y");
+    pf_z.initParam(config,"autoaim_z");
     fitting_disabled = false;
     
     return true;
@@ -66,10 +65,9 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     auto delta_t = timestamp - last_target.timestamp;
     auto last_dist = history_info.back().dist;
     // auto delta_time_estimate = (last_dist / bullet_speed) * 1e3 + delay;
-    auto delta_time_estimate = (last_dist / bullet_speed) * 1e3 + delay + timestamp - last_target.timestamp;
+    auto delta_time_estimate = (last_dist / bullet_speed) * 1e3 + delay;
     auto time_estimate = delta_time_estimate + history_info.back().timestamp - history_info.front().timestamp;
     //如速度过大,可认为为噪声干扰,进行滑窗滤波滤除
-    // //FIXME:测距噪声较大，暂未找到较好的方法滤除
     // if (((d_xyz.norm() / delta_t) * 1e3) >= max_v)
     // {
     //     history_info.push_back(target);
