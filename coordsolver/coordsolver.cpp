@@ -26,7 +26,11 @@ CoordSolver::~CoordSolver()
 bool CoordSolver::loadParam(string coord_path,string param_name)
 {
     YAML::Node config = YAML::LoadFile(coord_path);
-
+    if(config.IsNull())
+    {
+        throw openFileDefault();
+    }
+    
     Eigen::MatrixXd mat_intrinsic(3, 3);
     Eigen::MatrixXd mat_ic(4, 4);
     Eigen::MatrixXd mat_ci(4, 4);

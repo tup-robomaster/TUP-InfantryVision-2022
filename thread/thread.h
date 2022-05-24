@@ -65,7 +65,6 @@ bool Factory<T>::produce(T &product)
     
     }
     lock.unlock();
-
     return true;
 }
 
@@ -149,9 +148,11 @@ bool MessageFilter<T>::consume(T &message, int timestamp)
         
     //     cout<<cnt++<<" : "<<info.timestamp<<endl;
     // }
+    
+    // 找到大于等于时间戳timestamp元素的位置
     auto it = std::lower_bound(buffer.begin(), buffer.end(), timestamp, [](Product &prev, const int &timestamp)
                                { return prev.timestamp < timestamp; });
-    if (it == buffer.end())
+    if (it == buffer.end()) //如果没找到大于时间戳timestamp的元素的位置
     {
         //时间戳时间差大于10ms则认为该帧不可用
         if (abs((buffer.back().timestamp - timestamp)) > 10)

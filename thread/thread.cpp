@@ -17,15 +17,15 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-    DaHeng.SetExposureTime(8000);
+    DaHeng.SetExposureTime(EXPOSURE_TIME); 
     // 设置
-    DaHeng.SetGAIN(3, 14);
+    DaHeng.SetGAIN(3, EXPOSURE_GAIN);
     // 是否启用自动白平衡7
     // DaHeng.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
-    DaHeng.Set_BALANCE(0,1.56);
-    DaHeng.Set_BALANCE(1,1.0);
-    DaHeng.Set_BALANCE(2,1.548);
+    DaHeng.Set_BALANCE(0, B_BALANCE);
+    DaHeng.Set_BALANCE(1, G_BALANCE);
+    DaHeng.Set_BALANCE(2, R_BALANCE);
     // // Gamma
     // DaHeng.Set_Gamma(1,1.0);
     // //Color
@@ -222,9 +222,21 @@ bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory)
             usleep(5000);
             continue;
         }
+
+#ifdef DEBUG_WITHOUT_COM
+        //发送数据格式转换
         serial.TransformData(transmit);
-        serial.send();
+        try
+        {
+            serial.send();
+        }
+        catch(BaseException& e)
+        {
+            e.what();
+        }
         // cout<<"transmitting..."<<endl;
+#endif
+
     }
     return true;
 }
@@ -250,7 +262,7 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
             usleep(5000);
             continue;
         }
-        //数据读取不成功进行循环
+        //数据读取不成功进行循环 TODO:无串口调试模式应该不开启此线程
 #ifndef DEBUG_WITHOUT_COM
         while (!serial.get_Mode())
             ;
@@ -307,7 +319,15 @@ bool serialWatcher(SerialPort &serial)
             }
             serial.withoutSerialPort();
 #else
-            serial.initSerialPort();
+            try
+            {
+                serial.initSerialPort();
+                
+            }
+            catch(BaseException& e)
+            {
+                e.what();
+            }
 #endif //DEBUG_WITHOUT_COM
         }
     }

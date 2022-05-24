@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <linux/netlink.h>
+#include "../exception/exception.h"
 
 #include <iostream>
 #include <vector>
@@ -92,7 +93,7 @@ public:
     int speed, databits, stopbits, parity;
     unsigned char rdata[255];                 // raw_data
     float quat[4]; //四元数
-    float acc[3]; //加速度
+    float acc[3]; //加速度sssssssssssssssssssssssssssssssssssssssssssssss
     float gyro[3]; //角速度
     SerialPort(const string ID, const int BUAD);
     SerialPort(char *);

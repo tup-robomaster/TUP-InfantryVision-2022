@@ -12,8 +12,15 @@ SerialPort::SerialPort(const string ID, const int BAUD)
     // system(std::string("root@233").c_str());
 #ifdef DEBUG_WITHOUT_COM
     withoutSerialPort();
-#else
-    initSerialPort();
+#elsed
+    try
+    {
+        initSerialPort();
+    }
+    catch(BaseException& e)
+    {
+        e.what();
+    }
 #endif //DEBUG_WITHOUT_COM
 }
 
@@ -86,6 +93,10 @@ Device SerialPort::setDeviceByID(std::vector<Device> devices)
         if (dev.id == serial_id)
             return dev;
     }
+
+#ifdef PATH_EXCEPTION
+    throw pathError();
+#endif
     return Device();
 }
 
@@ -135,11 +146,23 @@ bool SerialPort::get_Mode()
  */
 bool SerialPort::initSerialPort()
 {
-    device = setDeviceByID(listPorts());
+    try
+    {
+        device = setDeviceByID(listPorts());
+    }
+    catch(BaseException& e)
+    {
+        e.what();
+    }
+    
     const string alias = "/dev/" + device.alias;
 
     if(alias.length() - 4 == 0)
+    {
+        throw "串口路径异常！";
         return false;
+    }
+    
 
     close(last_fd);
 	fd = open(alias.c_str(), O_RDWR | O_NOCTTY);
@@ -160,9 +183,11 @@ bool SerialPort::initSerialPort()
 
 	if (set_Bit() == FALSE)
 	{
-        printf("Set Parity Error\n");
-		exit(0);
+        throw setBrateDefault();
+        // printf("Set Parity Error\n");
+		// exit(0);
     }
+    
     printf("Open successed\n");
 
 #ifdef SAVE_LOG_ALL
@@ -369,7 +394,6 @@ void SerialPort::TransformData(const VisionData &data)
     Tdata[19] = data.nearFace;
 
 	Append_CRC16_Check_Sum(Tdata, 22);
-
 }
 
 /////////////////////////////////////////////
@@ -450,7 +474,13 @@ bool SerialPort::getAcc(unsigned char *data)
 //发送数据函数
 void SerialPort::send()
 {
+#ifdef DEBUG_WITHOUT_COM
 	auto write_stauts = write(fd, Tdata, 22);
+    if(write_stauts == -1)
+    {
+        throw serailSendingError();
+    }
+#endif
 }
 
 //关闭通讯协议接口

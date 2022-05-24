@@ -1,6 +1,12 @@
 //---------------------------------------------------------------------------//
 //                          FIXME:临场调试选项
 //---------------------------------------------------------------------------//
+extern constexpr int EXPOSURE_TIME = 6000;
+extern constexpr float EXPOSURE_GAIN = 10;
+extern constexpr float B_BALANCE = 1.56f;
+extern constexpr float G_BALANCE = 1.0f;
+extern constexpr float R_BALANCE = 1.548f;
+
 
 // #define DETECT_RED  //红色检测，不启用默认为蓝色检测
 
@@ -19,6 +25,12 @@
 //---------------------------------------------------------------------------//
 
 #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+
+/**** 大恒相机型号 ****/ 
+// #define CAMERA_ID_73 
+#ifndef CAMERA_ID_73
+    // #define CAMERA_ID_75 //默认相机型号为76
+#endif
 
 // #define DEBUG_WITHOUT_COM           //无串口调试
 //===========================================================================//
@@ -100,4 +112,9 @@
 #else
     #define DETECT_BUFF_RED
 #endif
+
+/*****************异常机制*****************/
+#define PATH_EXCEPTION              // 检测串口路径异常
+#define SERIAL_SENDING_EXCEPTION    // 检测串口数据发送异常
+
 //===========================================================================//

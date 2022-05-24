@@ -6,7 +6,18 @@ using namespace std;
 Buff::Buff()
 {
     detector.initModel(network_path);
-    coordsolver.loadParam(camera_param_path,camera_name);
+    
+
+    //TODO:此处使用异常机制可能会造成内存泄漏
+    try
+    {
+        coordsolver.loadParam(camera_param_path,camera_name);
+    }
+    catch(BaseException& e)
+    {
+        e.what();
+    }
+
     lost_cnt = 0;
     is_last_target_exists = false;
     // input_size = {640,384};

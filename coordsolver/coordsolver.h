@@ -11,6 +11,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <yaml-cpp/yaml.h>
+#include "../exception/exception.h"
 
 #include "../general/general.h"
 
