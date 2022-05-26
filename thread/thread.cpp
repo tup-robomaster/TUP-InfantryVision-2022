@@ -44,8 +44,6 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         LOG(INFO) << "[CAMERA] Open USB Camera success";
     #endif //SAVE_LOG_ALL
 
-    int width=cap.get(CAP_PROP_FRAME_WIDTH);
-    int height=cap.get(CAP_PROP_FRAME_HEIGHT);
     // auto time_start = std::chrono::steady_clock::now();
 #endif //USING_USB_CAMERA
 
@@ -64,13 +62,16 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     char now[64];
     std::time_t tt;
     struct tm *ttime;
+    int width = 1280;
+    int height = 1024;
     tt = time(nullptr);
     ttime = localtime(&tt);
     strftime(now, 64, "%Y-%m-%d_%H_%M_%S", ttime);  // 以时间为名字
     std::string now_string(now);
     std::string path(std::string(storage_location + now_string).append(".avi"));
     auto writer = cv::VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 30.0, cv::Size(width, height));    // Avi form
-    
+    std::future<void> write_video;
+    bool is_first_loop = true;
     #ifdef SAVE_LOG_ALL
         LOG(INFO) << "[SAVE_VIDEO] Save video to " << path;
     #endif //SAVE_LOG_ALL
@@ -122,9 +123,12 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         if(frame_cnt % 10 == 0)
         {
             frame_cnt = 0;
-            //TODO:异步读写加速
-            // auto write_video = std::async(std::launch::async, [&](){writer.write(src.img);});
-            writer.write(src.img);
+            //异步读写加速,避免阻塞生产者
+            if (is_first_loop)
+                is_first_loop = false;
+            else
+                write_video.wait();
+            write_video = std::async(std::launch::async, [&, src](){writer.write(src.img);});
         }
 #endif //SAVE_VIDEO
 
