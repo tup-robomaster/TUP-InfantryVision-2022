@@ -40,9 +40,11 @@ bool CoordSolver::loadParam(string coord_path,string param_name)
     Eigen::MatrixXd mat_angle_offset(1,2);
     
     //初始化弹道补偿参数
-    max_iter = config[param_name]["max_iter"].as<int>();
-    stop_error = config[param_name]["stop_error"].as<float>();
-    R_K_iter = config[param_name]["R_K_iter"].as<int>();
+    this->max_iter = config[param_name]["max_iter"].as<int>();
+    this->stop_error = config[param_name]["stop_error"].as<float>();
+    this->R_K_iter = config[param_name]["R_K_iter"].as<int>();
+    this->k = config[param_name]["LARM_K"].as<double>();
+    this->g = config[param_name]["G"].as<double>();
 
     //初始化内参矩阵
     auto read_vector = config[param_name]["Intrinsic"].as<vector<float>>();

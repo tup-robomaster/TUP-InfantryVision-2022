@@ -1,18 +1,12 @@
 //---------------------------------------------------------------------------//
 //                          FIXME:临场调试选项
 //---------------------------------------------------------------------------//
-extern constexpr int EXPOSURE_TIME = 6000;
-extern constexpr float EXPOSURE_GAIN = 10;
-extern constexpr float B_BALANCE = 1.56f;
-extern constexpr float G_BALANCE = 1.0f;
-extern constexpr float R_BALANCE = 1.548f;
-
 
 // #define DETECT_RED  //红色检测，不启用默认为蓝色检测
 
 // #define SAVE_VIDEO               // save video
 
-#define SAVE_LOG_ALL                // save log
+// #define SAVE_LOG_ALL                // save log
 
 #define USING_IMU                //是否使用陀螺仪数据
 //===========================================================================//
@@ -25,6 +19,13 @@ extern constexpr float R_BALANCE = 1.548f;
 //---------------------------------------------------------------------------//
 
 #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+#ifdef USING_DAHENG 
+    extern constexpr int EXPOSURE_TIME = 6000;
+    extern constexpr float EXPOSURE_GAIN = 10;
+    extern constexpr float B_BALANCE = 1.56f;
+    extern constexpr float G_BALANCE = 1.0f;
+    extern constexpr float R_BALANCE = 1.548f;
+#endif
 
 /**** 大恒相机型号 ****/ 
 // #define CAMERA_ID_73 
