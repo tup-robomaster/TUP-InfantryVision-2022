@@ -1,0 +1,12 @@
+#大恒相机配置参数
+DaHeng:
+  # 曝光时间
+  Exposure_time: 6000    
+  # 曝光增益
+  Exposure_gain: 10
+  # 白平衡b通道
+  B_balance: 1.56   
+  # g通道
+  G_balance: 1.0
+  # r通道
+  R_balance: 1.548

@@ -6,9 +6,21 @@
 **/
 bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
 {
+    constexpr string config_name = "../params/config.yaml";
+    constexpr string param_name = "param_name";
+
 #ifdef USING_DAHENG
+    YAML::Node config = YAML::LoadFile(config_name);
+    if(config.IsNull())
+    {
+        throw openFileDefault();
+    }
+
     start_get_img:
+    
+    // 初始化大恒相机参数
     DaHengCamera DaHeng;
+    
     DaHeng.StartDevice(1);
     // 设置分辨率
     DaHeng.SetResolution(1,1);
@@ -17,15 +29,15 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-    DaHeng.SetExposureTime(EXPOSURE_TIME); 
+    DaHeng.SetExposureTime(config[param_name]["Exposure_time"].as<int>()); 
     // 设置
-    DaHeng.SetGAIN(3, EXPOSURE_GAIN);
+    DaHeng.SetGAIN(3, config[param_name]["Exposure_gain"].as<double>());
     // 是否启用自动白平衡7
     // DaHeng.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
-    DaHeng.Set_BALANCE(0, B_BALANCE);
-    DaHeng.Set_BALANCE(1, G_BALANCE);
-    DaHeng.Set_BALANCE(2, R_BALANCE);
+    DaHeng.Set_BALANCE(0, config[param_name]["B_balance"].as<double>());
+    DaHeng.Set_BALANCE(1, config[param_name]["G_balance"].as<double>());
+    DaHeng.Set_BALANCE(2, config[param_name]["R_balance"].as<double>());
     // // Gamma
     // DaHeng.Set_Gamma(1,1.0);
     // //Color
