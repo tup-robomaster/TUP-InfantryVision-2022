@@ -154,6 +154,11 @@ float calcTetragonArea(cv::Point2f pts[4])
     return calcTriangleArea(&pts[0]) + calcTriangleArea(&pts[1]);
 }
 
+float calcDistance(cv::Point2f &p1, cv::Point2f &p2)
+{
+    return sqrt(pow((p1.x - p2.x), 2) + pow((p1.y - p2.y), 2));
+}
+
 /**
  * @brief 将旋转矩阵转化为欧拉角
  * @param R 旋转矩阵

@@ -80,11 +80,7 @@ KE0200110075:
     #x,y,z坐标偏移量(相机至枪管),单位m
     xyz_offset: [0, 0, 0]
     #pitch,yaw角度偏移量,单位度
-<<<<<<< HEAD
-    angle_offset: [0,0]
-=======
     angle_offset: [2, 1]
->>>>>>> 0524
     #使用迭代法求解pitch补偿的最大迭代次数
     max_iter: 10
     #停止迭代的最小误差(单位m)

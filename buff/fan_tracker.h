@@ -31,5 +31,5 @@ struct FanTracker
     Fan last_fan;           //上一次扇叶
     bool is_last_fan_exists;//是否存在上一次扇叶
     double rotate_speed;    //角速度
-    int last_timestamp;     //上次扇叶时间戳
+    int cur_timestamp;     //上次扇叶时间戳
 };

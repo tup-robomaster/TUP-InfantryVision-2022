@@ -201,7 +201,7 @@ bool Buff::run(TaskData &src,VisionData &data)
         {
             FanTracker fan_tracker;
             fan_tracker.last_fan = (*fan);
-            fan_tracker.last_timestamp = src.timestamp;
+            fan_tracker.cur_timestamp = src.timestamp;
             fan_tracker.is_last_fan_exists = false;//初始化
             fan_tracker.rotate_speed = 0;
             trackers_tmp.push_back(fan_tracker);
@@ -210,7 +210,7 @@ bool Buff::run(TaskData &src,VisionData &data)
         {
             for (auto iter = trackers.begin(); iter != trackers.end(); iter++)
             {
-                double delta_t = src.timestamp - (*iter).last_timestamp;
+                double delta_t = src.timestamp - (*iter).cur_timestamp;
                 double delta_theta;
                 auto current_roll = (*fan).euler[0];
                 auto last_roll = (*iter).last_fan.euler[0];
@@ -236,7 +236,7 @@ bool Buff::run(TaskData &src,VisionData &data)
                 {
                     FanTracker fan_tracker = (*iter);
                     fan_tracker.last_fan = (*fan);
-                    fan_tracker.last_timestamp = src.timestamp;
+                    fan_tracker.cur_timestamp = src.timestamp;
                     fan_tracker.is_last_fan_exists = true;
                     fan_tracker.rotate_speed = rotate_speed;
                     trackers_tmp.push_back(fan_tracker);
@@ -246,7 +246,7 @@ bool Buff::run(TaskData &src,VisionData &data)
                 {
                     FanTracker fan_tracker;
                     fan_tracker.last_fan = (*fan);
-                    fan_tracker.last_timestamp = src.timestamp;
+                    fan_tracker.cur_timestamp = src.timestamp;
                     fan_tracker.is_last_fan_exists = false;//初始化
                     fan_tracker.rotate_speed = 0;
                     trackers_tmp.push_back(fan_tracker);

@@ -19,19 +19,32 @@
 //---------------------------------------------------------------------------//
 
 // #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
-#ifdef USING_DAHENG 
-    extern constexpr int EXPOSURE_TIME = 6000;
-    extern constexpr float EXPOSURE_GAIN = 10;
-    extern constexpr float B_BALANCE = 1.56f;
-    extern constexpr float G_BALANCE = 1.0f;
-    extern constexpr float R_BALANCE = 1.548f;
+#ifdef USING_DAHENG //大恒相机参数设置
+    extern constexpr int EXPOSURE_TIME = 6000;  //曝光时间
+    extern constexpr float EXPOSURE_GAIN = 10;  //曝光增益
+    extern constexpr float B_BALANCE = 1.56f;   //白平衡——B通道
+    extern constexpr float G_BALANCE = 1.0f;    //白平衡——G通道
+    extern constexpr float R_BALANCE = 1.548f;  //白平衡——R通道
 #endif
 
-/**** 大恒相机型号 ****/ 
-// #define CAMERA_ID_73 
+//----------------------- 大恒相机型号 ----------------------------// 
+#define CAMERA_ID_73 //步兵
 #ifndef CAMERA_ID_73
-    // #define CAMERA_ID_75 //默认相机型号为76
+    // #define CAMERA_ID_75 //英雄 //默认相机型号为76（哨兵下云台）
 #endif
+
+//------兵种打击逻辑(与相机型号对应, 只需修改兵种对应的相机型号即可)-------//
+#ifdef CAMERA_ID_73 //步兵
+    #define INFANTRY_DECISION //步兵打击决策
+#endif
+#ifndef CAMERA_ID_73
+    #ifdef CAMERA_ID_75
+        #define HERO_DECISION //英雄打击决策
+    #else
+        #define SENTRY_DECISION //哨兵打击决策
+    #endif
+#endif
+
 
 #define DEBUG_WITHOUT_COM           //无串口调试
 //===========================================================================//

@@ -22,7 +22,7 @@ public:
         std::cerr << "除数为零！" << endl;
     }
 
-    // ~divideZeroException(){}
+    ~divideZeroException(){}
 };
 
 class typeError : public BaseException
@@ -33,44 +33,62 @@ public:
         std::cerr << "数据类型错误！" << endl;
     }
 
-    // ~typeError(){}
+    ~typeError(){}
 };
 
 class pathError : public BaseException
 {
+public:
     virtual void what()
     {
         std::cerr << "未检测到串口路径！" << endl;
     }
 
-    // ~pathError(){}
+    ~pathError(){}
 };
 
-class setBrateDefault : public BaseException
+class setBrateError : public BaseException
 {
 public:
     virtual void what()
     {
         std::cerr << "波特率设置失败！" << endl;
     }
+
+    ~setBrateError(){}
 };
 
-class serailSendingError : public BaseException
+class serialSendingError : public BaseException
 {
 public:
     virtual void what()
     {
         std::cerr << "数据发送失败！" << endl;
     }
+
+    ~serialSendingError(){}
 };
 
-class openFileDefault : public BaseException
+class openFileError : public BaseException
 {
 public:
     virtual void what()
     {
         std::cerr << "文件打开失败！" << endl;
     }
+
+    ~openFileError(){}
+};
+
+class GXInitLibError : public BaseException
+{
+public:
+    virtual void what()
+    {
+        std::cerr << "大恒相机库初始化失败！" << endl;
+    }
+
+    ~GXInitLibError(){}
 };
 
 

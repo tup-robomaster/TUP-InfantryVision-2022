@@ -22,7 +22,7 @@ Autoaim::Autoaim()
         e.what();
     }
 
-    coordsolver.loadParam(camera_param_path,camera_name);
+    coordsolver.loadParam(camera_param_path, camera_name);
     // cout<<"...."<<endl;
     lost_cnt = 0;
     is_last_target_exists = false;
@@ -226,27 +226,57 @@ Eigen::Vector4d FitSpaceCircle(std::vector<Eigen::Vector3d> pts)
  * @param timestamp 本次时间戳 
  * @return ArmorTracker* 选中的ArmorTracker
  */
-ArmorTracker* Autoaim::chooseTargetTracker(vector<ArmorTracker*> trackers, int timestamp)
+ArmorTracker* Autoaim::chooseTargetTracker(vector<ArmorTracker*> trackers, int timestamp, Point2f& src_center)
 {
     //TODO:优化打击逻辑
     //TODO:本逻辑为哨兵逻辑
     float max_area = 0;
     int target_idx = 0;
 
+#ifdef SENTRY_DECISION
     //若存在上次tracker则直接返回,若不存在则装甲板面积最大的Tracker
     for (int i = 0; i < trackers.size(); i++)
     {
         //若该Tracker为上次Tracker且本次仍在更新,则直接使用
-        if (trackers[i]->last_selected_timestamp == last_timestamp && trackers[i]->last_timestamp == timestamp)
+        if (trackers[i]->last_selected_timestamp == cur_timestamp && trackers[i]->cur_timestamp == timestamp)
             return trackers[i];
-        else if (trackers[i]->last_armor.area >= max_area && trackers[i]->last_timestamp == timestamp)
+        else if (trackers[i]->cur_armor.area >= max_area && trackers[i]->cur_timestamp == timestamp)
         {
-            max_area = trackers[i]->last_armor.area;
+            max_area = trackers[i]->cur_armor.area;
             target_idx = i;
         }
     }
-    return trackers[target_idx];
+#endif
 
+//步兵打击逻辑：选择距画面中心最近的装甲作为目标
+#ifdef INFANTRY_DECISION //步兵决策
+    float min_distance = calcDistance(trackers[0]->cur_armor.center2d, src_center);
+    for(int i = 1; i < trackers.size(); i++)
+    {   
+        float dis = calcDistance(trackers[i]->cur_armor.center2d, src_center);
+        if(dis < min_distance)
+        {
+            min_distance = dis;
+            target_idx = i;
+        }
+    }
+#endif
+
+//英雄打击逻辑：优先击打前哨站；其次是哨兵
+#ifdef HERO_DECISION //英雄决策
+    float min_distance = calcDistance(trackers[0]->cur_armor.center2d, src_center);
+    for(int i = 1; i < trackers.size(); i++)
+    {   
+        float dis = calcDistance(trackers[i]->cur_armor.center2d, src_center);
+        if(dis < min_distance)
+        {
+            min_distance = dis;
+            target_idx = i;
+        }
+    }
+#endif
+
+    return trackers[target_idx];
 }
 
 /**
@@ -272,7 +302,7 @@ string Autoaim::chooseTargetID(vector<Armor> &armors, int timestamp)
             return armor.key;
         }
         //若存在上次击打目标,时间较短,且该目标运动较小则将其选为候选目标,若遍历结束未发现危险距离内的英雄则将其ID选为目标ID.
-        else if (armor.id == last_armor.id && abs(armor.center3d_world.norm() - last_armor.center3d_world.norm()) < 0.1 && abs(timestamp - last_timestamp) < 30)
+        else if (armor.id == cur_armor.id && abs(armor.center3d_world.norm() - cur_armor.center3d_world.norm()) < 0.1 && abs(timestamp - cur_timestamp) < 30)
         {
             is_last_id_exists = true;
             target_key = armor.key;
@@ -437,8 +467,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         else if (predictors_with_same_key == 1)
         {
             auto candidate = trackers_map.find((*armor).key);
-            auto delta_t = src.timestamp - (*candidate).second.prev_timestamp;
-            auto delta_dist = ((*armor).center3d_world - (*candidate).second.prev_armor.center3d_world).norm();
+            auto delta_t = src.timestamp - (*candidate).second.last_timestamp;
+            auto delta_dist = ((*armor).center3d_world - (*candidate).second.last_armor.center3d_world).norm();
             auto velocity = (delta_dist / delta_t) * 1e3;
             //若匹配则使用此ArmorTracker
             if (velocity <= max_v)
@@ -465,8 +495,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             //遍历所有同Key预测器，匹配速度最小且更新时间最近的ArmorTracker
             for (auto iter = candiadates.first; iter != candiadates.second; ++iter)
             {
-                auto delta_t = src.timestamp - (*iter).second.prev_timestamp;
-                auto delta_dist = ((*armor).center3d_world - (*iter).second.prev_armor.center3d_world).norm();
+                auto delta_t = src.timestamp - (*iter).second.last_timestamp;
+                auto delta_dist = ((*armor).center3d_world - (*iter).second.last_armor.center3d_world).norm();
                 auto velocity = (delta_dist / delta_t) * 1e3;
                 if (velocity <= max_v && velocity <= min_v && delta_t <= min_delta_t)
                 {
@@ -498,8 +528,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         {
             //删除元素后迭代器会失效，需先行获取下一元素
             auto next = iter;
-            // cout<<(*iter).second.last_timestamp<<"  "<<src.timestamp<<endl;
-            if (src.timestamp - (*iter).second.last_timestamp > max_delta_t)
+            // cout<<(*iter).second.cur_timestamp<<"  "<<src.timestamp<<endl;
+            if (src.timestamp - (*iter).second.cur_timestamp > max_delta_t)
                 next = trackers_map.erase(iter);
             else
                 ++next;
@@ -518,43 +548,43 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             if (same_armors_cnt == 2)
             {
                 auto candidates = trackers_map.equal_range(cnt.first);
-                double last_armor_center;
-                double last_armor_timestamp;
+                double cur_armor_center;
+                double cur_armor_timestamp;
                 double new_armor_center;
                 double new_armor_timestamp;
                 auto candidate = candidates.first;
                 //确定新增装甲板与历史装甲板
                 if ((*candidate).second.is_initialized)
                 {
-                    last_armor_center = (*candidate).second.last_armor.center3d_cam[0];
-                    last_armor_timestamp = (*candidate).second.last_timestamp;
+                    cur_armor_center = (*candidate).second.cur_armor.center3d_cam[0];
+                    cur_armor_timestamp = (*candidate).second.cur_timestamp;
                     ++candidate;
                     if (!(*candidate).second.is_initialized)
                         {
-                            new_armor_center = (*candidate).second.last_armor.center3d_cam[0];
-                            new_armor_timestamp = (*candidate).second.last_timestamp;
+                            new_armor_center = (*candidate).second.cur_armor.center3d_cam[0];
+                            new_armor_timestamp = (*candidate).second.cur_timestamp;
                         }
                     else
                         continue;
                 }
                 else
                 {
-                    new_armor_center = (*candidate).second.last_armor.center3d_cam[0];
-                    new_armor_timestamp = (*candidate).second.last_timestamp;
+                    new_armor_center = (*candidate).second.cur_armor.center3d_cam[0];
+                    new_armor_timestamp = (*candidate).second.cur_timestamp;
                     ++candidate;
                     if ((*candidate).second.is_initialized)
                         {
-                            last_armor_center = (*candidate).second.last_armor.center3d_cam[0];
-                            last_armor_timestamp = (*candidate).second.last_timestamp;
+                            cur_armor_center = (*candidate).second.cur_armor.center3d_cam[0];
+                            cur_armor_timestamp = (*candidate).second.cur_timestamp;
                         }
                     else
                         continue;
                 }
-                auto spin_movement = new_armor_center - last_armor_center;
-                // cout<<last_armor_timestamp<<" : "<<new_armor_timestamp<<endl;
-                if (spin_score_map[cnt.first] == 0 && abs(spin_movement) > 0.05 && last_armor_timestamp == new_armor_timestamp)
+                auto spin_movement = new_armor_center - cur_armor_center;
+                // cout<<cur_armor_timestamp<<" : "<<new_armor_timestamp<<endl;
+                if (spin_score_map[cnt.first] == 0 && abs(spin_movement) > 0.05 && cur_armor_timestamp == new_armor_timestamp)
                     spin_score_map[cnt.first] = 100 * spin_movement / abs(spin_movement);
-                else if (abs(spin_movement) > 0.05 && last_armor_timestamp == new_armor_timestamp)
+                else if (abs(spin_movement) > 0.05 && cur_armor_timestamp == new_armor_timestamp)
                     spin_score_map[cnt.first] = anti_spin_max_r_multiple * spin_score_map[cnt.first];
             }
         }
@@ -599,7 +629,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         auto available_candidates_cnt = 0;
         for (auto iter = ID_candiadates.first; iter != ID_candiadates.second; ++iter)
         {
-            final_armors.push_back((*iter).second.last_armor);
+            final_armors.push_back((*iter).second.cur_armor);
             final_trackers.push_back(&(*iter).second);
             //若Tracker未完成初始化，不考虑使用
             // if (!(*iter).second.is_initialized || (*iter).second.history_info.size() < 3)
@@ -640,9 +670,9 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         //         Eigen::Vector3d rotate_center_world = {0,
         //                             sin(25 * 180 / CV_PI) * tracker->radius,
         //                             - cos(25 * 180 / CV_PI) * tracker->radius};
-        //         auto rotMat = eulerToRotationMatrix(tracker->prev_armor.euler);
+        //         auto rotMat = eulerToRotationMatrix(tracker->last_armor.euler);
         //         //Pc = R * Pw + T
-        //         rotate_center_cam = (rotMat * rotate_center_world) + tracker->prev_armor.center3d_cam;
+        //         rotate_center_cam = (rotMat * rotate_center_world) + tracker->last_armor.center3d_cam;
         //         rotate_center_car += coordsolver.worldToCam(rotate_center_cam, rmat_imu);
         //     }
         //     //求解旋转中心
@@ -668,10 +698,10 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         }
 #ifdef USING_PREDICT
         Eigen::Vector3d predict_value;
-        auto delta_t = src.timestamp - last_timestamp;
-        auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
+        auto delta_t = src.timestamp - cur_timestamp;
+        auto delta_dist = (target.center3d_world - cur_armor.center3d_world).norm();
         auto velocity = (delta_dist / delta_t) * 1e3;
-        if (target.key != last_armor.key || velocity > max_v)
+        if (target.key != cur_armor.key || velocity > max_v)
         {
             predictor.initParam(predictor_param_loader);
             aiming_point = target.center3d_cam;
@@ -692,19 +722,20 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     {
         for (auto iter = ID_candiadates.first; iter != ID_candiadates.second; ++iter)
         {
-            // final_armors.push_back((*iter).second.last_armor);
+            // final_armors.push_back((*iter).second.cur_armor);
             final_trackers.push_back(&(*iter).second);
         }
         //进行目标选择
-        auto tracker = chooseTargetTracker(final_trackers, src.timestamp);
-        target = tracker->last_armor;
+        Point2f src_center = Point(src.img.size().width / 2, src.img.size().height / 2);
+        auto tracker = chooseTargetTracker(final_trackers, src.timestamp, src_center);
+        target = tracker->cur_armor;
 
 #ifdef USING_PREDICT
-        auto delta_t = src.timestamp - last_timestamp;
-        auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
+        auto delta_t = src.timestamp - cur_timestamp;
+        auto delta_dist = (target.center3d_world - cur_armor.center3d_world).norm();
         auto velocity = (delta_dist / delta_t) * 1e3;
 
-        if (target.key != last_armor.key || velocity > max_v)
+        if (target.key != cur_armor.key || velocity > max_v)
         {
             predictor.initParam(predictor_param_loader);
             aiming_point = target.center3d_cam;
@@ -748,9 +779,9 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 #endif //ASSIST_LABEL
     //获取装甲板中心与装甲板面积以下一次ROI截取使用
     last_roi_center = target.center2d;
-    last_armor = target;
+    cur_armor = target;
     lost_cnt = 0;
-    last_timestamp = src.timestamp;
+    cur_timestamp = src.timestamp;
     last_target_area = target.area;
     last_aiming_point = aiming_point;
     is_last_target_exists = true;

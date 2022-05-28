@@ -25,7 +25,7 @@ private:
     
     bool is_last_target_exists;
     int lost_cnt;
-    int last_timestamp;
+    int cur_timestamp;
     double last_target_area;
     Point2i last_roi_center;
     Point2i roi_offset;

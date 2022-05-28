@@ -183,7 +183,7 @@ bool SerialPort::initSerialPort()
 
 	if (set_Bit() == FALSE)
 	{
-        throw setBrateDefault();
+        throw setBrateError();
         // printf("Set Parity Error\n");
 		// exit(0);
     }
@@ -478,7 +478,7 @@ void SerialPort::send()
 	auto write_stauts = write(fd, Tdata, 22);
     if(write_stauts == -1)
     {
-        throw serailSendingError();
+        throw serialSendingError();
     }
 #endif
 }
