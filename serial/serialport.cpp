@@ -12,7 +12,7 @@ SerialPort::SerialPort(const string ID, const int BAUD)
     // system(std::string("root@233").c_str());
 #ifdef DEBUG_WITHOUT_COM
     withoutSerialPort();
-#elsed
+#else
     try
     {
         initSerialPort();

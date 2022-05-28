@@ -77,7 +77,7 @@ bool Factory<T>::consume(T &product)
         if (!buffer.empty())
             break;
         lock.unlock();
-        usleep(1e3)
+        usleep(1e3);
     }
     product = buffer.front();
     buffer.pop_front();

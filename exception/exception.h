@@ -4,6 +4,9 @@
 #include <typeinfo>
 using namespace std;
 
+#pragma once 
+
+
 class BaseException
 {
 public:
@@ -19,7 +22,7 @@ public:
         std::cerr << "除数为零！" << endl;
     }
 
-    ~divideZeroException(){}
+    // ~divideZeroException(){}
 };
 
 class typeError : public BaseException
@@ -30,7 +33,7 @@ public:
         std::cerr << "数据类型错误！" << endl;
     }
 
-    ~typeError(){}
+    // ~typeError(){}
 };
 
 class pathError : public BaseException
@@ -40,7 +43,7 @@ class pathError : public BaseException
         std::cerr << "未检测到串口路径！" << endl;
     }
 
-    ~pathError(){}
+    // ~pathError(){}
 };
 
 class setBrateDefault : public BaseException

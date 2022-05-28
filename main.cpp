@@ -61,7 +61,7 @@ int main(int argc,char* argv[])
         LOG(INFO) << "[MAIN] task_consumer start!";
 #endif //SAVE_MAIN_LOG
 
-#ifdef DEBUG_WITHOUT_COM
+#ifndef DEBUG_WITHOUT_COM
     std::thread transmitter(&dataTransmitter, ref(serial), ref(data_transmit_factory));
     #ifdef SAVE_MAIN_LOG
             LOG(INFO) << "[MAIN] transmitter start!";
@@ -83,7 +83,7 @@ int main(int argc,char* argv[])
 
     task_consumer.join();
 
-#ifdef DEBUG_WITHOUT_COM    
+#ifndef DEBUG_WITHOUT_COM    
     #ifdef SAVE_MAIN_LOG
         LOG(WARNING) << "[MAIN] task_consumer end!";
     #endif //SAVE_MAIN_LOG

@@ -437,8 +437,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         else if (predictors_with_same_key == 1)
         {
             auto candidate = trackers_map.find((*armor).key);
-            auto delta_t = src.timestamp - (*candidate).second.pre_timestamp;
-            auto delta_dist = ((*armor).center3d_world - (*candidate).second.pre_armor.center3d_world).norm();
+            auto delta_t = src.timestamp - (*candidate).second.prev_timestamp;
+            auto delta_dist = ((*armor).center3d_world - (*candidate).second.prev_armor.center3d_world).norm();
             auto velocity = (delta_dist / delta_t) * 1e3;
             //若匹配则使用此ArmorTracker
             if (velocity <= max_v)

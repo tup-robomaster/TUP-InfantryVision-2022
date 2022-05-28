@@ -4,13 +4,13 @@ source /opt/intel/openvino_2021/bin/setupvars.sh
 
 sec=1
 cnt=0
-name=Adjust_Version         #TODO:程序所在文件夹名称
-
-echo "password" | sudo -S chmod 777 /home/liubiao/Desktop/$name # -S --stdin 直接从标准输入读取密码，不需要手动添加
+name=TUP-InfantryVision-2022         #TODO:程序所在文件夹名称
+projectname=Infantry_Vision
+echo "sys666" | sudo -S chmod 777 /home/tup/Desktop/$name # -S --stdin 直接从标准输入读取密码，不需要手动添加
                                                                 # TODO:password 为自己的密码
-cd /home/liubiao/Desktop/$name/build/
-cmake .. && make clean && 
-make -j8 
+cd /home/tup/Desktop/$name/build/
+# cmake .. && make clean && 
+make -j6 
 
 while [ 1 ] 
 do
@@ -38,15 +38,15 @@ do
     (sudo chmod 777 /dev/ttyACM0 || chmod 777 /dev/ttyACM1)  # 给串口权限
     
     if [ $count -gt 2 ]; then
-        echo "The $name is still alive!" 
+        echo "The $projectname is still alive!" 
         sleep $sec 
     else  
-        echo "Starting $name..." 
+        echo "Starting $projectname..." 
         # gnome-terminal -- bash -c "cd /home/tup/Desktop/$name/build/;
         # ./$name;exec bash;" 
-        cd /home/liubiao/Desktop/$name/build/   #TODO:程序build文件夹路径
-        make -j8 && ./$name
-        echo "$name has started!"   
+        cd /home/tup/Desktop/$name/build/   #TODO:程序build文件夹路径
+        make -j6 && ./$projectname
+        echo "$projectname has started!"   
         sleep $sec 
 
         ((cnt=cnt+1)) 
