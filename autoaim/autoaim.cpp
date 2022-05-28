@@ -12,7 +12,16 @@ ofstream file;
 Autoaim::Autoaim()
 {
     detector.initModel(network_path);
-    predictor_param_loader.initParam(predict_param_path);
+
+    try
+    {
+        predictor_param_loader.initParam(predict_param_path);
+    }
+    catch(BaseException& e)
+    {
+        e.what();
+    }
+
     coordsolver.loadParam(camera_param_path,camera_name);
     // cout<<"...."<<endl;
     lost_cnt = 0;

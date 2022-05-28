@@ -40,6 +40,11 @@ bool ArmorPredictor::initParam(ArmorPredictor &predictor_loader)
 bool ArmorPredictor::initParam(string coord_path)
 {
     YAML::Node config = YAML::LoadFile(coord_path);
+    // if(config.IsNull())
+    // {
+    //     throw openFileDefault();
+    // }
+
     pf_x.initParam(config,"autoaim_x");
     pf_y.initParam(config,"autoaim_y");
     pf_z.initParam(config,"autoaim_z");

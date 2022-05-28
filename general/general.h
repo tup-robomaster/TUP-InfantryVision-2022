@@ -24,7 +24,16 @@
 
 using namespace std;
 using namespace cv;
-const string camera_name = "KE0200110076";
+
+#ifdef CAMERA_ID_73
+    const string camera_name = "KE0200110073";
+#else
+    #ifdef CAMERA_ID_75
+        const string camera_name = "KE0200110075";
+    #else
+        const string camera_name = "KE0200110076";
+    #endif
+#endif
 
 /**
  * @brief 存储任务所需数据的结构体

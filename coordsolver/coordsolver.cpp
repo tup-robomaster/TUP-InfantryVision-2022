@@ -26,7 +26,11 @@ CoordSolver::~CoordSolver()
 bool CoordSolver::loadParam(string coord_path,string param_name)
 {
     YAML::Node config = YAML::LoadFile(coord_path);
-
+    if(config.IsNull())
+    {
+        throw openFileDefault();
+    }
+    
     Eigen::MatrixXd mat_intrinsic(3, 3);
     Eigen::MatrixXd mat_ic(4, 4);
     Eigen::MatrixXd mat_ci(4, 4);
@@ -39,6 +43,8 @@ bool CoordSolver::loadParam(string coord_path,string param_name)
     max_iter = config[param_name]["max_iter"].as<int>();
     stop_error = config[param_name]["stop_error"].as<float>();
     R_K_iter = config[param_name]["R_K_iter"].as<int>();
+    k = config[param_name]["Latm_K"].as<double>();
+    g = config[param_name]["G"].as<double>();
 
     //初始化内参矩阵
     auto read_vector = config[param_name]["Intrinsic"].as<vector<float>>();

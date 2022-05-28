@@ -10,6 +10,7 @@
 #include <Eigen/Core>
 #include <opencv2/opencv.hpp>
 #include <yaml-cpp/yaml.h>
+#include "../../exception/exception.h"
 
 #include "../../general/general.h"
 #include "particle_filter.h"

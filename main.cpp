@@ -35,14 +35,15 @@ int main(int argc,char* argv[])
     Factory<VisionData> data_transmit_factory(5);
     MessageFilter<MCUData> data_receiver(50);
     SerialPort serial(SERIAL_ID, BAUD);
-    
-#ifdef USING_IMU_C_BOARD
-    std::thread serial_watcher(&serialWatcher, ref(serial));
-    std::thread receiver(&dataReceiver, ref(serial), ref(data_receiver), time_start);
-    #ifdef SAVE_MAIN_LOG
-        LOG(INFO) << "[MAIN] serial_watcher(with IMU) start!"<<endl;
-    #endif //SAVE_MAIN_LOG
-#endif //USING_IMU_C_BOARD
+#ifdef DEBUG_WITHOUT_COM
+    #ifdef USING_IMU_C_BOARD
+        std::thread serial_watcher(&serialWatcher, ref(serial));
+        std::thread receiver(&dataReceiver, ref(serial), ref(data_receiver), time_start);
+        #ifdef SAVE_MAIN_LOG
+            LOG(INFO) << "[MAIN] serial_watcher(with IMU) start!"<<endl;
+        #endif //SAVE_MAIN_LOG
+    #endif //USING_IMU_C_BOARD
+#endif
 
 // #ifdef USING_IMU_WIT
 //     IMUSerial serial_imu(SERIAL_ID_IMU, BAUD_IMU);
@@ -60,10 +61,12 @@ int main(int argc,char* argv[])
         LOG(INFO) << "[MAIN] task_consumer start!";
 #endif //SAVE_MAIN_LOG
 
+#ifndef DEBUG_WITHOUT_COM
     std::thread transmitter(&dataTransmitter, ref(serial), ref(data_transmit_factory));
-#ifdef SAVE_MAIN_LOG
-        LOG(INFO) << "[MAIN] transmitter start!";
-#endif //SAVE_MAIN_LOG
+    #ifdef SAVE_MAIN_LOG
+            LOG(INFO) << "[MAIN] transmitter start!";
+    #endif //SAVE_MAIN_LOG
+#endif
 
 #ifndef USING_IMU
     std::thread serial_watcher(&serialWatcher, ref(serial));
@@ -73,31 +76,35 @@ int main(int argc,char* argv[])
 #endif //USING_IMU
 
     task_producer.join();
+    
 #ifdef SAVE_MAIN_LOG
     LOG(WARNING) << "[MAIN] task_producer end!";
 #endif //SAVE_MAIN_LOG
 
     task_consumer.join();
-#ifdef SAVE_MAIN_LOG
-    LOG(WARNING) << "[MAIN] task_consumer end!";
-#endif //SAVE_MAIN_LOG
 
-    serial_watcher.join();
-#ifdef SAVE_MAIN_LOG
-    LOG(WARNING) << "[MAIN] serial_watcher end!";
-#endif //SAVE_MAIN_LOG
-
-    transmitter.join();
-#ifdef SAVE_MAIN_LOG
-    LOG(WARNING) << "[MAIN] transmitter end!";
-#endif //SAVE_MAIN_LOG
-
-#ifdef USING_IMU
-    receiver.join();
-    #ifdef SAVE_MAIN_LOG    
-        LOG(WARNING) << "[MAIN] IMU receiver end!";
+#ifndef DEBUG_WITHOUT_COM    
+    #ifdef SAVE_MAIN_LOG
+        LOG(WARNING) << "[MAIN] task_consumer end!";
     #endif //SAVE_MAIN_LOG
-#endif //USING_IMU
+
+        serial_watcher.join();
+    #ifdef SAVE_MAIN_LOG
+        LOG(WARNING) << "[MAIN] serial_watcher end!";
+    #endif //SAVE_MAIN_LOG
+
+        transmitter.join();
+    #ifdef SAVE_MAIN_LOG
+        LOG(WARNING) << "[MAIN] transmitter end!";
+    #endif //SAVE_MAIN_LOG
+
+    #ifdef USING_IMU
+        receiver.join();
+        #ifdef SAVE_MAIN_LOG    
+            LOG(WARNING) << "[MAIN] IMU receiver end!";
+        #endif //SAVE_MAIN_LOG
+    #endif //USING_IMU
+#endif
 
 #ifdef SAVE_MAIN_LOG
     google::ShutdownGoogleLogging();

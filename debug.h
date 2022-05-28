@@ -6,9 +6,9 @@
 
 // #define SAVE_VIDEO               // save video
 
-#define SAVE_LOG_ALL                // save log
+// #define SAVE_LOG_ALL                // save log
 
-#define USING_IMU                //是否使用陀螺仪数据
+// #define USING_IMU                //是否使用陀螺仪数据
 //===========================================================================//
 
 
@@ -18,9 +18,22 @@
 //                              硬件设备选项
 //---------------------------------------------------------------------------//
 
-#define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+// #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+#ifdef USING_DAHENG 
+    extern constexpr int EXPOSURE_TIME = 6000;
+    extern constexpr float EXPOSURE_GAIN = 10;
+    extern constexpr float B_BALANCE = 1.56f;
+    extern constexpr float G_BALANCE = 1.0f;
+    extern constexpr float R_BALANCE = 1.548f;
+#endif
 
-// #define DEBUG_WITHOUT_COM           //无串口调试
+/**** 大恒相机型号 ****/ 
+// #define CAMERA_ID_73 
+#ifndef CAMERA_ID_73
+    // #define CAMERA_ID_75 //默认相机型号为76
+#endif
+
+#define DEBUG_WITHOUT_COM           //无串口调试
 //===========================================================================//
 
 
@@ -44,7 +57,7 @@
 
 // #define PRINT_TARGET_INFO //是否输出目标信息
 
-#define USING_PREDICT           //是否启用预测
+// #define USING_PREDICT           //是否启用预测
 
 #define USING_SPIN_DETECT //是否检测陀螺
 
@@ -85,7 +98,7 @@
     #define SHOW_ALL_FANS   //是否绘制所有扇叶
     #define SHOW_FPS    //是否显示FPS
     #define SHOW_PREDICT //是否显示预测
-    #define SHOW_AIM_CROSS//是否绘制十字瞄准线
+    // #define SHOW_AIM_CROSS//是否绘制十字瞄准线
 #endif // SHOW_IMG
 
 #ifndef USING_DAHENG
@@ -100,4 +113,9 @@
 #else
     #define DETECT_BUFF_RED
 #endif
+
+/*****************异常机制*****************/
+#define PATH_EXCEPTION              // 检测串口路径异常
+#define SERIAL_SENDING_EXCEPTION    // 检测串口数据发送异常
+
 //===========================================================================//

@@ -11,8 +11,10 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <yaml-cpp/yaml.h>
+#include "../exception/exception.h"
 
 #include "../general/general.h"
+#include "../debug.h"
 
 using namespace std;
 using namespace cv;
@@ -66,8 +68,8 @@ private:
 
     const int armor_type_wh_thres = 7;      //大小装甲板长宽比阈值
     const int bullet_speed = 28;            //TODO:弹速可变
-    // const int bullet_speed = 16;            //TODO:弹速可变
-    const double k = 0.0389;                //25°C,1atm,小弹丸
-    // const double k = 0.0111;                //25°C,1atm,大弹丸
-    const double g = 9.801;
+    // const int bullet_speed = 16;         //TODO:弹速可变
+    double k;                         //25°C,1atm,小弹丸
+    // const double k = 0.0111;             //25°C,1atm,大弹丸
+    double g;
 };
