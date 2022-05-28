@@ -26,7 +26,7 @@ private:
 
     bool is_last_target_exists;
     int lost_cnt;
-    int last_timestamp;
+    int prev_timestamp;
     double last_target_area;
     Point2i last_roi_center;
     Eigen::Vector3d last_aiming_point;
@@ -38,13 +38,15 @@ private:
     std::map<string,SpinHeading> spin_status_map;    //反小陀螺，记录该车小陀螺状态
     std::map<string,double> spin_score_map;     //反小陀螺，记录各装甲板小陀螺可能性分数，大于0为逆时针旋转，小于0为顺时针旋转
 
+    const int armor_type_wh_thres = 2.6;      //大小装甲板长宽比阈值
+
     const int max_lost_cnt = 5;                 //最大丢失目标帧数
     const int max_armors = 8;                   //视野中最多装甲板数
     const int max_v = 8;                        //两次预测间最大速度(m/s)
     const int max_delta_t = 100;                //使用同一预测器的最大时间间隔(ms)
 
-    int anti_spin_judge_high_thres = 2e4;//大于该阈值认为该车已开启陀螺
-    int anti_spin_judge_low_thres = 5e3;//小于该阈值认为该车已关闭陀螺
+    int anti_spin_judge_high_thres = 1.5e4;//大于该阈值认为该车已开启陀螺
+    int anti_spin_judge_low_thres = 3.5e3;//小于该阈值认为该车已关闭陀螺
     int anti_spin_max_r_multiple = 3;
 
     const double no_crop_thres = 2e-3;      //禁用ROI裁剪的装甲板占图像面积最大面积比值

@@ -36,7 +36,7 @@ public:
 
     double dynamicCalcPitchOffset(Eigen::Vector3d &xyz);
     
-    PnPInfo pnp(const std::vector<Point2f> &points_pic, const Eigen::Matrix3d &rmat_imu, int method);
+    PnPInfo pnp(const std::vector<Point2f> &points_pic, const Eigen::Matrix3d &rmat_imu, enum TargetType type, int method);
     
     Eigen::Vector3d camToWorld(const Eigen::Vector3d &point_camera,const Eigen::Matrix3d &rmat);
     Eigen::Vector3d worldToCam(const Eigen::Vector3d &point_world,const Eigen::Matrix3d &rmat);
@@ -64,7 +64,7 @@ private:
 
     YAML::Node param_node;
 
-    const int armor_type_wh_thres = 7;      //大小装甲板长宽比阈值
+    const int armor_type_wh_thres = 3.3;      //大小装甲板长宽比阈值
     const int bullet_speed = 28;            //TODO:弹速可变
     // const int bullet_speed = 16;            //TODO:弹速可变
     const double k = 0.0389;                //25°C,1atm,小弹丸

@@ -18,7 +18,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     DaHeng.SetStreamOn();
     // 设置曝光事件
     DaHeng.SetExposureTime(8000);
-    // 设置
+    // 设置1
     DaHeng.SetGAIN(3, 14);
     // 是否启用自动白平衡7
     // DaHeng.Set_BALANCE_AUTO(0);
@@ -120,7 +120,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
 #ifdef SAVE_VIDEO
         frame_cnt++;
-        if(frame_cnt % 10 == 0)
+        if(frame_cnt % 5 == 0)
         {
             frame_cnt = 0;
             //异步读写加速,避免阻塞生产者
@@ -135,7 +135,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 #ifdef USING_IMU
         //获取下位机数据
         MCUData mcu_status;
-        if (!receive_factory.consume(mcu_status, src.timestamp - 4))
+        if (!receive_factory.consume(mcu_status, src.timestamp))
             continue;
         src.quat = mcu_status.quat;
         src.mode = mcu_status.mode;

@@ -75,6 +75,10 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     //     target = {filtered_xyz, (int)filtered_xyz.norm(), timestamp};
     //     history_info.pop_back();
     // }
+    // auto filtered_xyz = shiftWindowFilter(history_info.size() - window_size - 1);
+    // filtered_xyz << xyz[0], xyz[1], filtered_xyz[2];
+    // target = {filtered_xyz, (int)filtered_xyz.norm(), timestamp};
+    // history_info.pop_back();
 
     //当队列长度不足时不使用拟合
     if (history_info.size() < history_deque_len)
@@ -134,7 +138,7 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
         result[2] = result_fitting[2];
     else
         result[2] = result_pf[2];
-
+    // result[2] = xyz[2];
     auto t2=std::chrono::steady_clock::now();
     double dr_ms=std::chrono::duration<double,std::milli>(t2-t1).count();
     // if(timestamp % 10 == 0)
@@ -211,13 +215,9 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     Eigen::VectorXd measure_vz (1);
 
     //取隔两帧前的装甲板，拉长时间，以求降低高频噪声影响
-    auto before_target_next = history_info.at(history_info.size() - 4);
-    auto before_target_prior = history_info.at(history_info.size() - 3);
+    auto before_target = history_info.at(history_info.size() - 4);
 
-    auto v_xyz_prior = (target.xyz - before_target_prior.xyz) / (target.timestamp - before_target_prior.timestamp) * 1e3;
-    auto v_xyz_next = (target.xyz - before_target_next.xyz) / (target.timestamp - before_target_next.timestamp) * 1e3;
-
-    auto v_xyz = (v_xyz_next + v_xyz_prior) / 2; 
+    auto v_xyz = (target.xyz - before_target.xyz) / (target.timestamp - before_target.timestamp) * 1e3;
 
     measure_vx << v_xyz[0];
     measure_vy << v_xyz[1];

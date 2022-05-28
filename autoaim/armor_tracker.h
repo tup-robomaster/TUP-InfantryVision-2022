@@ -34,6 +34,8 @@ public:
     int last_selected_timestamp;            //该Tracker上次被选为目标tracker时间戳
     int prev_timestamp;                     //上次装甲板时间戳
     int last_timestamp;                     //本次装甲板时间戳
+    int history_type_sum;                   //历史次数之和
+    int selected_sum;                       //
     const int max_history_len = 4;          //历史信息队列最大长度
     double velocity;
     double radius;
