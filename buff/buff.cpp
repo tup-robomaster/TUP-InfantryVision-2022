@@ -18,6 +18,14 @@ Buff::Buff()
         e.what();
     }
 
+    YAML::Node config = YAML::LoadFile(config_param_path);
+
+    max_lost_cnt  = config["Buff"]["Max_lost_cnt"].as<int>();     
+    max_v         = config["Buff"]["Max_v"].as<int>();           
+    max_delta_t   = config["Buff"]["Max_delta_t"].as<int>();     
+    fan_length    = config["Buff"]["Fan_length"].as<float>();    
+    no_crop_thres = config["Buff"]["No_crop_thres"].as<float>(); 
+
     lost_cnt = 0;
     is_last_target_exists = false;
     // input_size = {640,384};

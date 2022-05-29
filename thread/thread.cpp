@@ -6,18 +6,14 @@
 **/
 bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
 {
-    constexpr string config_name = "../params/config.yaml";
-    constexpr string param_name = "param_name";
+    const string config_name = "../params/config.yaml";
+    const string param_name = "DaHeng";
 
 #ifdef USING_DAHENG
     YAML::Node config = YAML::LoadFile(config_name);
-    if(config.IsNull())
-    {
-        throw openFileDefault();
-    }
-
-    start_get_img:
     
+    start_get_img: //goto跳转点
+
     // 初始化大恒相机参数
     DaHengCamera DaHeng;
     
@@ -49,7 +45,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 #endif //USING_DAHENG
 
 #ifdef USING_USB_CAMERA
-    VideoCapture cap(0);
+    VideoCapture cap(1);
     // VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Open USB Camera success\n");
     #ifdef SAVE_LOG_ALL

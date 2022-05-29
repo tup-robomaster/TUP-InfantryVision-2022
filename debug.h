@@ -18,18 +18,7 @@
 //                              硬件设备选项
 //---------------------------------------------------------------------------//
 
-<<<<<<< HEAD
 // #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
-#ifdef USING_DAHENG //大恒相机参数设置
-    extern constexpr int EXPOSURE_TIME = 6000;  //曝光时间
-    extern constexpr float EXPOSURE_GAIN = 10;  //曝光增益
-    extern constexpr float B_BALANCE = 1.56f;   //白平衡——B通道
-    extern constexpr float G_BALANCE = 1.0f;    //白平衡——G通道
-    extern constexpr float R_BALANCE = 1.548f;  //白平衡——R通道
-#endif
-=======
-#define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
->>>>>>> de523e6b87b95b9d61720aea715c8ef8eb201f05
 
 //----------------------- 大恒相机型号 ----------------------------// 
 #define CAMERA_ID_73 //步兵
@@ -76,7 +65,7 @@
 
 // #define USING_PREDICT           //是否启用预测
 
-#define USING_SPIN_DETECT //是否检测陀螺
+// #define USING_SPIN_DETECT //是否检测陀螺
 
 #define DISABLE_FITTING //是否禁用曲线拟合
 //===========================================================================//

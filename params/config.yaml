@@ -1,4 +1,4 @@
-#大恒相机配置参数
+# 大恒相机配置参数
 DaHeng:
   # 曝光时间
   Exposure_time: 6000    
@@ -10,3 +10,35 @@ DaHeng:
   G_balance: 1.0
   # r通道
   R_balance: 1.548
+
+# 自瞄常量设置
+AutoAim:
+  # 丢帧上限
+  Max_lost_cnt: 5
+  # 视野最多装甲板数量
+  Max_armors_num: 8
+  # 两次预测最大速度
+  Max_v: 8
+  # 使用同一预测器的最大时间间隔（ms）
+  Max_delta_t: 100
+  # 陀螺开启旋转下限
+  Anti_spin_judge_high_thres: 2e4
+  # 陀螺关闭旋转上限
+  Anti_spin_judge_low_thres: 5e3
+  # 
+  Anti_spin_max_r_multiple: 3
+  # 禁用ROI时装甲板占图像面积的最大比值
+  No_crop_thres: 2e-3
+  # 英雄危险距离阈值（小于该距离直接攻击）
+  Hero_danger_zone: 4
+
+# 大符常量设置
+Buff:
+  Max_lost_cnt: 4     #最大丢失目标帧数
+  Max_v: 4            #最大旋转速度(rad/s)
+  Max_delta_t: 4000   #使用同一预测器的最大时间间隔(ms)
+  Fan_length: 0.565   #大符臂长(R字中心至装甲板中心)
+  No_crop_thres: 2e-3 #禁用ROI裁剪的装甲板占图像面积最大面积比值
+
+
+ 

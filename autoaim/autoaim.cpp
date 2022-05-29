@@ -23,6 +23,21 @@ Autoaim::Autoaim()
     }
 
     coordsolver.loadParam(camera_param_path, camera_name);
+
+    YAML::Node config = YAML::LoadFile(config_param_path);
+
+    max_lost_cnt = config["AutoAim"]["Max_lost_cnt"].as<int>();   
+    max_armors   = config["AutoAim"]["Max_armors_num"].as<int>();     
+    max_v        = config["AutoAim"]["Max_v"].as<int>();          
+    max_delta_t  = config["AutoAim"]["Max_delta_t"].as<int>();     
+
+    anti_spin_judge_high_thres = config["AutoAim"]["Anti_spin_judge_high_thres"].as<float>();   
+    anti_spin_judge_low_thres  = config["AutoAim"]["Anti_spin_judge_low_thres"].as<float>();    
+    anti_spin_max_r_multiple   = config["AutoAim"]["Anti_spin_max_r_multiple"].as<int>();
+
+    no_crop_thres    = config["AutoAim"]["No_crop_thres"].as<float>();      
+    hero_danger_zone = config["AutoAim"]["Hero_danger_zone"].as<int>();     
+
     // cout<<"...."<<endl;
     lost_cnt = 0;
     is_last_target_exists = false;
@@ -285,11 +300,11 @@ ArmorTracker* Autoaim::chooseTargetTracker(vector<ArmorTracker*> trackers, int t
  * @param armors 
  * @return string 
  */
-string Autoaim::chooseTargetID(vector<Armor> &armors, int timestamp)
+std::string Autoaim::chooseTargetID(vector<Armor> &armors, int timestamp)
 {
     //TODO:自瞄逻辑修改
     bool is_last_id_exists = false;
-    string target_key;
+    std::string target_key;
     //该选择逻辑主要存在两层约束:
     //英雄约束与上次目标约束
     //若检测到危险距离内的英雄直接退出循环

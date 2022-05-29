@@ -6,7 +6,6 @@ using namespace std;
 
 #pragma once 
 
-
 class BaseException
 {
 public:
