@@ -78,7 +78,7 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     // history_info.pop_back();
 
     //当队列长度不足时不使用拟合
-    if (history_info.size() < history_deque_len)
+    if (history_info.size() < min_fitting_len)
     {
         history_info.push_back(target);
         fitting_disabled = true;
@@ -90,11 +90,13 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
         history_info.push_back(target);
         fitting_disabled = true;
     }
-    else if (history_info.size() == history_deque_len)
+    else if (history_info.size() <= history_deque_len)
     {
-        history_info.pop_front();
         history_info.push_back(target);
         fitting_disabled = false;
+        //若队列过长，移除首元素
+        if (history_info.size() > history_deque_len)
+            history_info.pop_front();
     }
     
 #ifdef DISABLE_FITTING
@@ -208,38 +210,45 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     //使用线性运动模型
     Eigen::VectorXd measure_vx (1);
     Eigen::VectorXd measure_vy (1);
-    Eigen::VectorXd measure_vz (1);
 
-    //取隔两帧前的装甲板，拉长时间，以求降低高频噪声影响
-    auto before_target = history_info.at(history_info.size() - 4);
+    Eigen::Vector3d v_sum = {0, 0, 0};
+    Eigen::Vector3d v_xyz = {0, 0, 0};
+    //使用逐差法求解现在速度
+    int max_iter = 2;
+    int back_idx = history_info.size() - 1;
 
-    auto v_xyz = (target.xyz - before_target.xyz) / (target.timestamp - before_target.timestamp) * 1e3;
+    for (int i = 0; i < max_iter; i++)
+    {
+        auto next = history_info[back_idx - i];
+        auto prev = history_info[back_idx - i - 2];
+        v_sum += (next.xyz - prev.xyz) / (next.timestamp - prev.timestamp) * 1e3; 
+    }
+    v_xyz = v_sum / max_iter;
+    cout<<v_xyz.norm()<<endl;
 
     measure_vx << v_xyz[0];
     measure_vy << v_xyz[1];
-    measure_vz << v_xyz[2];
+
+    is_available.xyz_status[0] = pf_x.is_ready;
+    is_available.xyz_status[1] = pf_y.is_ready;
+    //Update
+    auto update_x = std::async(std::launch::deferred, [&, measure_vx](){pf_x.update(measure_vx);});
+    auto update_y = std::async(std::launch::deferred, [&, measure_vy](){pf_y.update(measure_vy);});
+
+
+    update_x.wait();
+    update_y.wait();
+
+    
     auto pf_result_vx = std::async(std::launch::deferred, [&](){return pf_x.predict();});
     auto pf_result_vy = std::async(std::launch::deferred, [&](){return pf_y.predict();});
 
     auto result_vx = pf_result_vx.get();
     auto result_vy = pf_result_vy.get();
 
-
     result << result_vx[0], result_vy[0], 0;
-
-    //异步修正
-    auto update_x = std::async(std::launch::deferred, [&, measure_vx](){pf_x.update(measure_vx);});
-    auto update_y = std::async(std::launch::deferred, [&, measure_vy](){pf_y.update(measure_vy);});
-
-    // cout<<(result  * (time_estimated / 1000.f))<<endl;
-    // cout<<"............."<<endl;
     result = result  * (time_estimated / 1000.f) + target.xyz;
 
-    is_available.xyz_status[0] = pf_x.is_ready;
-    is_available.xyz_status[1] = pf_y.is_ready;
-
-    update_x.wait();
-    update_y.wait();
 
     return is_available;
 }
@@ -275,7 +284,6 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
     auto dc = sum / history_info.size();
     params_x[0] = dc[0];
     params_y[0] = dc[1];
-    params_z[0] = dc[2];
 
     for (auto target_info : history_info)
     {
@@ -295,41 +303,28 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
             nullptr,            // 核函数，这里不使用，为空
             &params_y[1]                 // 待估计参数
         );
-        problem_z.AddResidualBlock (     // 向问题中添加误差项
-        // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 3> ( 
-                new CURVE_FITTING_COST ( target_info.timestamp - history_info.front().timestamp, target_info.xyz[2] - params_z[0])
-            ),
-            nullptr,            // 核函数，这里不使用，为空
-            &params_z[1]                // 待估计参数
-        );
     }
 
     //异步计算
     auto status_solve_x = std::async(std::launch::deferred, [&](){ceres::Solve(options_x, &problem_x, &summary_x);});
     auto status_solve_y = std::async(std::launch::deferred, [&](){ceres::Solve(options_y, &problem_y, &summary_y);});
-    auto status_solve_z = std::async(std::launch::deferred, [&](){ceres::Solve(options_z, &problem_z, &summary_z);});
 
     status_solve_x.wait();
     status_solve_y.wait();
-    status_solve_z.wait();
 
     auto x_cost = summary_x.final_cost;
     auto y_cost = summary_y.final_cost;
-    auto z_cost = summary_z.final_cost;
     // cout<<x_cost<<endl;
 
     PredictStatus is_available;
 
     is_available.xyz_status[0] = (x_cost <= max_cost);
     is_available.xyz_status[1] = (y_cost <= max_cost);
-    is_available.xyz_status[2] = (z_cost <= max_cost);
     // cout<<z_cost<<endl;
 
     auto x_pred = params_x[0] + params_x[1] * cos(params_x[3] * time_estimated) + params_x[2] * sin(params_x[3] * time_estimated);
     auto y_pred = params_y[0] + params_y[1] * cos(params_y[3] * time_estimated) + params_y[2] * sin(params_y[3] * time_estimated);
-    auto z_pred = params_z[0] + params_z[1] * cos(params_z[3] * time_estimated) + params_z[2] * sin(params_z[3] * time_estimated);
 
-    result = {x_pred,y_pred,z_pred};
+    result = {x_pred,y_pred,dc[2]};
     return is_available;
 }

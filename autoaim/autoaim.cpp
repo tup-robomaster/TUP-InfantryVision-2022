@@ -96,10 +96,10 @@ bool Autoaim::updateSpinScore()
             spin_status = UNKNOWN;
         else
             spin_status = spin_status_map[(*score).first];
-        // cout<<(*score).first<<"--"<<(*score).second<<" "<<spin_status<<endl;
+        cout<<(*score).first<<"--:"<<(*score).second<<" "<<spin_status<<endl;
 
         // 若分数过低移除此元素
-        if ((*score).second <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
+        if (abs((*score).second) <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
         {
             fmt::print(fmt::fg(fmt::color::red), "[SpinScore] Removing\n");
             spin_status_map.erase((*score).first);
@@ -108,7 +108,7 @@ bool Autoaim::updateSpinScore()
         }
         // 
         if (spin_status != UNKNOWN)
-            (*score).second = 0.978 * (*score).second;
+            (*score).second = 0.978 * (*score).second - 1 * abs((*score).second) / (*score).second;
         else
             (*score).second = 0.998 * (*score).second - 1 * abs((*score).second) / (*score).second;
         //当小于该值时移除该元素
@@ -120,7 +120,7 @@ bool Autoaim::updateSpinScore()
         }
         else if (abs((*score).second) >= anti_spin_judge_high_thres)
         {
-            (*score).second = anti_spin_judge_high_thres;
+            (*score).second = anti_spin_judge_high_thres * abs((*score).second) / (*score).second;
             if ((*score).second < 0)
                 spin_status_map[(*score).first] = CLOCKWISE;
             else if((*score).second > 0)
@@ -222,18 +222,31 @@ ArmorTracker* Autoaim::chooseTargetTracker(vector<ArmorTracker*> trackers, int t
     //TODO:优化打击逻辑
     //TODO:本逻辑为哨兵逻辑
     float max_area = 0;
+    float min_horizonal_dist = 0;
     int target_idx = 0;
 
     //若存在上次tracker则直接返回,若不存在则装甲板面积最大的Tracker
     for (int i = 0; i < trackers.size(); i++)
     {
-        //若该Tracker为上次Tracker且本次仍在更新,则直接使用
-        if (trackers[i]->last_selected_timestamp == prev_timestamp && trackers[i]->last_timestamp == timestamp)
-            return trackers[i];
-        else if (trackers[i]->last_armor.area >= max_area && trackers[i]->last_timestamp == timestamp)
+        auto horizonal_dist_to_center = abs(trackers[i]->last_armor.center2d.x - 640);
+        if (trackers[i]->last_timestamp == timestamp)
         {
-            max_area = trackers[i]->last_armor.area;
-            target_idx = i;
+            //若该Tracker为上次Tracker且本次仍在更新,则直接使用该装甲板
+            if (trackers[i]->last_selected_timestamp == prev_timestamp)
+                return trackers[i];
+            //若该装甲板面积较大且与目前最大面积差距较大，列为候选并记录该装甲板数据
+            else if (trackers[i]->last_armor.area >= max_area && abs(trackers[i]->last_armor.area - max_area) > 300)
+            {
+                max_area = trackers[i]->last_armor.area;
+                min_horizonal_dist = horizonal_dist_to_center;
+                target_idx = i;
+            }
+            //若该装甲板面积较大且与目前最大面积差距较小，判断该装甲板与图像中心点的二维水平距离
+            else if (abs(trackers[i]->last_armor.area - max_area) <= 300 && horizonal_dist_to_center < min_horizonal_dist)
+            {
+                min_horizonal_dist = horizonal_dist_to_center;
+                target_idx = i;
+            }
         }
     }
     return trackers[target_idx];
@@ -333,6 +346,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         // cout<<lost_cnt<<endl;
         is_last_target_exists = false;
         last_target_area = 0;
+        data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
         return false;
     }
 #ifdef ASSIST_LABEL
@@ -432,6 +446,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         lost_cnt++;
         is_last_target_exists = false;
         last_target_area = 0;
+        data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
         return false;
     }
     ///------------------------生成/分配ArmorTracker----------------------------
@@ -541,41 +556,33 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                 //确定新增装甲板与历史装甲板
                 if ((*candidate).second.is_initialized)
                 {
-                    last_armor_center = (*candidate).second.last_armor.center3d_cam[0];
+                    last_armor_center = (*candidate).second.last_armor.center2d.x;
                     last_armor_timestamp = (*candidate).second.last_timestamp;
                     ++candidate;
-                    if (!(*candidate).second.is_initialized)
-                        {
-                            new_armor_center = (*candidate).second.last_armor.center3d_cam[0];
-                            new_armor_timestamp = (*candidate).second.last_timestamp;
-                        }
-                    else
-                        continue;
+                    new_armor_center = (*candidate).second.last_armor.center2d.x;
+                    new_armor_timestamp = (*candidate).second.last_timestamp;
                 }
                 else
                 {
-                    new_armor_center = (*candidate).second.last_armor.center3d_cam[0];
+                    new_armor_center = (*candidate).second.last_armor.center2d.x;
                     new_armor_timestamp = (*candidate).second.last_timestamp;
                     ++candidate;
-                    if ((*candidate).second.is_initialized)
-                        {
-                            last_armor_center = (*candidate).second.last_armor.center3d_cam[0];
-                            last_armor_timestamp = (*candidate).second.last_timestamp;
-                        }
-                    else
-                        continue;
+                    last_armor_center = (*candidate).second.last_armor.center2d.x;
+                    last_armor_timestamp = (*candidate).second.last_timestamp;
                 }
                 auto spin_movement = new_armor_center - last_armor_center;
-                // cout<<last_armor_timestamp<<" : "<<new_armor_timestamp<<endl;
+
                 if (spin_score_map.count(cnt.first) == 0)
                 {
                     if (abs(spin_movement) > 0.05 && last_armor_timestamp == new_armor_timestamp)
-                        spin_score_map[cnt.first] = 200 * spin_movement / abs(spin_movement);
+                        spin_score_map[cnt.first] = 300 * spin_movement / abs(spin_movement);
                 }
                 else if (abs(spin_movement) > 0.05 && last_armor_timestamp == new_armor_timestamp)
                 {
                     spin_score_map[cnt.first] = anti_spin_max_r_multiple * spin_score_map[cnt.first];
                 }
+                cout<<spin_score_map[cnt.first]<<endl;
+
             }
         }
     }
@@ -628,21 +635,21 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             {
                 continue;
             }
-            //若Tracker未完成初始化，不考虑使用
-            // if (!(*iter).second.is_initialized || (*iter).second.history_info.size() < 3)
-            // {
-            //     continue;
-            // }
-            // else
-            // {
-            //     final_trackers.push_back(&(*iter).second);
-            //     available_candidates_cnt++;
-            // }
+            // 若Tracker未完成初始化，不考虑使用
+            if (!(*iter).second.is_initialized || (*iter).second.history_info.size() < 3)
+            {
+                continue;
+            }
+            else
+            {
+                final_trackers.push_back(&(*iter).second);
+                available_candidates_cnt++;
+            }
         }
-        // if (available_candidates_cnt == 0)
-        // {
-        //     cout<<"Invalid"<<endl;   
-        // }
+        if (available_candidates_cnt == 0)
+        {
+            cout<<"Invalid"<<endl;   
+        }
         // else
         // {   //TODO:改进旋转中心识别方法
         //     //FIXME:目前在目标小陀螺时并移动时，旋转中心的确定可能存在问题，故该语句块中的全部计算结果均暂未使用
@@ -855,6 +862,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 #ifdef SAVE_AUTOAIM_LOG
     LOG(INFO) <<"[AUTOAIM] LATENCY: "<< "Crop: " << dr_crop_ms << " ms" << " Infer: " << dr_infer_ms << " ms" << " Predict: " << dr_predict_ms << " ms" << " Total: " << dr_full_ms << " ms";
     LOG(INFO) <<"[AUTOAIM] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)target.center3d_cam.norm() << " Target: " << target.key << " Is Spinning: " << is_target_spinning;
+    LOG(INFO) <<"[AUTOAIM] TARGET_COORD: "<<"X: "<<target.center3d_world[0]<<" Y: "<<target.center3d_world[1]<<" Z: " << target.center3d_world[2];
 #endif //SAVE_AUTOAIM_LOG
 
     data = {(float)angle[1], (float)angle[0], (float)target.center3d_cam.norm(), 0, 1, is_target_spinning, 1};

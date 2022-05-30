@@ -17,7 +17,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-    DaHeng.SetExposureTime(8000);
+    DaHeng.SetExposureTime(6000);
     // 设置1
     DaHeng.SetGAIN(3, 14);
     // 是否启用自动白平衡7
@@ -182,18 +182,14 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
 
         if (mode == 1)
         {
-            if (autoaim.run(dst, data))
-            {
-                transmit_factory.produce(data);
-            }
+            autoaim.run(dst, data);
+            transmit_factory.produce(data);
         }
         //进入能量机关打击模式，3为小能量机关，4为大能量机关
         else if (mode == 3 || mode == 4)
         {
-            if (buff.run(dst, data))
-            {
-                transmit_factory.produce(data);
-            }   
+            buff.run(dst, data);
+            transmit_factory.produce(data);
         }
     }
     return true;

@@ -147,7 +147,11 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
         }
         matrix_weights /= matrix_weights.sum();
         //重采样
-        resample();
+        double n_eff = 1.0 / (matrix_weights.transpose() * matrix_weights).value();
+        // cout<<"eff:"<<n_eff<<endl;
+        //有效粒子数少于一半时进行重采样
+        if (n_eff < (num_particle / 2))
+            resample();
 
         return true;
     }

@@ -20,7 +20,7 @@ public:
 
     bool run(TaskData &src,VisionData &data);       // 自瞄主函数
 private:
-    const string network_path = "../model/opt-0527-001.xml";
+    const string network_path = "../model/opt-0517-001.xml";
     const string camera_param_path = "../params/coord_param.yaml";
     const string predict_param_path = "../params/filter/filter_param.yaml";
 
@@ -45,9 +45,9 @@ private:
     const int max_v = 8;                        //两次预测间最大速度(m/s)
     const int max_delta_t = 100;                //使用同一预测器的最大时间间隔(ms)
 
-    int anti_spin_judge_high_thres = 1.5e4;//大于该阈值认为该车已开启陀螺
-    int anti_spin_judge_low_thres = 3.5e3;//小于该阈值认为该车已关闭陀螺
-    int anti_spin_max_r_multiple = 3;
+    int anti_spin_judge_high_thres = 4e4;//大于该阈值认为该车已开启陀螺
+    int anti_spin_judge_low_thres = 2e3;//小于该阈值认为该车已关闭陀螺
+    int anti_spin_max_r_multiple = 7;
 
     const double no_crop_thres = 2e-3;      //禁用ROI裁剪的装甲板占图像面积最大面积比值
 
