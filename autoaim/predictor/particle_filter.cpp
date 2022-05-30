@@ -14,10 +14,7 @@ bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix, Eigen::MatrixXd &cov)
     default_random_engine e(rd());
     std::vector<normal_distribution<double>> normal_distribution_list;
 
-<<<<<<< HEAD
-=======
     //假设所有元素不相关
->>>>>>> master
     for (int i = 0; i<cov.cols(); i++)
     {
         normal_distribution<double> n(0,cov(i,i));
@@ -103,14 +100,9 @@ bool ParticleFilter::initParam(ParticleFilter parent)
     vector_len = parent.vector_len;
     num_particle = parent.num_particle;
     process_noise_cov = parent.process_noise_cov;
-<<<<<<< HEAD
-    matrix_particle = parent.matrix_particle;
-    matrix_weights = parent.matrix_weights;
-=======
     matrix_particle = Eigen::MatrixXd::Zero(num_particle, vector_len);
     randomlizedGaussianColwise(matrix_particle, process_noise_cov);
     matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
->>>>>>> master
     is_ready = false;
 
     return true;
@@ -141,15 +133,6 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
 
     if (is_ready)
     {
-<<<<<<< HEAD
-    //     auto mean_weights = (matrix_particle - mat_measure).mean();
-        //序列重要性采样
-        // matrix_weights = (matrix_particle - mat_measure).rowwise().squaredNorm();
-        matrix_weights = (matrix_particle - mat_measure).rowwise().norm();
-        // matrix_weights = matrix_weights + 10 * Eigen::MatrixXd::Ones(num_particle, 1);//滤除高频噪声
-        // matrix_weights = (matrix_particle - mat_measure).rowwise().;
-        matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1).array() / matrix_weights.array();
-=======
         //auto mean_weights = (matrix_particle - mat_measure).mean();
         //序列重要性采样
         //按照高斯分布函数曲线右半侧计算粒子权重
@@ -162,7 +145,6 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
             Eigen::MatrixXd tmp = ((-(weights_dist / pow(sigma, 2)) / matrix_particle.cols()).array().exp() / (sqrt(CV_2PI) * sigma)).array();
             matrix_weights = tmp;
         }
->>>>>>> master
         matrix_weights /= matrix_weights.sum();
         //重采样
         resample();

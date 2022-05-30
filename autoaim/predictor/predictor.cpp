@@ -20,10 +20,6 @@ ArmorPredictor ArmorPredictor::generate()
     ArmorPredictor new_predictor;
     new_predictor.pf_x.initParam(pf_x);
     new_predictor.pf_y.initParam(pf_y);
-<<<<<<< HEAD
-    new_predictor.pf_z.initParam(pf_z);
-=======
->>>>>>> master
     new_predictor.fitting_disabled = false;
 
     return new_predictor;
@@ -34,10 +30,6 @@ bool ArmorPredictor::initParam(ArmorPredictor &predictor_loader)
     history_info.clear();
     pf_x.initParam(predictor_loader.pf_x);
     pf_y.initParam(predictor_loader.pf_y);
-<<<<<<< HEAD
-    pf_z.initParam(predictor_loader.pf_z);
-=======
->>>>>>> master
     fitting_disabled = false;
     
     return true;
@@ -48,10 +40,6 @@ bool ArmorPredictor::initParam(string coord_path)
     YAML::Node config = YAML::LoadFile(coord_path);
     pf_x.initParam(config,"autoaim_x");
     pf_y.initParam(config,"autoaim_y");
-<<<<<<< HEAD
-    pf_z.initParam(config,"autoaim_z");
-=======
->>>>>>> master
     fitting_disabled = false;
     
     return true;
@@ -146,12 +134,7 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     if (is_fitting_available.xyz_status[2] && !fitting_disabled)
         result[2] = result_fitting[2];
     else
-<<<<<<< HEAD
-        result[2] = result_pf[2];
-    // result[2] = xyz[2];
-=======
         result[2] = xyz[2];
->>>>>>> master
     auto t2=std::chrono::steady_clock::now();
     double dr_ms=std::chrono::duration<double,std::milli>(t2-t1).count();
     // if(timestamp % 10 == 0)
@@ -237,51 +220,26 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     measure_vz << v_xyz[2];
     auto pf_result_vx = std::async(std::launch::deferred, [&](){return pf_x.predict();});
     auto pf_result_vy = std::async(std::launch::deferred, [&](){return pf_y.predict();});
-<<<<<<< HEAD
-    auto pf_result_vz = std::async(std::launch::deferred, [&](){return pf_z.predict();});
-
-    auto result_vx = pf_result_vx.get();
-    auto result_vy = pf_result_vy.get();
-    auto result_vz = pf_result_vz.get();
-
-
-    result << result_vx[0], result_vy[0], result_vz[0];
-=======
 
     auto result_vx = pf_result_vx.get();
     auto result_vy = pf_result_vy.get();
 
 
     result << result_vx[0], result_vy[0], 0;
->>>>>>> master
 
     //异步修正
     auto update_x = std::async(std::launch::deferred, [&, measure_vx](){pf_x.update(measure_vx);});
     auto update_y = std::async(std::launch::deferred, [&, measure_vy](){pf_y.update(measure_vy);});
-<<<<<<< HEAD
-    auto update_z = std::async(std::launch::deferred, [&, measure_vz](){pf_z.update(measure_vz);});
-
-    // cout<<result.norm()<<endl;
-=======
 
     // cout<<(result  * (time_estimated / 1000.f))<<endl;
     // cout<<"............."<<endl;
->>>>>>> master
     result = result  * (time_estimated / 1000.f) + target.xyz;
 
     is_available.xyz_status[0] = pf_x.is_ready;
     is_available.xyz_status[1] = pf_y.is_ready;
-<<<<<<< HEAD
-    is_available.xyz_status[2] = pf_z.is_ready;
 
     update_x.wait();
     update_y.wait();
-    update_z.wait();
-=======
-
-    update_x.wait();
-    update_y.wait();
->>>>>>> master
 
     return is_available;
 }

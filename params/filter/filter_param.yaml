@@ -3,32 +3,13 @@ autoaim_x:
     #预测维度
     vector_len: 1
     #粒子数
-<<<<<<< HEAD
-    num_particle: 1500
-    #速度噪声sigma值，与车辆加速度有关，越大对加速度剧烈变化的物体跟踪效果越好，但容易导致抖动增大
-    process_noise: [0.03]
-=======
     num_particle: 300
     #速度噪声sigma值，与车辆加速度有关，越大对加速度剧烈变化的物体跟踪效果越好，但容易导致抖动增大
     process_noise: [0.2]
->>>>>>> master
 autoaim_y:
     #预测维度
     vector_len: 1
     #粒子数
-<<<<<<< HEAD
-    num_particle: 800
-    #速度噪声sigma值，与车辆加速度有关，越大对加速度剧烈变化的物体跟踪效果越好，但容易导致抖动增大
-    process_noise: [0.03]
-autoaim_z:
-    #预测维度
-    vector_len: 1
-    #粒子数
-    num_particle: 800
-    #速度噪声sigma值，与车辆加速度有关，越大对加速度剧烈变化的物体跟踪效果越好，但容易导致抖动增大
-    process_noise: [0.03]
-=======
     num_particle: 300
     #速度噪声sigma值，与车辆加速度有关，越大对加速度剧烈变化的物体跟踪效果越好，但容易导致抖动增大
     process_noise: [0.2]
->>>>>>> master

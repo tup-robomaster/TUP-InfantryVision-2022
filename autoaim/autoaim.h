@@ -20,11 +20,7 @@ public:
 
     bool run(TaskData &src,VisionData &data);       // 自瞄主函数
 private:
-<<<<<<< HEAD
-    const string network_path = "../model/opt-0517-001.xml";
-=======
     const string network_path = "../model/opt-0527-001.xml";
->>>>>>> master
     const string camera_param_path = "../params/coord_param.yaml";
     const string predict_param_path = "../params/filter/filter_param.yaml";
 
