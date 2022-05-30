@@ -52,6 +52,10 @@ log/
 # *.ERROR
 # *.INFO
 
+<<<<<<< HEAD
+=======
+.vscode/
+>>>>>>> master
 
 #CMake
 CMakeFiles

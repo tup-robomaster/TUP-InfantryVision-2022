@@ -330,6 +330,10 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     //     fmt::print(fmt::fg(fmt::color::golden_rod), "Infer: {} ms\n",dr_infer_ms);
     // }
         lost_cnt++;
+<<<<<<< HEAD
+=======
+        // cout<<lost_cnt<<endl;
+>>>>>>> master
         is_last_target_exists = false;
         last_target_area = 0;
         return false;
@@ -359,7 +363,11 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         Armor armor;
         armor.id = object.cls;
         armor.color = object.color;
+<<<<<<< HEAD
         cout<<object.prob<<endl;
+=======
+        armor.conf = object.prob;
+>>>>>>> master
         if (object.color == 0)
             armor.key = "B" + to_string(object.cls);
         if (object.color == 1)
@@ -385,6 +393,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         // for (auto rrect.)
         TargetType target_type = SMALL;
         //计算长宽比,确定装甲板类型
+<<<<<<< HEAD
         auto height = (sqrt(pow(((points_pic[0] - points_pic[1]).x), 2) + 
                             pow(((points_pic[0] - points_pic[1]).y), 2)) +
                             sqrt(pow(((points_pic[2] - points_pic[3]).x), 2) + 
@@ -400,11 +409,23 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 
         // }
         // draw
+=======
+        RotatedRect points_pic_rrect = minAreaRect(points_pic);
+        auto apex_wh_ratio = max(points_pic_rrect.size.height, points_pic_rrect.size.width) /
+                                 min(points_pic_rrect.size.height, points_pic_rrect.size.width);
+        //若大于长宽阈值或为哨兵、英雄装甲板
+        if (apex_wh_ratio > armor_type_wh_thres || object.cls == 1 || object.cls == 0)
+            target_type = BIG;
+>>>>>>> master
         // for (auto pic : points_pic)
         //     cout<<pic<<endl;
         // cout<<endl;
         auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_IPPE);
+<<<<<<< HEAD
         //防止装甲板类型出错导致解算问题，首先尝试切换装甲板类型，若仍无效则直接跳过该帧数
+=======
+        //防止装甲板类型出错导致解算问题，首先尝试切换装甲板类型，若仍无效则直接跳过该装甲板
+>>>>>>> master
         if (pnp_result.armor_cam.norm() > 10)
         {
             if (target_type == SMALL)
@@ -416,10 +437,13 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                 continue;
         }
 
+<<<<<<< HEAD
         // cout<<pnp_result.armor_cam<<endl;
         // cout<<",,,"
         // auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_IPPE_SQUARE);
 
+=======
+>>>>>>> master
         armor.center3d_world = pnp_result.armor_world;
         armor.center3d_cam = pnp_result.armor_cam;
         armor.euler = pnp_result.euler;
@@ -602,7 +626,10 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     ///-----------------------------判断击打车辆------------------------------------------
     auto target_id = chooseTargetID(armors, src.timestamp);
     auto ID_candiadates = trackers_map.equal_range(target_id);
+<<<<<<< HEAD
     cout<<target_id<<endl;
+=======
+>>>>>>> master
     ///---------------------------获取最终装甲板序列---------------------------------------
     bool is_target_spinning;
     Armor target;
@@ -737,6 +764,11 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         }
         //进行目标选择
         auto tracker = chooseTargetTracker(final_trackers, src.timestamp);
+<<<<<<< HEAD
+=======
+        tracker->last_selected_timestamp = src.timestamp;
+        tracker->selected_cnt++;
+>>>>>>> master
         target = tracker->last_armor;
 
 #ifdef USING_PREDICT
@@ -804,6 +836,10 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 #ifdef SHOW_ALL_ARMOR
     for (auto armor :armors)
     {
+<<<<<<< HEAD
+=======
+        putText(src.img, fmt::format("{:.2f}", armor.conf),armor.apex2d[3],FONT_HERSHEY_SIMPLEX, 1, {0, 255, 0}, 2);
+>>>>>>> master
         if (armor.color == 0)
             putText(src.img, fmt::format("B{}",armor.id),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, {255, 100, 0}, 2);
         if (armor.color == 1)
@@ -841,12 +877,15 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     imshow("dst",src.img);
     waitKey(1);
 #endif //SHOW_IMG
+<<<<<<< HEAD
     if (isnan(angle[1]))
     {
         cout<<target.center3d_cam<<endl;
         cout<<endl;
         waitKey(0);
     }
+=======
+>>>>>>> master
 #ifdef PRINT_LATENCY
     //降低输出频率，避免影响帧率
     if (src.timestamp % 10 == 0)

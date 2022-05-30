@@ -122,8 +122,13 @@ static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, cons
         float color_conf = (feat_ptr[basic_pos + 9 + box_color]);
         float cls_conf = (feat_ptr[basic_pos + 9 + NUM_COLORS + box_class]);
 
+<<<<<<< HEAD
         // float box_prob = (box_objectness + cls_conf + color_conf) / 3.0;
         float box_prob = box_objectness;
+=======
+        float box_prob = (box_objectness + cls_conf + color_conf) / 3.0;
+        // float box_prob = box_objectness;
+>>>>>>> master
 
         if (box_prob >= prob_threshold)
         {
