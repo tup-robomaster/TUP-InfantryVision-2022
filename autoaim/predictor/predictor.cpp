@@ -18,8 +18,7 @@ ArmorPredictor::~ArmorPredictor()
 ArmorPredictor ArmorPredictor::generate()
 {
     ArmorPredictor new_predictor;
-    new_predictor.pf_x.initParam(pf_x);
-    new_predictor.pf_y.initParam(pf_y);
+    new_predictor.pf.initParam(pf);
     new_predictor.fitting_disabled = false;
 
     return new_predictor;
@@ -28,8 +27,7 @@ ArmorPredictor ArmorPredictor::generate()
 bool ArmorPredictor::initParam(ArmorPredictor &predictor_loader)
 {
     history_info.clear();
-    pf_x.initParam(predictor_loader.pf_x);
-    pf_y.initParam(predictor_loader.pf_y);
+    pf.initParam(predictor_loader.pf);
     fitting_disabled = false;
     
     return true;
@@ -38,8 +36,7 @@ bool ArmorPredictor::initParam(ArmorPredictor &predictor_loader)
 bool ArmorPredictor::initParam(string coord_path)
 {
     YAML::Node config = YAML::LoadFile(coord_path);
-    pf_x.initParam(config,"autoaim_x");
-    pf_y.initParam(config,"autoaim_y");
+    pf.initParam(config,"autoaim");
     fitting_disabled = false;
     
     return true;
@@ -208,8 +205,7 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
 {
     PredictStatus is_available;
     //使用线性运动模型
-    Eigen::VectorXd measure_vx (1);
-    Eigen::VectorXd measure_vy (1);
+    Eigen::VectorXd measure_v (2);
 
     Eigen::Vector3d v_sum = {0, 0, 0};
     Eigen::Vector3d v_xyz = {0, 0, 0};
@@ -224,29 +220,23 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
         v_sum += (next.xyz - prev.xyz) / (next.timestamp - prev.timestamp) * 1e3; 
     }
     v_xyz = v_sum / max_iter;
-    cout<<v_xyz.norm()<<endl;
+    // cout<<v_xyz.norm()<<endl;
 
-    measure_vx << v_xyz[0];
-    measure_vy << v_xyz[1];
+    measure_v << v_xyz[0], v_xyz[1];
 
-    is_available.xyz_status[0] = pf_x.is_ready;
-    is_available.xyz_status[1] = pf_y.is_ready;
+    is_available.xyz_status[0] = pf.is_ready;
+    is_available.xyz_status[1] = pf.is_ready;
+
     //Update
-    auto update_x = std::async(std::launch::deferred, [&, measure_vx](){pf_x.update(measure_vx);});
-    auto update_y = std::async(std::launch::deferred, [&, measure_vy](){pf_y.update(measure_vy);});
-
-
-    update_x.wait();
-    update_y.wait();
+    auto update = std::async(std::launch::deferred, [&, measure_vx](){pf.update(measure_vx);});
+    update.wait();
 
     
-    auto pf_result_vx = std::async(std::launch::deferred, [&](){return pf_x.predict();});
-    auto pf_result_vy = std::async(std::launch::deferred, [&](){return pf_y.predict();});
+    auto pf_result_v = std::async(std::launch::deferred, [&](){return pf.predict();});
 
-    auto result_vx = pf_result_vx.get();
-    auto result_vy = pf_result_vy.get();
+    auto result_v = pf_result_vx.get();
 
-    result << result_vx[0], result_vy[0], 0;
+    result << result_v[0], result_v[1], 0;
     result = result  * (time_estimated / 1000.f) + target.xyz;
 
 
@@ -257,23 +247,18 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
 {
     double params_x[4] = {1,1,1,0};            // 参数的估计值
     double params_y[4] = {1,1,1,0};            // 参数的估计值
-    double params_z[4] = {1,1,1,0};            // 参数的估计值
 
     ceres::Problem problem_x;
     ceres::Problem problem_y;
-    ceres::Problem problem_z;
 
     ceres::Solver::Options options_x;
     ceres::Solver::Options options_y;
-    ceres::Solver::Options options_z;
 
     ceres::Solver::Summary summary_x;                // 优化信息
     ceres::Solver::Summary summary_y;                // 优化信息
-    ceres::Solver::Summary summary_z;                // 优化信息
 
     options_x.linear_solver_type = ceres::DENSE_QR;  // 增量方程如何求解
     options_y.linear_solver_type = ceres::DENSE_QR;  // 增量方程如何求解
-    options_z.linear_solver_type = ceres::DENSE_QR;  // 增量方程如何求解
 
     //求直流分量
     Eigen::Vector3d sum = {0,0,0};
@@ -284,7 +269,7 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
     auto dc = sum / history_info.size();
     params_x[0] = dc[0];
     params_y[0] = dc[1];
-
+    
     for (auto target_info : history_info)
     {
         problem_x.AddResidualBlock (     // 向问题中添加误差项
