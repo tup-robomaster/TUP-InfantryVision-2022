@@ -102,7 +102,7 @@ bool Autoaim::updateSpinScore()
         // 若分数过低移除此元素
         if (abs((*score).second) <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
         {
-            fmt::print(fmt::fg(fmt::color::red), "[SpinScore] Removing\n");
+            fmt::print(fmt::fg(fmt::color::red), "[SpinScore] Removing {}.\n", (*score).first);
             spin_status_map.erase((*score).first);
             score = spin_score_map.erase(score);
             continue;
@@ -741,6 +741,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
         auto velocity = (delta_dist / delta_t) * 1e3;
 
+        //目前类别预测不是十分稳定,若之后仍有问题，可以考虑去除类别判断条件
         if (target.key != last_armor.key || velocity > max_v)
         {
             predictor.initParam(predictor_param_loader);

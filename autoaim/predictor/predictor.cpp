@@ -228,13 +228,9 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     is_available.xyz_status[1] = pf.is_ready;
 
     //Update
-    auto update = std::async(std::launch::deferred, [&, measure_v](){pf.update(measure_v);});
-    update.wait();
+    pf.update(measure_vx)
+    auto result_v = pf.predict();
 
-    
-    auto pf_result_v = std::async(std::launch::deferred, [&](){return pf.predict();});
-
-    auto result_v = pf_result_v.get();
 
     result << result_v[0], result_v[1], 0;
     result = result  * (time_estimated / 1000.f) + target.xyz;

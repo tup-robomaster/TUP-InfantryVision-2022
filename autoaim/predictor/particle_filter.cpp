@@ -85,7 +85,8 @@ bool ParticleFilter::initParam(YAML::Node &config,const string param_name)
     initMatrix(observe_noise_cov_tmp,read_vector);
     observe_noise_cov = observe_noise_cov_tmp;
     //初始化粒子矩阵及粒子权重
-    matrix_particle = Eigen::MatrixXd::Random(num_particle, vector_len) * 5;
+    matrix_particle = Eigen::MatrixXd::Zero(vector_len,num_particle);
+    randomlizedGaussianColwise(matrix_particle,process_noise_cov);
     matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
     is_ready = false;
     
@@ -104,7 +105,8 @@ bool ParticleFilter::initParam(ParticleFilter parent)
     process_noise_cov = parent.process_noise_cov;
     observe_noise_cov = parent.observe_noise_cov;
     //初始化粒子矩阵及粒子权重
-    matrix_particle = Eigen::MatrixXd::Random(num_particle, vector_len) * 5;
+    matrix_particle = Eigen::MatrixXd::Zero(vector_len,num_particle);
+    randomlizedGaussianColwise(matrix_particle,process_noise_cov);
     matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
     is_ready = false;
 
@@ -134,29 +136,32 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
     Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
     Eigen::MatrixXd mat_measure = measure.replicate(1,num_particle).transpose();
 
-
     auto dst = (matrix_particle - mat_measure).mean();
     //预测值与真实值的差值小于1时视作可用
-    if (dst < 1)
-        is_ready = true;
-    else
-        is_ready = false;
-    //序列重要性采样
-    matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1);
-    //按照高斯分布函数曲线右半侧计算粒子权重
-    for(int i = 0; i < matrix_particle.cols(); i++)
+    if (is_ready)
     {
-        auto sigma = observe_noise_cov(i,i);
-        Eigen::MatrixXd weights_dist = (matrix_particle.col(i) - mat_measure.col(i)).rowwise().squaredNorm();
-        Eigen::MatrixXd tmp = ((-(weights_dist / pow(sigma, 2)) / matrix_particle.cols()).array().exp() / (sqrt(CV_2PI) * sigma)).array();
-        matrix_weights = matrix_weights.array() * tmp.array();
+        //序列重要性采样
+        matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1);
+        //按照高斯分布函数曲线右半侧计算粒子权重
+        for(int i = 0; i < matrix_particle.cols(); i++)
+        {
+            auto sigma = observe_noise_cov(i,i);
+            Eigen::MatrixXd weights_dist = (matrix_particle.col(i) - mat_measure.col(i)).rowwise().squaredNorm();
+            Eigen::MatrixXd tmp = ((-(weights_dist / pow(sigma, 2)) / matrix_particle.cols()).array().exp() / (sqrt(CV_2PI) * sigma)).array();
+            matrix_weights = matrix_weights.array() * tmp.array();
+        }
+        matrix_weights /= matrix_weights.sum();
+        double n_eff = 1.0 / (matrix_weights.transpose() * matrix_weights).value();
+        //有效粒子数少于一半时进行重采样
+        if (n_eff < (num_particle / 2))
+            resample();
     }
-    matrix_weights /= matrix_weights.sum();
-    double n_eff = 1.0 / (matrix_weights.transpose() * matrix_weights).value();
-    //有效粒子数少于一半时进行重采样
-    if (n_eff < (num_particle / 2))
-        resample();
-
+    else
+    {
+        matrix_particle+=measure;
+        is_ready = true;
+        return false;
+    }
     return true;
 }
 
