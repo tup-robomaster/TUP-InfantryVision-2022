@@ -39,3 +39,7 @@ V0.1 Beta 完成自瞄推理部分及粒子滤波器. 2021.11.12
         ulimit -c
 
         ulimit -c unlimited
+
+输入命令：sudo systemctl set-default multi-user.target 重启reboot
+
+开启界面：sudo systemctl set-default graphical.target
