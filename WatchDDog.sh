@@ -5,7 +5,7 @@ sec=1
 cnt=0 
 name=TUP-InfantryVision-2022
 program_name=Infantry_Vision
-cd /home/dishierweidu/Desktop/$name/build/
+cd /home/tup/Desktop/$name/build/
 #make clean && 
 make -j6 
 while [ 1 ] 

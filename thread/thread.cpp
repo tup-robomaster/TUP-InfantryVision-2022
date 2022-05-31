@@ -7,19 +7,21 @@
 bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
 {
 #ifdef USING_DAHENG
+    //用于大恒离线后自动重新加载
     start_get_img:
+    
     DaHengCamera DaHeng;
     DaHeng.StartDevice(1);
     // 设置分辨率
-    DaHeng.SetResolution(1,1);
+    DaHeng.SetResolution(2,2);
     //更新时间戳，设置时间戳偏移量
     DaHeng.UpdateTimestampOffset(time_start);
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-    DaHeng.SetExposureTime(1000);
+    DaHeng.SetExposureTime(3000);
     // 设置
-    DaHeng.SetGAIN(3, 14);
+    DaHeng.SetGAIN(3, 10);
     // 是否启用自动白平衡7
     // DaHeng.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
@@ -42,8 +44,8 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         LOG(INFO) << "[CAMERA] Set param finished";
     #endif //SAVE_LOG_ALL
 
-    int width = 1280;
-    int height = 1024;
+    int width = 640;
+    int height = 480;
 #endif //USING_DAHENG
 
 #ifdef USING_USB_CAMERA

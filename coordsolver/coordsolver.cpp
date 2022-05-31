@@ -92,7 +92,6 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
     {
         RotatedRect points_pic_rrect = minAreaRect(vecotr_apex);
         auto apex_wh_ratio = max(points_pic_rrect.size.height, points_pic_rrect.size.width) / min(points_pic_rrect.size.height, points_pic_rrect.size.width);
-
         //大于长宽比阈值使用大装甲板世界坐标
         if(apex_wh_ratio > armor_type_wh_thres)
             points_world = {

@@ -101,7 +101,12 @@ bool Autoaim::updateSpinScore()
         // 若分数过低移除此元素
         if ((*score).second <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
         {
-            fmt::print(fmt::fg(fmt::color::red), "[SpinScore] Removing\n");
+            fmt::print(fmt::fg(fmt::color::red), "[AUTOAIM] SpinScore Removing\n");
+
+            #ifdef SAVE_AUTOAIM_LOG
+                LOG(INFO)<<"[AUTOAIM] SpinScore Removing";
+            #endif //SAVE_AUTOAIM_LOG
+
             spin_status_map.erase((*score).first);
             score = spin_score_map.erase(score);
             continue;
@@ -307,7 +312,6 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     //     fmt::print(fmt::fg(fmt::color::golden_rod), "Infer: {} ms\n",dr_infer_ms);
     // }
         lost_cnt++;
-        // cout<<lost_cnt<<endl;
         is_last_target_exists = false;
         last_target_area = 0;
         return false;
@@ -568,6 +572,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         auto available_candidates_cnt = 0;
         for (auto iter = ID_candiadates.first; iter != ID_candiadates.second; ++iter)
         {
+            //FIXME:目标选择存在问题，可能选择到历史装甲板
             final_armors.push_back((*iter).second.last_armor);
             //若Tracker未完成初始化，不考虑使用
             // if (!(*iter).second.is_initialized || (*iter).second.history_info.size() < 3)
@@ -660,6 +665,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     {
         for (auto iter = ID_candiadates.first; iter != ID_candiadates.second; ++iter)
         {
+            //FIXME:目标选择存在问题，可能选择到历史装甲板
             final_armors.push_back((*iter).second.last_armor);
         }
         //选取最大的装甲板进行击打
