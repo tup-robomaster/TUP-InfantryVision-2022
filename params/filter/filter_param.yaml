@@ -3,11 +3,11 @@ autoaim:
     #预测维度
     vector_len: 2
     #粒子数
-    num_particle: 600
+    num_particle: 800
     #过程噪声，与车辆加速度有关,可以增加粒子多样性,提高滤波器鲁棒性
-    process_noise: [0.286,0,
-			0, 0.286]
+    process_noise: [0.05,0,
+			0, 0.1]
     #观测噪声, 影响重要性密度函数计算例子权重
-    observe_noise: [0.481,0,
-                    0,0.481]
+    observe_noise: [0.01,0,
+                    0,0.3]
 

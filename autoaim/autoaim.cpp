@@ -17,8 +17,9 @@ Autoaim::Autoaim()
     // cout<<"...."<<endl;
     lost_cnt = 0;
     is_last_target_exists = false;
+    is_target_switched = true;
     last_target_area = 0;
-    input_size = {416,416};
+    input_size = {640,640};
     auto predictor_tmp = predictor_param_loader.generate();
     predictor.initParam(predictor_param_loader);
 
@@ -121,9 +122,9 @@ bool Autoaim::updateSpinScore()
         else if (abs((*score).second) >= anti_spin_judge_high_thres)
         {
             (*score).second = anti_spin_judge_high_thres * abs((*score).second) / (*score).second;
-            if ((*score).second < 0)
+            if ((*score).second > 0)
                 spin_status_map[(*score).first] = CLOCKWISE;
-            else if((*score).second > 0)
+            else if((*score).second < 0)
                 spin_status_map[(*score).first] = COUNTER_CLOCKWISE;
         }
         ++score;
@@ -574,14 +575,14 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 
                 if (spin_score_map.count(cnt.first) == 0)
                 {
-                    if (abs(spin_movement) > 0.05 && last_armor_timestamp == new_armor_timestamp)
+                    if (abs(spin_movement) > 10 && last_armor_timestamp == new_armor_timestamp)
                         spin_score_map[cnt.first] = 300 * spin_movement / abs(spin_movement);
                 }
-                else if (abs(spin_movement) > 0.05 && last_armor_timestamp == new_armor_timestamp)
+                else if (abs(spin_movement) > 10 && last_armor_timestamp == new_armor_timestamp)
                 {
                     spin_score_map[cnt.first] = anti_spin_max_r_multiple * spin_score_map[cnt.first];
                 }
-                cout<<spin_score_map[cnt.first]<<endl;
+                // cout<<spin_score_map[cnt.first]<<endl;
 
             }
         }
@@ -783,6 +784,17 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     cnt++;
     usleep(5000);
 #endif //ASSIST_LABEL
+    Eigen::Vector3d predict_value;
+    auto delta_t = src.timestamp - prev_timestamp;
+    auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
+    auto velocity = (delta_dist / delta_t) * 1e3;
+
+    //判断装甲板是否切换，若切换将变量置1
+    if(target.key != last_armor.key || velocity > max_v)
+        is_target_switched = true;
+    else
+        is_target_switched = false;
+
     //获取装甲板中心与装甲板面积以下一次ROI截取使用
     last_roi_center = target.center2d;
     last_armor = target;
@@ -793,8 +805,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     is_last_target_exists = true;
 
 #ifdef SHOW_AIM_CROSS
-        line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), {0,255,0}, 1);
-        line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), {0,255,0}, 1);
+    line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), {0,255,0}, 1);
+    line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), {0,255,0}, 1);
 #endif //SHOW_AIM_CROSS
 
 #ifdef SHOW_ALL_ARMOR
@@ -858,13 +870,15 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     fmt::print(fmt::fg(fmt::color::green_yellow), "Dist: {} m\n",(float)target.center3d_cam.norm());
     fmt::print(fmt::fg(fmt::color::white), "Target: {} \n",target.key);
     fmt::print(fmt::fg(fmt::color::orange_red), "Is Spinning: {} \n",is_target_spinning);
+    fmt::print(fmt::fg(fmt::color::orange_red), "Is Switched: {} \n",is_target_switched);
 #endif //PRINT_TARGET_INFO
 #ifdef SAVE_AUTOAIM_LOG
     LOG(INFO) <<"[AUTOAIM] LATENCY: "<< "Crop: " << dr_crop_ms << " ms" << " Infer: " << dr_infer_ms << " ms" << " Predict: " << dr_predict_ms << " ms" << " Total: " << dr_full_ms << " ms";
-    LOG(INFO) <<"[AUTOAIM] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)target.center3d_cam.norm() << " Target: " << target.key << " Is Spinning: " << is_target_spinning;
+    LOG(INFO) <<"[AUTOAIM] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)target.center3d_cam.norm()
+                    << " Target: " << target.key << " Is Spinning: " << is_target_spinning<< " Is Switched: " << is_target_switched;
     LOG(INFO) <<"[AUTOAIM] TARGET_COORD: "<<"X: "<<target.center3d_world[0]<<" Y: "<<target.center3d_world[1]<<" Z: " << target.center3d_world[2];
 #endif //SAVE_AUTOAIM_LOG
 
-    data = {(float)angle[1], (float)angle[0], (float)target.center3d_cam.norm(), 0, 1, is_target_spinning, 1};
+    data = {(float)angle[1], (float)angle[0], (float)target.center3d_cam.norm(), is_target_switched, 1, is_target_spinning, 0};
     return true;
 }
