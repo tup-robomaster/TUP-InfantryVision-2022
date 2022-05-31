@@ -85,8 +85,8 @@ bool ParticleFilter::initParam(YAML::Node &config,const string param_name)
     initMatrix(observe_noise_cov_tmp,read_vector);
     observe_noise_cov = observe_noise_cov_tmp;
     //初始化粒子矩阵及粒子权重
-    matrix_particle = Eigen::MatrixXd::Zero(vector_len,num_particle);
-    randomlizedGaussianColwise(matrix_particle,process_noise_cov);
+    matrix_particle = Eigen::MatrixXd::Zero(num_particle, vector_len);
+    randomlizedGaussianColwise(matrix_particle, process_noise_cov);
     matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
     is_ready = false;
     
@@ -105,8 +105,8 @@ bool ParticleFilter::initParam(ParticleFilter parent)
     process_noise_cov = parent.process_noise_cov;
     observe_noise_cov = parent.observe_noise_cov;
     //初始化粒子矩阵及粒子权重
-    matrix_particle = Eigen::MatrixXd::Zero(vector_len,num_particle);
-    randomlizedGaussianColwise(matrix_particle,process_noise_cov);
+    matrix_particle = Eigen::MatrixXd::Zero(num_particle, vector_len);
+    randomlizedGaussianColwise(matrix_particle, process_noise_cov);
     matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
     is_ready = false;
 
