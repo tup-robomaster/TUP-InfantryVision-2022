@@ -59,6 +59,25 @@ Point2i Autoaim::cropImageByROI(Mat &img)
     {
         return Point2i(0,0);
     }
+
+    //根据丢失帧数逐渐扩大ROI大小
+    if(lost_cnt == 2)
+    {   //丢失2帧ROI扩大1.5倍
+        input_size = input_size * 1.5;
+    }
+    else if(lost_cnt == 3)
+    {   //丢失3帧ROI扩大2.5倍
+        input_size = input_size * 2.5;
+    }
+    else if(lost_cnt == 4)
+    {   //丢失4帧ROI扩大3.5倍
+        input_size = input_size * 3.5;
+    }
+    else if(lost_cnt == 5)
+    {   //返回原图像
+        return Point2i(0,0);
+    }
+
     //处理X越界
     if (last_roi_center.x <= input_size.width / 2)
         last_roi_center.x = input_size.width / 2;
@@ -389,9 +408,11 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         {
             armor.apex2d[i] += Point2f((float)roi_offset.x,(float)roi_offset.y);
         }
-        Point2f apex_sum;
+        Point2f apex_sum = Point(0, 0);
         for(auto apex : armor.apex2d)
             apex_sum +=apex;
+
+        //求出装甲板的中心点
         armor.center2d = apex_sum / 4.f;
 
         // auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_ITERATIVE);
@@ -429,6 +450,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         armor.area = object.area;
         armors.push_back(armor);
     }
+
     //若无合适装甲板
     if (armors.empty())
     {
@@ -450,6 +472,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
         return false;
     }
+
     ///------------------------生成/分配ArmorTracker----------------------------
     new_armors_cnt_map.clear();
     //为装甲板分配或新建最佳ArmorTracker
@@ -464,8 +487,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             auto target_predictor = trackers_map.insert(make_pair((*armor).key, tracker));
             new_armors_cnt_map[(*armor).key]++;
         }
-        //当存在一个该类型ArmorTracker
-        else if (predictors_with_same_key == 1)
+        else if (predictors_with_same_key == 1) //当存在一个该类型ArmorTracker
         {
             auto candidate = trackers_map.find((*armor).key);
             auto delta_t = src.timestamp - (*candidate).second.prev_timestamp;
@@ -484,8 +506,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                 new_armors_cnt_map[(*armor).key]++;
             }
         }
-        //当存在多个该类型装甲板ArmorTracker
-        else
+        else //当存在多个该类型装甲板ArmorTracker
         {
             //1e9无实际意义，仅用于以非零初始化
             double min_v = 1e9;
@@ -509,8 +530,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             }
             if (is_best_candidate_exist)
             {
-                auto velocity = min_v;
-                auto delta_t = min_delta_t;
+                // auto velocity = min_v;
+                // auto delta_t = min_delta_t;
                 (*best_candidate).second.update((*armor), src.timestamp);
             }
             else
@@ -545,16 +566,18 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         if (cnt.second == 1)
         {
             auto same_armors_cnt = trackers_map.count(cnt.first);
-            //当存在同时存在两块同类别装甲板Tracker时才进入陀螺状态识别
+            //当同时存在两块同类别装甲板Tracker时才进入陀螺状态识别
             if (same_armors_cnt == 2)
             {
+                //获取trackers_map中同类别装甲板Tracker的区间
                 auto candidates = trackers_map.equal_range(cnt.first);
                 double last_armor_center;
                 double last_armor_timestamp;
                 double new_armor_center;
                 double new_armor_timestamp;
                 auto candidate = candidates.first;
-                //确定新增装甲板与历史装甲板
+
+                //确定新增装甲板与历史装甲板（same_armors_cnt == 2）
                 if ((*candidate).second.is_initialized)
                 {
                     last_armor_center = (*candidate).second.last_armor.center2d.x;
@@ -583,7 +606,6 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                     spin_score_map[cnt.first] = anti_spin_max_r_multiple * spin_score_map[cnt.first];
                 }
                 // cout<<spin_score_map[cnt.first]<<endl;
-
             }
         }
     }
@@ -608,12 +630,12 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     //若目标处于陀螺状态，预先瞄准目标中心，待预测值与该点距离较近时开始击打
     SpinHeading spin_status;
     if (spin_status_map.count(target_id) == 0)
-    {
+    {   //若目标处于非陀螺状态，则直接击打目标
         spin_status = UNKNOWN;
         is_target_spinning = false;
     }
     else
-    {
+    {   //若目标处于陀螺状态，则预先瞄准目标中心，待预测值与该点距离较近时开始击打
         spin_status = spin_status_map[target_id];
         if (spin_status != UNKNOWN)
             is_target_spinning = true;
@@ -707,12 +729,12 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
         auto velocity = (delta_dist / delta_t) * 1e3;
         if (target.key != last_armor.key || velocity > max_v)
-        {
+        {   //若装甲板发生了变化，或者速度超过阈值，则进行预测初始化，打击点为装甲板中心
             predictor.initParam(predictor_param_loader);
             aiming_point = target.center3d_cam;
         }
         else
-        {
+        {   //若装甲板未发生变化，则进行预测
             auto aiming_point_world = predictor.predict(target.center3d_world, src.timestamp);
             // aiming_point = aiming_point_world;
             aiming_point = coordsolver.worldToCam(aiming_point_world, rmat_imu);
@@ -731,7 +753,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             final_trackers.push_back(&(*iter).second);
         }
         //进行目标选择
-        auto tracker = chooseTargetTracker(final_trackers, src.timestamp);
+        auto tracker = chooseTargetTracker(final_trackers, src.timestamp); //选择与上次是同一个的装甲板，其次选择最近（面积最大）的装甲板
         tracker->last_selected_timestamp = src.timestamp;
         tracker->selected_cnt++;
         target = tracker->last_armor;
@@ -741,7 +763,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
         auto velocity = (delta_dist / delta_t) * 1e3;
 
-        //目前类别预测不是十分稳定,若之后仍有问题，可以考虑去除类别判断条件
+        //TODO:目前类别预测不是十分稳定,若之后仍有问题，可以考虑去除类别判断条件
         if (target.key != last_armor.key || velocity > max_v)
         {
             predictor.initParam(predictor_param_loader);
@@ -758,7 +780,9 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     // aiming_point = coordsolver.worldToCam(target.center3d_world,rmat_imu);
     aiming_point = target.center3d_cam;
 #endif //USING_PREDICT
+
     }
+
 #ifdef ASSIST_LABEL
     auto label_name = path_prefix + to_string(cnt) + ".txt";
     string content;
@@ -785,12 +809,13 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     cnt++;
     usleep(5000);
 #endif //ASSIST_LABEL
+
     Eigen::Vector3d predict_value;
     auto delta_t = src.timestamp - prev_timestamp;
     auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
     auto velocity = (delta_dist / delta_t) * 1e3;
 
-    //判断装甲板是否切换，若切换将变量置1
+    //TODO:判断装甲板是否切换，若切换将变量置1
     if(target.key != last_armor.key || velocity > max_v)
         is_target_switched = true;
     else
@@ -880,6 +905,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     LOG(INFO) <<"[AUTOAIM] TARGET_COORD: "<<"X: "<<target.center3d_world[0]<<" Y: "<<target.center3d_world[1]<<" Z: " << target.center3d_world[2];
 #endif //SAVE_AUTOAIM_LOG
 
+    //pitch + yaw + dist
     data = {(float)angle[1], (float)angle[0], (float)target.center3d_cam.norm(), is_target_switched, 1, is_target_spinning, 0};
     return true;
 }

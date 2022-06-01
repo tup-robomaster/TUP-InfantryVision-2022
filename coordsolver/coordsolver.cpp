@@ -89,7 +89,7 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
 
     //长度为4进入装甲板模式
 
-        //大于长宽比阈值使用大装甲板世界坐标
+    //大于长宽比阈值使用大装甲板世界坐标
     if (type == BIG)
     {
         points_world = {

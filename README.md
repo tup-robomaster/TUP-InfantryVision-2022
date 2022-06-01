@@ -14,12 +14,16 @@ https://github.com/lava/matplotlib-cpp
 sudo apt-get install libeigen3-dev
 
 sudo ln -s /usr/include/eigen3/Eigen /usr/include/Eigen
+
+
 ### 更新内容
 V1.0 合并更新debug.h，优化输出，添加日志记录，优化相机驱动，解耦串口，增加小陀螺判断，修复USB相机调用bug	
 V0.7 Beta 改善预测功能（使用拟合与粒子滤波），增添ROI 2022.1.27  
 V0.6 Beta 增加预测功能 2022.1.23  
 V0.5 Beta 完成主程序、串口与自瞄进程. 2021.12.12  
 V0.1 Beta 完成自瞄推理部分及粒子滤波器. 2021.11.12  
+
+
 ## 1.结构
     1.autoaim 自瞄
     2.camera 相机
@@ -29,6 +33,8 @@ V0.1 Beta 完成自瞄推理部分及粒子滤波器. 2021.11.12
     6.params 各类参数文件
     7.main.cpp 程序主文件
     8.README.md 说明文件
+
+    
 ## 2.Use
     1.sudo cat /sys/kernel/debug/usb/devices
 
