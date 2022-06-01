@@ -14,6 +14,7 @@ bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix, Eigen::MatrixXd &cov)
     default_random_engine e(rd());
     std::vector<normal_distribution<double>> normal_distribution_list;
 
+    //假设所有元素不相关
     for (int i = 0; i<cov.cols(); i++)
     {
         normal_distribution<double> n(0,cov(i,i));
@@ -74,12 +75,15 @@ bool ParticleFilter::initParam(YAML::Node &config,const string param_name)
     vector_len = config[param_name]["vector_len"].as<int>();
     num_particle = config[param_name]["num_particle"].as<int>();
     Eigen::MatrixXd process_noise_cov_tmp(vector_len,vector_len);
-    
+    Eigen::MatrixXd observe_noise_cov_tmp(vector_len,vector_len);
     //初始化过程噪声矩阵
     auto read_vector = config[param_name]["process_noise"].as<vector<float>>();
     initMatrix(process_noise_cov_tmp,read_vector);
     process_noise_cov = process_noise_cov_tmp;
-
+    //初始化观测噪声矩阵
+    read_vector = config[param_name]["observe_noise"].as<vector<float>>();
+    initMatrix(observe_noise_cov_tmp,read_vector);
+    observe_noise_cov = observe_noise_cov_tmp;
     //初始化粒子矩阵及粒子权重
     matrix_particle = Eigen::MatrixXd::Zero(num_particle, vector_len);
     randomlizedGaussianColwise(matrix_particle, process_noise_cov);
@@ -99,8 +103,11 @@ bool ParticleFilter::initParam(ParticleFilter parent)
     vector_len = parent.vector_len;
     num_particle = parent.num_particle;
     process_noise_cov = parent.process_noise_cov;
-    matrix_particle = parent.matrix_particle;
-    matrix_weights = parent.matrix_weights;
+    observe_noise_cov = parent.observe_noise_cov;
+    //初始化粒子矩阵及粒子权重
+    matrix_particle = Eigen::MatrixXd::Zero(num_particle, vector_len);
+    randomlizedGaussianColwise(matrix_particle, process_noise_cov);
+    matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
     is_ready = false;
 
     return true;
@@ -129,28 +136,33 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
     Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
     Eigen::MatrixXd mat_measure = measure.replicate(1,num_particle).transpose();
 
+    auto dst = (matrix_particle - mat_measure).mean();
+    //预测值与真实值的差值小于1时视作可用
     if (is_ready)
     {
-    //     auto mean_weights = (matrix_particle - mat_measure).mean();
         //序列重要性采样
-        // matrix_weights = (matrix_particle - mat_measure).rowwise().squaredNorm();
-        matrix_weights = (matrix_particle - mat_measure).rowwise().norm();
-        // matrix_weights = matrix_weights + 10 * Eigen::MatrixXd::Ones(num_particle, 1);//滤除高频噪声
-        // matrix_weights = (matrix_particle - mat_measure).rowwise().;
-        matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1).array() / matrix_weights.array();
+        matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1);
+        //按照高斯分布函数曲线右半侧计算粒子权重
+        for(int i = 0; i < matrix_particle.cols(); i++)
+        {
+            auto sigma = observe_noise_cov(i,i);
+            Eigen::MatrixXd weights_dist = (matrix_particle.col(i) - mat_measure.col(i)).rowwise().squaredNorm();
+            Eigen::MatrixXd tmp = ((-(weights_dist / pow(sigma, 2)) / matrix_particle.cols()).array().exp() / (sqrt(CV_2PI) * sigma)).array();
+            matrix_weights = matrix_weights.array() * tmp.array();
+        }
         matrix_weights /= matrix_weights.sum();
-        //重采样
-        resample();
-
-        return true;
+        double n_eff = 1.0 / (matrix_weights.transpose() * matrix_weights).value();
+        //有效粒子数少于一半时进行重采样
+        if (n_eff < (num_particle / 2))
+            resample();
     }
     else
     {
-        matrix_particle += mat_measure;
+        matrix_particle+=measure;
         is_ready = true;
         return false;
     }
-
+    return true;
 }
 
 bool ParticleFilter::resample()

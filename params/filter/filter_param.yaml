@@ -1,22 +1,13 @@
 
-autoaim_x:
+autoaim:
     #预测维度
-    vector_len: 1
+    vector_len: 2
     #粒子数
-    num_particle: 1500
-    #速度噪声sigma值，与车辆加速度有关，越大对加速度剧烈变化的物体跟踪效果越好，但容易导致抖动增大
-    process_noise: [0.02]
-autoaim_y:
-    #预测维度
-    vector_len: 1
-    #粒子数
-    num_particle: 1500
-    #速度噪声sigma值，与车辆加速度有关，越大对加速度剧烈变化的物体跟踪效果越好，但容易导致抖动增大
-    process_noise: [0.02]
-autoaim_z:
-    #预测维度
-    vector_len: 1
-    #粒子数
-    num_particle: 1500
-    #速度噪声sigma值，与车辆加速度有关，越大对加速度剧烈变化的物体跟踪效果越好，但容易导致抖动增大
-    process_noise: [0.02]
+    num_particle: 800
+    #过程噪声，与车辆加速度有关,可以增加粒子多样性,提高滤波器鲁棒性
+    process_noise: [0.05,0,
+			0, 0.1]
+    #观测噪声, 影响重要性密度函数计算例子权重
+    observe_noise: [0.01,0,
+                    0,0.3]
+

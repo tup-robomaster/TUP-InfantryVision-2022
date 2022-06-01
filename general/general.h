@@ -35,6 +35,7 @@ using namespace cv;
     #endif
 #endif
 
+enum TargetType {SMALL, BIG, BUFF};
 /**
  * @brief 存储任务所需数据的结构体
  * 

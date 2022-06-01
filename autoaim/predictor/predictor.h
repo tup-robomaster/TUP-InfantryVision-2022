@@ -67,17 +67,16 @@ private:
     bool fitting_disabled;                                                  //当前是否禁用拟合
 
 
-    ParticleFilter pf_x;                                                  //粒子滤波
-    ParticleFilter pf_y;                                                  //粒子滤波
-    ParticleFilter pf_z;                                                  //粒子滤波
+    ParticleFilter pf;                                                  //粒子滤波
     std::deque<TargetInfo> history_info;                                  //目标队列
 
     const int max_timespan = 1000;                                        //最大时间跨度，大于该时间重置预测器(ms)
-    const int max_cost = 1e-3;                                            //回归函数最大Cost
+    const int max_cost = 1;                                            //回归函数最大Cost
     const int max_v = 8;                                                  //设置最大速度,单位m/s
-    const int history_deque_len = 10;                                     //队列长度    
-    const int bullet_speed = 30;                                          //TODO:弹速可变
-    const int delay = 50;                                                 //发弹延迟(ms)
+    const int history_deque_len = 10;                                     //队列长度
+    const int min_fitting_len = 6;                                         //使用拟合的最短队列长度    
+    const int bullet_speed = 28;                                          //TODO:弹速可变
+    const int delay = 70;                                                 //发弹延迟(ms)
     const int window_size = 3;                                            //滑动窗口大小
 
 public:

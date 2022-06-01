@@ -75,10 +75,10 @@ typedef struct
     // float2uchar yaw_angle;//偏航角
     // float2uchar pitch_angle;//俯仰角
     float2uchar dis;  //目标距离
-    int ismiddle;     //设置1表示目标进入了可以开火的范围，设置0则表示目标尚未进入可开火的范围，目前暂不使用，默认置0
+    int isSwitched;   //目标是否发生切换
     int isFindTarget; //当识别的图片范围内有目标且电控发来的信号不为0x00（关闭视觉）置为1，否则置0
-    int isSpinning;
-    int nearFace;
+    int isSpinning;   //目标是否处于陀螺状态
+    int ismiddle;     //设置1表示目标进入了可以开火的范围，设置0则表示目标尚未进入可开火的范围，默认置0
 } VisionData;
 
 class SerialPort

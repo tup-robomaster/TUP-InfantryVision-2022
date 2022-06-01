@@ -52,7 +52,6 @@ log/
 # *.ERROR
 # *.INFO
 
-
 #CMake
 CMakeFiles
 *.cmake

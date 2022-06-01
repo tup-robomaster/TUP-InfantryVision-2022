@@ -386,12 +386,12 @@ void SerialPort::TransformData(const VisionData &data)
     Tdata[13] = data.dis.c[2];
     Tdata[14] = data.dis.c[3];
 
-    Tdata[15] = data.ismiddle;
+    Tdata[15] = data.isSwitched;
 	Tdata[16] = data.isFindTarget;
 
     Tdata[17] = data.isSpinning;
-    Tdata[18] = 0x00;
-    Tdata[19] = data.nearFace;
+    Tdata[18] = data.ismiddle;
+    Tdata[19] = 0x00;
 
 	Append_CRC16_Check_Sum(Tdata, 22);
 }

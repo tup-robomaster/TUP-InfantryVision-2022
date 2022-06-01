@@ -12,7 +12,7 @@ static constexpr int NUM_CLASSES = 8;  // Number of classes
 static constexpr int NUM_COLORS = 4;   // Number of color
 static constexpr int TOPK = 128;       // TopK
 static constexpr float NMS_THRESH = 0.3;
-static constexpr float BBOX_CONF_THRESH = 0.6;
+static constexpr float BBOX_CONF_THRESH = 0.75;
 static constexpr float FFT_CONF_ERROR = 0.15;
 static constexpr float FFT_MIN_IOU = 0.9;
 
@@ -122,8 +122,8 @@ static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, cons
         float color_conf = (feat_ptr[basic_pos + 9 + box_color]);
         float cls_conf = (feat_ptr[basic_pos + 9 + NUM_COLORS + box_class]);
 
-        // float box_prob = (box_objectness + cls_conf + color_conf) / 3.0;
-        float box_prob = box_objectness;
+        float box_prob = (box_objectness + cls_conf + color_conf) / 3.0;
+        // float box_prob = box_objectness;
 
         if (box_prob >= prob_threshold)
         {

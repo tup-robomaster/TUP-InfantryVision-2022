@@ -29,9 +29,15 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
+<<<<<<< HEAD
     DaHeng.SetExposureTime(config[param_name]["Exposure_time"].as<int>()); 
     // 设置
     DaHeng.SetGAIN(3, config[param_name]["Exposure_gain"].as<double>());
+=======
+    DaHeng.SetExposureTime(6000);
+    // 设置1
+    DaHeng.SetGAIN(3, 14);
+>>>>>>> main
     // 是否启用自动白平衡7
     // DaHeng.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
@@ -56,8 +62,6 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         LOG(INFO) << "[CAMERA] Open USB Camera success";
     #endif //SAVE_LOG_ALL
 
-    int width=cap.get(CAP_PROP_FRAME_WIDTH);
-    int height=cap.get(CAP_PROP_FRAME_HEIGHT);
     // auto time_start = std::chrono::steady_clock::now();
 #endif //USING_USB_CAMERA
 
@@ -76,13 +80,16 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     char now[64];
     std::time_t tt;
     struct tm *ttime;
+    int width = 1280;
+    int height = 1024;
     tt = time(nullptr);
     ttime = localtime(&tt);
     strftime(now, 64, "%Y-%m-%d_%H_%M_%S", ttime);  // 以时间为名字
     std::string now_string(now);
     std::string path(std::string(storage_location + now_string).append(".avi"));
     auto writer = cv::VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 30.0, cv::Size(width, height));    // Avi form
-    
+    std::future<void> write_video;
+    bool is_first_loop = true;
     #ifdef SAVE_LOG_ALL
         LOG(INFO) << "[SAVE_VIDEO] Save video to " << path;
     #endif //SAVE_LOG_ALL
@@ -131,19 +138,22 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
 #ifdef SAVE_VIDEO
         frame_cnt++;
-        if(frame_cnt % 10 == 0)
+        if(frame_cnt % 5 == 0)
         {
             frame_cnt = 0;
-            //TODO:异步读写加速
-            // auto write_video = std::async(std::launch::async, [&](){writer.write(src.img);});
-            writer.write(src.img);
+            //异步读写加速,避免阻塞生产者
+            if (is_first_loop)
+                is_first_loop = false;
+            else
+                write_video.wait();
+            write_video = std::async(std::launch::async, [&, src](){writer.write(src.img);});
         }
 #endif //SAVE_VIDEO
 
 #ifdef USING_IMU
         //获取下位机数据
         MCUData mcu_status;
-        if (!receive_factory.consume(mcu_status, src.timestamp - 4))
+        if (!receive_factory.consume(mcu_status, src.timestamp))
             continue;
         src.quat = mcu_status.quat;
         src.mode = mcu_status.mode;
@@ -190,18 +200,14 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
 
         if (mode == 1)
         {
-            if (autoaim.run(dst, data))
-            {
-                transmit_factory.produce(data);
-            }
+            autoaim.run(dst, data);
+            transmit_factory.produce(data);
         }
         //进入能量机关打击模式，3为小能量机关，4为大能量机关
         else if (mode == 3 || mode == 4)
         {
-            if (buff.run(dst, data))
-            {
-                transmit_factory.produce(data);
-            }   
+            buff.run(dst, data);
+            transmit_factory.produce(data);
         }
     }
     return true;
@@ -234,9 +240,13 @@ bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory)
             usleep(5000);
             continue;
         }
+<<<<<<< HEAD
 
 #ifdef DEBUG_WITHOUT_COM
         //发送数据格式转换
+=======
+        
+>>>>>>> main
         serial.TransformData(transmit);
         try
         {
