@@ -794,6 +794,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     fmt::print(fmt::fg(fmt::color::white), "Target: {} \n",target.key);
     fmt::print(fmt::fg(fmt::color::orange_red), "Is Spinning: {} \n",is_target_spinning);
 #endif //PRINT_TARGET_INFO
+
 #ifdef SAVE_AUTOAIM_LOG
     LOG(INFO) <<"[AUTOAIM] LATENCY: "<< "Crop: " << dr_crop_ms << " ms" << " Infer: " << dr_infer_ms << " ms" << " Predict: " << dr_predict_ms << " ms" << " Total: " << dr_full_ms << " ms";
     LOG(INFO) <<"[AUTOAIM] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)target.center3d_cam.norm() << " Target: " << target.key << " Is Spinning: " << is_target_spinning;
