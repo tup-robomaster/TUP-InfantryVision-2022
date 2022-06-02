@@ -44,13 +44,13 @@ private:
     const int max_lost_cnt = 5;                 //最大丢失目标帧数
     const int max_armors = 8;                   //视野中最多装甲板数
     const int max_v = 8;                        //两次预测间最大速度(m/s)
-    const int max_delta_t = 100;                //使用同一预测器的最大时间间隔(ms)
+    const int max_delta_t = 200;                //使用同一预测器的最大时间间隔(ms)
 
     int anti_spin_judge_high_thres = 4.5e4;//大于该阈值认为该车已开启陀螺
     int anti_spin_judge_low_thres = 2e3;//小于该阈值认为该车已关闭陀螺
     int anti_spin_max_r_multiple = 7;
 
-    const double no_crop_thres = 1e-3;      //禁用ROI裁剪的装甲板占图像面积最大面积比值
+    const double no_crop_thres = 1;      //禁用ROI裁剪的装甲板占图像面积最大面积比值
 
     const int hero_danger_zone = 4;       //英雄危险距离阈值，检测到有小于该距离的英雄直接开始攻击
 

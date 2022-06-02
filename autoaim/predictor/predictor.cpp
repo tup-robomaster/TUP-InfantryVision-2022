@@ -47,6 +47,7 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
 {
     auto t1=std::chrono::steady_clock::now();
     TargetInfo target = {xyz, (int)xyz.norm(), timestamp};
+    timestamp = timestamp;
     
     //当队列长度小于3，仅更新队列
     if (history_info.size() < 3)
@@ -143,18 +144,18 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     if (cnt < 2000)
     {
         auto x = cnt * 5;
-        cv::circle(pic_x,cv::Point2f((timestamp) / 10,xyz[0] * 100 + 200),1,cv::Scalar(0,0,255),1);
-        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[0] * 100 + 200),1,cv::Scalar(0,255,0),1);
-        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[0] * 100 + 200),1,cv::Scalar(255,255,0),1);
+        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,xyz[0] * 100),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[0] * 100),1,cv::Scalar(0,255,0),1);
+        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[0] * 100),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result[0]+ 200),1,cv::Scalar(255,255,255),1);
 
 
-        cv::circle(pic_y,cv::Point2f((timestamp) / 10,xyz[1] * 100 + 200),1,cv::Scalar(0,0,255),1);
-        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[1] * 100 + 200),1,cv::Scalar(0,255,0),1);
-        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[1] * 100 + 200),1,cv::Scalar(255,255,0),1);
+        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,xyz[1] * 100 + 500),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[1] * 100 + 500),1,cv::Scalar(0,255,0),1);
+        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[1] * 100 + 500),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result[1]+ 200),1,cv::Scalar(255,255,255),1);
 
-        cv::circle(pic_z,cv::Point2f((timestamp) / 10,xyz[2] * 100 + 200),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,xyz[2] * 100 + 200),1,cv::Scalar(0,0,255),1);
         cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[2] * 100 + 200),1,cv::Scalar(0,255,0),1);
         cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[2] * 100),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result[2]),1,cv::Scalar(255,255,255),1);
@@ -205,35 +206,40 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
 {
     PredictStatus is_available;
     //使用线性运动模型
-    Eigen::VectorXd measure_v (2);
+    Eigen::VectorXd measure (2);
+    Eigen::VectorXd result_transformed (2);
 
     Eigen::Vector3d v_sum = {0, 0, 0};
     Eigen::Vector3d v_xyz = {0, 0, 0};
-    //使用逐差法求解现在速度
-    int max_iter = 2;
-    int back_idx = history_info.size() - 1;
 
-    for (int i = 0; i < max_iter; i++)
-    {
-        auto next = history_info[back_idx - i];
-        auto prev = history_info[back_idx - i - 2];
-        v_sum += (next.xyz - prev.xyz) / (next.timestamp - prev.timestamp) * 1e3; 
-    }
-    v_xyz = v_sum / max_iter;
-    // cout<<v_xyz.norm()<<endl;
-
-    measure_v << v_xyz[0], v_xyz[1];
 
     is_available.xyz_status[0] = pf.is_ready;
     is_available.xyz_status[1] = pf.is_ready;
 
+    measure << target.xyz[0], target.xyz[1];
+    pf.update(measure);
+
+    auto result_pf = pf.predict();
+    //获取粒子滤波后的目标位置信息
+    Eigen::Vector3d pf_target = {result_pf[0], result_pf[1], target.xyz[2]};
+    //距离项未使用，目前置0
+
+    auto before_target = history_info.at(history_info.size() - 4);
+    if (pf.is_ready)
+        v_xyz = (pf_target - last_pf_target.xyz) / (target.timestamp - last_pf_target.timestamp) * 1e3;
+    else
+        v_xyz = (target.xyz - before_target.xyz) / (target.timestamp - before_target.timestamp) * 1e3;
+
     //Update
-    pf.update(measure_vx)
-    auto result_v = pf.predict();
+    // cout<<sqrt(v_xyz[0] * v_xyz[0] + v_xyz[1] * v_xyz[1])<<endl;
+
+    result_transformed[0] = result_pf[0] + v_xyz[0] * time_estimated / 1e3;
+    result_transformed[1] = result_pf[1] + v_xyz[1] * time_estimated / 1e3;
 
 
-    result << result_v[0], result_v[1], 0;
-    result = result  * (time_estimated / 1000.f) + target.xyz;
+    result << result_transformed[0], result_transformed[1], target.xyz[2];
+    last_pf_target = {pf_target, 0, target.timestamp};
+    result = result;
 
 
     return is_available;

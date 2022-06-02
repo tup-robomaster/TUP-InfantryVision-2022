@@ -137,6 +137,7 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
     Eigen::MatrixXd mat_measure = measure.replicate(1,num_particle).transpose();
 
     auto dst = (matrix_particle - mat_measure).mean();
+    // cout<<".."<<is_ready<<endl;
     //预测值与真实值的差值小于1时视作可用
     if (is_ready)
     {
@@ -152,13 +153,11 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
         }
         matrix_weights /= matrix_weights.sum();
         double n_eff = 1.0 / (matrix_weights.transpose() * matrix_weights).value();
-        //有效粒子数少于一半时进行重采样
-        if (n_eff < (num_particle / 2))
-            resample();
+        resample();
     }
     else
     {
-        matrix_particle+=measure;
+        matrix_particle+=mat_measure;
         is_ready = true;
         return false;
     }

@@ -65,7 +65,6 @@ private:
 private:
     bool fitting_disabled;                                                  //当前是否禁用拟合
 
-
     ParticleFilter pf;                                                  //粒子滤波
     std::deque<TargetInfo> history_info;                                  //目标队列
 
@@ -80,6 +79,7 @@ private:
 
 public:
     TargetInfo last_target;                                                  //最后目标
+    TargetInfo last_pf_target;                                               //最后一次粒子滤波后的位置结果
 
     ArmorPredictor();
     ~ArmorPredictor();
