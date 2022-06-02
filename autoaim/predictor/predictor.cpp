@@ -18,7 +18,8 @@ ArmorPredictor::~ArmorPredictor()
 ArmorPredictor ArmorPredictor::generate()
 {
     ArmorPredictor new_predictor;
-    new_predictor.pf.initParam(pf);
+    new_predictor.pf_pos.initParam(pf_pos);
+    new_predictor.pf_v.initParam(pf_v);
     new_predictor.fitting_disabled = false;
 
     return new_predictor;
@@ -27,7 +28,8 @@ ArmorPredictor ArmorPredictor::generate()
 bool ArmorPredictor::initParam(ArmorPredictor &predictor_loader)
 {
     history_info.clear();
-    pf.initParam(predictor_loader.pf);
+    pf_pos.initParam(predictor_loader.pf_pos);
+    pf_v.initParam(predictor_loader.pf_v);
     fitting_disabled = false;
     
     return true;
@@ -36,7 +38,8 @@ bool ArmorPredictor::initParam(ArmorPredictor &predictor_loader)
 bool ArmorPredictor::initParam(string coord_path)
 {
     YAML::Node config = YAML::LoadFile(coord_path);
-    pf.initParam(config,"autoaim");
+    pf_pos.initParam(config,"pos");
+    pf_v.initParam(config,"v");
     fitting_disabled = false;
     
     return true;
@@ -47,19 +50,28 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
 {
     auto t1=std::chrono::steady_clock::now();
     TargetInfo target = {xyz, (int)xyz.norm(), timestamp};
-    timestamp = timestamp;
-    
-    //当队列长度小于3，仅更新队列
-    if (history_info.size() < 3)
+    //-----------------对位置进行粒子滤波,以降低测距噪声影响-------------------------------------
+    Eigen::VectorXd measure (2);
+    measure << xyz[0], xyz[1];
+    bool is_pos_filter_ready = pf_pos.update(measure);
+    Eigen::VectorXd predict_pos_xy = pf_pos.predict();
+    Eigen::Vector3d predict_pos = {predict_pos_xy[0], predict_pos_xy[1], xyz[2]};
+    //若位置粒子滤波器未完成初始化或滤波结果与目前位置相距过远,则本次不对目标位置做滤波,直接向队列压入原值
+    if (!is_pos_filter_ready || (predict_pos - xyz).norm() > 0.1)
     {
         history_info.push_back(target);
-        last_target = target;
-        return xyz;
     }
+    //若位置粒子滤波器已完成初始化且预测值大小恰当,则对目标位置做滤波
+    else
+    {
+        target.xyz[0] = predict_pos[0];
+        target.xyz[1] = predict_pos[1];
+    }
+    //FIXME:
+    //-----------------进行滑窗滤波,备选方案,暂未使用-------------------------------------
     auto d_xyz = target.xyz - last_target.xyz;
     auto delta_t = timestamp - last_target.timestamp;
     auto last_dist = history_info.back().dist;
-    // auto delta_time_estimate = (last_dist / bullet_speed) * 1e3 + delay;
     auto delta_time_estimate = (last_dist / bullet_speed) * 1e3 + delay;
     auto time_estimate = delta_time_estimate + history_info.back().timestamp - history_info.front().timestamp;
     //如速度过大,可认为为噪声干扰,进行滑窗滤波滤除
@@ -75,27 +87,33 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     // target = {filtered_xyz, (int)filtered_xyz.norm(), timestamp};
     // history_info.pop_back();
 
-    //当队列长度不足时不使用拟合
-    if (history_info.size() < min_fitting_len)
+    //---------------根据目前队列长度选用合适的滤波器------------------------------------
+    //当队列长度小于3，仅更新队列
+    if (history_info.size() < 3)
     {
-        history_info.push_back(target);
-        fitting_disabled = true;
+        last_target = target;
+        return xyz;
     }
     //当队列时间跨度过长时不使用拟合
     else if (target.timestamp - history_info.front().timestamp >= max_timespan)
     {
         history_info.pop_front();
-        history_info.push_back(target);
         fitting_disabled = true;
     }
-    else if (history_info.size() <= history_deque_len)
+    //当队列长度不足时不使用拟合
+    else if (history_info.size() < min_fitting_len)
     {
-        history_info.push_back(target);
+        fitting_disabled = true;
+    }
+    //其余状况下皆可以进行拟合
+    else
+    {
         fitting_disabled = false;
         //若队列过长，移除首元素
         if (history_info.size() > history_deque_len)
             history_info.pop_front();
     }
+
     
 #ifdef DISABLE_FITTING
     fitting_disabled = true;
@@ -205,42 +223,29 @@ inline Eigen::Vector3d ArmorPredictor::shiftWindowFilter(int start_idx=0)
 ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, Vector3d &result, int time_estimated)
 {
     PredictStatus is_available;
-    //使用线性运动模型
-    Eigen::VectorXd measure (2);
-    Eigen::VectorXd result_transformed (2);
 
-    Eigen::Vector3d v_sum = {0, 0, 0};
-    Eigen::Vector3d v_xyz = {0, 0, 0};
+    //采取中心差分法,使用 t, t-1, t-2时刻速度,计算t-1时刻的速度
+    auto target_prev = history_info.at(history_info.size() - 3);
+    auto target_next = target;
+    auto v_xyz = (target_next.xyz - target_prev.xyz) / (target_next.timestamp - target_prev.timestamp) * 1e3;
+    auto t = target_next.timestamp - history_info.at(history_info.size() - 2).timestamp;
 
-
-    is_available.xyz_status[0] = pf.is_ready;
-    is_available.xyz_status[1] = pf.is_ready;
-
-    measure << target.xyz[0], target.xyz[1];
-    pf.update(measure);
-
-    auto result_pf = pf.predict();
-    //获取粒子滤波后的目标位置信息
-    Eigen::Vector3d pf_target = {result_pf[0], result_pf[1], target.xyz[2]};
-    //距离项未使用，目前置0
-
-    auto before_target = history_info.at(history_info.size() - 4);
-    if (pf.is_ready)
-        v_xyz = (pf_target - last_pf_target.xyz) / (target.timestamp - last_pf_target.timestamp) * 1e3;
-    else
-        v_xyz = (target.xyz - before_target.xyz) / (target.timestamp - before_target.timestamp) * 1e3;
+    is_available[0] = pf_v.is_ready;
+    is_available[1] = pf_v.is_ready;
 
     //Update
-    // cout<<sqrt(v_xyz[0] * v_xyz[0] + v_xyz[1] * v_xyz[1])<<endl;
+    Eigen::VectorXd measure (2);
+    measure << v_xyz[0], v_xyz[1];
+    pf_v.update(measure);
 
-    result_transformed[0] = result_pf[0] + v_xyz[0] * time_estimated / 1e3;
-    result_transformed[1] = result_pf[1] + v_xyz[1] * time_estimated / 1e3;
+    //Predict
+    auto result_v = pf_v.predict();
+
+    auto predict_x = target[0] + result_v[0] * (time_estimated + t) / 1e3;
+    auto predict_y = target[1] + result_v[1] * (time_estimated + t) / 1e3;
 
 
-    result << result_transformed[0], result_transformed[1], target.xyz[2];
-    last_pf_target = {pf_target, 0, target.timestamp};
-    result = result;
-
+    result << predict_x, predict_y, target.xyz[2];
 
     return is_available;
 }

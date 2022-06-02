@@ -137,13 +137,11 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
     Eigen::MatrixXd mat_measure = measure.replicate(1,num_particle).transpose();
 
     auto dst = (matrix_particle - mat_measure).mean();
-    // cout<<".."<<is_ready<<endl;
-    //预测值与真实值的差值小于1时视作可用
     if (is_ready)
     {
         //序列重要性采样
         matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1);
-        //按照高斯分布函数曲线右半侧计算粒子权重
+        //按照高斯分布概率密度函数曲线右半侧计算粒子权重
         for(int i = 0; i < matrix_particle.cols(); i++)
         {
             auto sigma = observe_noise_cov(i,i);
@@ -153,7 +151,9 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
         }
         matrix_weights /= matrix_weights.sum();
         double n_eff = 1.0 / (matrix_weights.transpose() * matrix_weights).value();
-        resample();
+        //TODO:有效粒子数少于一定值时进行重采样,该值需在实际调试过程中修改
+        if (n_eff < (num_particle * 0.8)
+            resample();
     }
     else
     {
