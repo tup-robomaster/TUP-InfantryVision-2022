@@ -6,7 +6,6 @@ using namespace std;
 Buff::Buff()
 {
     detector.initModel(network_path);
-    
 
     //TODO:此处使用异常机制可能会造成内存泄漏
     try
@@ -26,7 +25,7 @@ Buff::Buff()
     fmt::print(fmt::fg(fmt::color::pale_violet_red), "[BUFF] Buff init model success! Size: {} {}\n", input_size.height, input_size.width);
 
 #ifdef SAVE_BUFF_LOG
-    LOG(INFO)<<"[BUFF] Buff init model success! Size: "<<input_size.height<<" "<<input_size.width;
+    LOG(INFO) << "[BUFF] Buff init model success! Size: " << input_size.height << " " << input_size.width;
 #endif //SAVE_BUFF_LOG
 }
 
@@ -173,7 +172,7 @@ bool Buff::run(TaskData &src,VisionData &data)
         if (object.color == 0)
             fan.key = "B" + string(object.cls == 0 ? "Activated" : "Target");
         if (object.color == 1)
-            fan.key = "R" + string(object.cls == 0 ? "Activated" : "Target");
+            fan.key = "R" + string(object.cl s == 0 ? "Activated" : "Target");
         memcpy(fan.apex2d, object.apex, 5 * sizeof(cv::Point2f));
         for(int i = 0; i < 5; i++)
         {
@@ -264,7 +263,7 @@ bool Buff::run(TaskData &src,VisionData &data)
     bool is_target_exists = chooseTarget(fans, target);
 
     if (!is_target_exists)
-    {
+    {   //若目标不存在
 
 #ifdef SHOW_IMG
         imshow("dst",src.img);
@@ -307,11 +306,9 @@ bool Buff::run(TaskData &src,VisionData &data)
     double theta_offset;
     ///------------------------进行预测----------------------------
     // predictor.mode = 1;
-    if (src.mode == 3)
-        //进入小能量机关识别模式
+    if (src.mode == 3)      //进入小能量机关识别模式
         predictor.mode = 0;
-    else if (src.mode == 4)
-        //进入大能量机关识别模式
+    else if (src.mode == 4) //进入大能量机关识别模式
         predictor.mode = 1;
 
     if (!predictor.predict(mean_rotate_speed, int(mean_r_center.norm()), src.timestamp, theta_offset))
@@ -329,16 +326,18 @@ bool Buff::run(TaskData &src,VisionData &data)
     theta_offset = rangedAngleRad(theta_offset);
     // cout<<theta_offset<<endl;
     //由offset生成欧拉角和旋转矩阵
-    Eigen::Vector3d hit_point_world = {sin(theta_offset) * fan_length, (cos(theta_offset) - 1) * fan_length,0};
+    Eigen::Vector3d hit_point_world = {sin(theta_offset) * fan_length, (cos(theta_offset) - 1) * fan_length, 0};
     // cout<<hit_point_world<<endl;
     Eigen::Vector3d hit_point_cam = {0,0,0};
     // Eigen::Vector3d euler_rad = target.euler;
     Eigen::Vector3d euler_rad = target.euler;
     auto rotMat = eulerToRotationMatrix(euler_rad);
+    
     //Pc = R * Pw + T
     hit_point_world = (rotMat * hit_point_world) + target.armor3d_world;
     hit_point_cam = coordsolver.worldToCam(hit_point_world, rmat_imu);
     auto r_center_cam = coordsolver.worldToCam(target.centerR3d_cam, rmat_imu);
+    
     // auto r_center_cam = coordsolver.worldToCam(mean_r_center, rmat_imu);
     auto center2d_src = coordsolver.reproject(r_center_cam);
     auto target2d = coordsolver.reproject(hit_point_cam);

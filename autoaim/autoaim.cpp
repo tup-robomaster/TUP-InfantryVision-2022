@@ -241,7 +241,6 @@ Eigen::Vector4d FitSpaceCircle(std::vector<Eigen::Vector3d> pts)
 
 /**
  * @brief 从ArmorTracker选出最佳Tracker
- * 
  * @param trackers Trackers
  * @param timestamp 本次时间戳 
  * @return ArmorTracker* 选中的ArmorTracker
@@ -345,6 +344,11 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 #ifdef USING_ROI
     roi_offset = cropImageByROI(input);
 #endif  //USING_ROI
+
+#ifdef SHOW_ROI
+    namedWindow("ROI", WINDOW_AUTOSIZE);
+    imshow("ROI", input);
+#endif  //SHOW_ROI
 
     auto time_crop=std::chrono::steady_clock::now();
     //若未检测到目标

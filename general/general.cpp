@@ -265,7 +265,7 @@ double rangedAngleRad(double &angle)
     if (fabs(angle) >= CV_PI)
     {
         angle -= (angle / fabs(angle)) * CV_2PI;
-        angle = rangedAngleRad(angle);
+        angle = rangedAngleRad(angle); // 递归调用，直到角度在[-PI,PI]范围内（TODO:）
     }
     return angle;
 }

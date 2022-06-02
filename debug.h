@@ -4,9 +4,9 @@
 
 // #define DETECT_RED  //红色检测，不启用默认为蓝色检测
 
-// #define SAVE_VIDEO               // save video
+#define SAVE_VIDEO               // save video
 
-// #define SAVE_LOG_ALL                // save log
+#define SAVE_LOG_ALL                // save log
 
 #define USING_IMU                //是否使用陀螺仪数据
 //===========================================================================//
@@ -45,8 +45,9 @@
 //---------------------------------------------------------------------------//
 
 #define USING_ROI   //Using roi
+#define SHOW_ROI    //Show roi
 
-// #define PRINT_LATENCY //输出运行时间
+#define PRINT_LATENCY //输出运行时间
 
 #define PRINT_TARGET_INFO //是否输出目标信息
 
