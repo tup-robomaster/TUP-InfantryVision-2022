@@ -19,7 +19,7 @@ Autoaim::Autoaim()
     is_last_target_exists = false;
     is_target_switched = true;
     last_target_area = 0;
-    input_size = {640,640};
+    input_size = {720,720};
     auto predictor_tmp = predictor_param_loader.generate();
     predictor.initParam(predictor_param_loader);
 
@@ -97,7 +97,7 @@ bool Autoaim::updateSpinScore()
             spin_status = UNKNOWN;
         else
             spin_status = spin_status_map[(*score).first];
-        // cout<<(*score).first<<"--:"<<(*score).second<<" "<<spin_status<<endl;
+        cout<<(*score).first<<"--:"<<(*score).second<<" "<<spin_status<<endl;
 
         // 若分数过低移除此元素
         if (abs((*score).second) <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
@@ -835,6 +835,9 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 #endif //SHOW_PREDICT
 
     auto angle = coordsolver.getAngle(aiming_point,rmat_imu);
+    //若预测出错则直接世界坐标系下坐标作为击打点
+    if (isnan(angle[0]) || isnan(angle[0]))
+        angle = coordsolver.getAngle(target.center3d_world,rmat_imu);
     auto time_predict = std::chrono::steady_clock::now();
 
     double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();

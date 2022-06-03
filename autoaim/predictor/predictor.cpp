@@ -132,8 +132,8 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     }
     else
     {
-        auto get_pf_available = std::async(std::launch::deferred, [=, &result_pf](){return predict_pf_run(target, result_pf, delta_time_estimate);});
-        auto get_fitting_available = std::async(std::launch::deferred, [=, &result_fitting](){return predict_fitting_run(result_fitting, time_estimate);});
+        auto get_pf_available = std::async(std::launch::async, [=, &result_pf](){return predict_pf_run(target, result_pf, delta_time_estimate);});
+        auto get_fitting_available = std::async(std::launch::async, [=, &result_fitting](){return predict_fitting_run(result_fitting, time_estimate);});
 
         is_pf_available = get_pf_available.get();
         is_fitting_available = get_fitting_available.get();
@@ -167,18 +167,18 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     if (cnt < 2000)
     {
         auto x = cnt * 5;
-        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,xyz[0] * 100),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_x,cv::Point2f((timestamp) / 10,xyz[0] * 100),1,cv::Scalar(0,0,255),1);
         cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[0] * 100),1,cv::Scalar(0,255,0),1);
         cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[0] * 100),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result[0]+ 200),1,cv::Scalar(255,255,255),1);
 
 
-        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,xyz[1] * 100 + 500),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_y,cv::Point2f((timestamp) / 10,xyz[1] * 100 + 500),1,cv::Scalar(0,0,255),1);
         cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[1] * 100 + 500),1,cv::Scalar(0,255,0),1);
         cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[1] * 100 + 500),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result[1]+ 200),1,cv::Scalar(255,255,255),1);
 
-        cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,xyz[2] * 100 + 200),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_z,cv::Point2f((timestamp) / 10,xyz[2] * 100 + 200),1,cv::Scalar(0,0,255),1);
         cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[2] * 100 + 200),1,cv::Scalar(0,255,0),1);
         cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[2] * 100),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result[2]),1,cv::Scalar(255,255,255),1);
@@ -237,7 +237,7 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
 
     is_available.xyz_status[0] = pf_v.is_ready;
     is_available.xyz_status[1] = pf_v.is_ready;
-    cout<<v_xyz<<endl;
+    // cout<<v_xyz<<endl;
 
     //Update
     Eigen::VectorXd measure (2);
