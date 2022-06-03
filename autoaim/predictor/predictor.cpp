@@ -66,6 +66,7 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     {
         target.xyz[0] = predict_pos[0];
         target.xyz[1] = predict_pos[1];
+        history_info.push_back(target);
     }
     //FIXME:
     //-----------------进行滑窗滤波,备选方案,暂未使用-------------------------------------
@@ -94,15 +95,15 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
         last_target = target;
         return xyz;
     }
+    //当队列长度不足时不使用拟合
+    else if (history_info.size() < min_fitting_len)
+    {
+        fitting_disabled = true;
+    }
     //当队列时间跨度过长时不使用拟合
     else if (target.timestamp - history_info.front().timestamp >= max_timespan)
     {
         history_info.pop_front();
-        fitting_disabled = true;
-    }
-    //当队列长度不足时不使用拟合
-    else if (history_info.size() < min_fitting_len)
-    {
         fitting_disabled = true;
     }
     //其余状况下皆可以进行拟合
@@ -230,8 +231,9 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     auto v_xyz = (target_next.xyz - target_prev.xyz) / (target_next.timestamp - target_prev.timestamp) * 1e3;
     auto t = target_next.timestamp - history_info.at(history_info.size() - 2).timestamp;
 
-    is_available[0] = pf_v.is_ready;
-    is_available[1] = pf_v.is_ready;
+    is_available.xyz_status[0] = pf_v.is_ready;
+    is_available.xyz_status[1] = pf_v.is_ready;
+    cout<<v_xyz<<endl;
 
     //Update
     Eigen::VectorXd measure (2);
@@ -241,11 +243,13 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     //Predict
     auto result_v = pf_v.predict();
 
-    auto predict_x = target[0] + result_v[0] * (time_estimated + t) / 1e3;
-    auto predict_y = target[1] + result_v[1] * (time_estimated + t) / 1e3;
+
+    auto predict_x = target.xyz[0] + result_v[0] * (time_estimated + t) / 1e3;
+    auto predict_y = target.xyz[1] + result_v[1] * (time_estimated + t) / 1e3;
 
 
     result << predict_x, predict_y, target.xyz[2];
+    // cout<<result<<endl;
 
     return is_available;
 }
