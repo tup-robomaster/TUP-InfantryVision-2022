@@ -13,8 +13,8 @@ static constexpr int NUM_COLORS = 4;   // Number of color
 static constexpr int TOPK = 128;       // TopK
 static constexpr float NMS_THRESH = 0.3;
 static constexpr float BBOX_CONF_THRESH = 0.75;
-static constexpr float FFT_CONF_ERROR = 0.15;
-static constexpr float FFT_MIN_IOU = 0.9;
+static constexpr float MERGE_CONF_ERROR = 0.15;
+static constexpr float MERGE_MIN_IOU = 0.9;
 
 static inline int argmax(const float *ptr, int len) 
 {
@@ -246,7 +246,7 @@ static void nms_sorted_bboxes(std::vector<ArmorObject>& faceobjects, std::vector
             {
                 keep = 0;
                 //Stored for FFT
-                if (iou > FFT_MIN_IOU && abs(a.prob - b.prob) < FFT_CONF_ERROR 
+                if (iou > MERGE_MIN_IOU && abs(a.prob - b.prob) < MERGE_CONF_ERROR 
                                         && a.cls == b.cls && a.color == b.color)
                 {
                     for (int i = 0; i < 4; i++)

@@ -97,7 +97,7 @@ bool Autoaim::updateSpinScore()
             spin_status = UNKNOWN;
         else
             spin_status = spin_status_map[(*score).first];
-        cout<<(*score).first<<"--:"<<(*score).second<<" "<<spin_status<<endl;
+        // cout<<(*score).first<<"--:"<<(*score).second<<" "<<spin_status<<endl;
 
         // 若分数过低移除此元素
         if (abs((*score).second) <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
@@ -636,21 +636,21 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             {
                 continue;
             }
-            // 若Tracker未完成初始化，不考虑使用
-            if (!(*iter).second.is_initialized || (*iter).second.history_info.size() < 3)
-            {
-                continue;
-            }
-            else
-            {
-                final_trackers.push_back(&(*iter).second);
-                available_candidates_cnt++;
-            }
+            // // 若Tracker未完成初始化，不考虑使用
+            // if (!(*iter).second.is_initialized || (*iter).second.history_info.size() < 3)
+            // {
+            //     continue;
+            // }
+            // else
+            // {
+            //     final_trackers.push_back(&(*iter).second);
+            //     available_candidates_cnt++;
+            // }
         }
-        if (available_candidates_cnt == 0)
-        {
-            cout<<"Invalid"<<endl;
-        }
+        // if (available_candidates_cnt == 0)
+        // {
+        //     cout<<"Invalid"<<endl;
+        // }
         // else
         // {   //TODO:改进旋转中心识别方法
         //     //FIXME:目前在目标小陀螺时并移动时，旋转中心的确定可能存在问题，故该语句块中的全部计算结果均暂未使用

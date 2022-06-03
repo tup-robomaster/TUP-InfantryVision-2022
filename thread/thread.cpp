@@ -222,7 +222,6 @@ bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory)
             usleep(5000);
             continue;
         }
-        
         serial.TransformData(transmit);
         serial.send();
         // cout<<"transmitting..."<<endl;

@@ -14,7 +14,7 @@ bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix, Eigen::MatrixXd &cov)
     default_random_engine e(rd());
     std::vector<normal_distribution<double>> normal_distribution_list;
 
-    //假设所有元素不相关
+    //假设各个变量不相关
     for (int i = 0; i<cov.cols(); i++)
     {
         normal_distribution<double> n(0,cov(i,i));
@@ -136,7 +136,6 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
     Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
     Eigen::MatrixXd mat_measure = measure.replicate(1,num_particle).transpose();
 
-    auto dst = (matrix_particle - mat_measure).mean();
     if (is_ready)
     {
         //序列重要性采样

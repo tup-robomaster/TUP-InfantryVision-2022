@@ -142,13 +142,17 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     //进行融合
     if (is_fitting_available.xyz_status[0] && !fitting_disabled)
         result[0] = result_fitting[0];
-    else
+    else if (is_pf_available.xyz_status[0])
         result[0] = result_pf[0];
+    else
+        result[0] = xyz[0];
 
     if (is_fitting_available.xyz_status[1] && !fitting_disabled)
         result[1] = result_fitting[1];
-    else
+    else if (is_pf_available.xyz_status[1])
         result[1] = result_pf[1];
+    else
+        result[1] = xyz[1];
 
     if (is_fitting_available.xyz_status[2] && !fitting_disabled)
         result[2] = result_fitting[2];
@@ -321,6 +325,6 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
     auto x_pred = params_x[0] + params_x[1] * cos(params_x[3] * time_estimated) + params_x[2] * sin(params_x[3] * time_estimated);
     auto y_pred = params_y[0] + params_y[1] * cos(params_y[3] * time_estimated) + params_y[2] * sin(params_y[3] * time_estimated);
 
-    result = {x_pred,y_pred,dc[2]};
+    result = {x_pred, y_pred, dc[2]};
     return is_available;
 }

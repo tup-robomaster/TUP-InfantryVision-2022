@@ -1,7 +1,7 @@
 # TUP-InfantryVision-2022
 沈阳航空航天大学T-UP战队2022赛季步兵视觉识别程序
 ## Author:顾昊 赵梓合
-## Version: 0.7 Beta
+## Version: V1.1 Beta
 ## Env
 http://www.fftw.org/download.html
 
@@ -15,6 +15,7 @@ sudo apt-get install libeigen3-dev
 
 sudo ln -s /usr/include/eigen3/Eigen /usr/include/Eigen
 ### 更新内容
+V1.1 改进预测器,优化UI 2022.6.3
 V1.0 合并更新debug.h，优化输出，添加日志记录，优化相机驱动，解耦串口，增加小陀螺判断，修复USB相机调用bug	
 V0.7 Beta 改善预测功能（使用拟合与粒子滤波），增添ROI 2022.1.27  
 V0.6 Beta 增加预测功能 2022.1.23  
@@ -39,3 +40,7 @@ V0.1 Beta 完成自瞄推理部分及粒子滤波器. 2021.11.12
         ulimit -c
 
         ulimit -c unlimited
+
+输入命令：sudo systemctl set-default multi-user.target 重启reboot
+
+开启界面：sudo systemctl set-default graphical.target
