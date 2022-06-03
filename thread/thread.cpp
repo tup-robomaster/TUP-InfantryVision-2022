@@ -7,7 +7,9 @@
 bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
 {
 #ifdef USING_DAHENG
+    //用于大恒离线后自动重新加载
     start_get_img:
+    
     DaHengCamera DaHeng;
     DaHeng.StartDevice(1);
     // 设置分辨率
@@ -17,9 +19,9 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-    DaHeng.SetExposureTime(6000);
-    // 设置1
-    DaHeng.SetGAIN(3, 14);
+    DaHeng.SetExposureTime(3000);
+    // 设置
+    DaHeng.SetGAIN(3, 5);
     // 是否启用自动白平衡7
     // DaHeng.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
@@ -35,6 +37,16 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // //Saturation
     // DaHeng.Set_Saturation(0,0);
 #endif //USING_DAHENG
+    
+#ifdef USING_DAHENG
+    fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
+    #ifdef SAVE_LOG_ALL
+        LOG(INFO) << "[CAMERA] Set param finished";
+    #endif //SAVE_LOG_ALL
+
+    int width = 640;
+    int height = 480;
+#endif //USING_DAHENG
 
 #ifdef USING_USB_CAMERA
     VideoCapture cap(0);
@@ -44,17 +56,11 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         LOG(INFO) << "[CAMERA] Open USB Camera success";
     #endif //SAVE_LOG_ALL
 
+    int width=cap.get(CAP_PROP_FRAME_WIDTH);
+    int height=cap.get(CAP_PROP_FRAME_HEIGHT);
     // auto time_start = std::chrono::steady_clock::now();
 #endif //USING_USB_CAMERA
 
-
-#ifdef USING_VIDEO
-    sleep(6);//防止网络加载完成前视频开始播放
-    VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
-    // VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/sample.mp4");
-#endif //USING_VIDEO
-
-    fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
 #ifdef SAVE_VIDEO
     /*============ video_writer ===========*/
     int frame_cnt = 0;
@@ -62,20 +68,18 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     char now[64];
     std::time_t tt;
     struct tm *ttime;
-    int width = 1280;
-    int height = 1024;
     tt = time(nullptr);
     ttime = localtime(&tt);
     strftime(now, 64, "%Y-%m-%d_%H_%M_%S", ttime);  // 以时间为名字
     std::string now_string(now);
     std::string path(std::string(storage_location + now_string).append(".avi"));
     auto writer = cv::VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 30.0, cv::Size(width, height));    // Avi form
-    std::future<void> write_video;
-    bool is_first_loop = true;
+    
     #ifdef SAVE_LOG_ALL
         LOG(INFO) << "[SAVE_VIDEO] Save video to " << path;
     #endif //SAVE_LOG_ALL
 #endif //SAVE_VIDEO
+
     while(1)
     {
         TaskData src;
@@ -97,17 +101,10 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         // src.timestamp = DaHeng.Get_TIMESTAMP();
 #endif //USING_DAHENG
 
-#ifdef USING_VIDEO
-        cap >> src.img;
-        auto time_cap = std::chrono::steady_clock::now();
-        src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
-        // sleep(0.02);
-        waitKey(33.3);
-#endif //USING_VIDEO
-
 #ifdef USING_USB_CAMERA
         cap >> src.img;
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
+        // waitKey(33.3);
 #endif //USING_USB_CAMERA
 
         if (src.img.empty())
@@ -120,22 +117,19 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
 #ifdef SAVE_VIDEO
         frame_cnt++;
-        if(frame_cnt % 5 == 0)
+        if(frame_cnt % 10 == 0)
         {
             frame_cnt = 0;
-            //异步读写加速,避免阻塞生产者
-            if (is_first_loop)
-                is_first_loop = false;
-            else
-                write_video.wait();
-            write_video = std::async(std::launch::async, [&, src](){writer.write(src.img);});
+            //TODO:异步读写加速
+            // auto write_video = std::async(std::launch::async, [&](){writer.write(src.img);});
+            writer.write(src.img);
         }
 #endif //SAVE_VIDEO
 
 #ifdef USING_IMU
         //获取下位机数据
         MCUData mcu_status;
-        if (!receive_factory.consume(mcu_status, src.timestamp))
+        if (!receive_factory.consume(mcu_status, src.timestamp - 4))
             continue;
         src.quat = mcu_status.quat;
         src.mode = mcu_status.mode;
@@ -167,11 +161,10 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
         mode = dst.mode;
 
 #ifdef DEBUG_WITHOUT_COM
-        mode = 1;
 #endif //DEBUG_WITHOUT_COM
+        mode = 1;
 
 #ifdef SAVE_TRANSMIT_LOG
-    // cout<<mode<<"..."<<last_mode<<endl;
     if (mode != last_mode)
     {
         LOG(INFO)<<"[CONSUMER] Mode switched to "<< mode;
@@ -182,14 +175,18 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
 
         if (mode == 1)
         {
-            autoaim.run(dst, data);
-            transmit_factory.produce(data);
+            if (autoaim.run(dst, data))
+            {
+                transmit_factory.produce(data);
+            }
         }
         //进入能量机关打击模式，3为小能量机关，4为大能量机关
         else if (mode == 3 || mode == 4)
         {
-            buff.run(dst, data);
-            transmit_factory.produce(data);
+            if (buff.run(dst, data))
+            {
+                transmit_factory.produce(data);
+            }   
         }
     }
     return true;
@@ -222,7 +219,6 @@ bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory)
             usleep(5000);
             continue;
         }
-        
         serial.TransformData(transmit);
         serial.send();
         // cout<<"transmitting..."<<endl;
@@ -260,9 +256,8 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
         auto timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // cout<<"Quat: "<<serial.quat[0]<<" "<<serial.quat[1]<<" "<<serial.quat[2]<<" "<<serial.quat[3]<<" "<<endl;
         // Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
-        //FIXME:注意此处mode设置
+
         int mode = serial.mode;
-        // int mode = 1;
         Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         Eigen::Vector3d acc = {serial.acc[0],serial.acc[1],serial.acc[2]};;
         Eigen::Vector3d gyro = {serial.gyro[0],serial.gyro[1],serial.gyro[2]};;

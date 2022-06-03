@@ -2,7 +2,7 @@
 //                          FIXME:临场调试选项
 //---------------------------------------------------------------------------//
 
-#define DETECT_RED  //红色检测，不启用默认为蓝色检测
+// #define DETECT_RED  //红色检测，不启用默认为蓝色检测
 
 // #define SAVE_VIDEO               // save video
 
@@ -40,7 +40,7 @@
 
 #define USING_ROI   //Using roi
 
-// #define PRINT_LATENCY //输出运行时
+// #define PRINT_LATENCY //输出运行时间
 
 #define PRINT_TARGET_INFO //是否输出目标信息
 
@@ -48,7 +48,7 @@
 
 #define USING_SPIN_DETECT //是否检测陀螺
 
-#define DISABLE_FITTING //是否禁用曲线拟合
+// #define DISABLE_FITTING //是否禁用曲线拟合
 //===========================================================================//
 
 
@@ -58,8 +58,8 @@
 
 // #define ASSIST_LABEL //辅助数据集标注
 
-// #define DRAW_PREDICT //是否显示预测图像(使用时需使视野内仅存在一块装甲板)
-// ===========================================================================//
+#define DRAW_PREDICT //是否显示预测图像(使用时需使视野内仅存在一块装甲板
+//===========================================================================//
 
 
 //---------------------------------------------------------------------------//
@@ -79,7 +79,6 @@
     #define USING_IMU_C_BOARD   //使用C板陀螺仪
 #endif // USING_IMU
 
-
 #ifdef SHOW_IMG
     #define SHOW_ALL_ARMOR  //是否绘制装甲板
     #define SHOW_ALL_FANS   //是否绘制所有扇叶
@@ -95,6 +94,7 @@
 #ifndef DETECT_RED
     #define DETECT_BLUE
 #endif  //DETECT_RED
+
 #ifdef DETECT_RED
     #define DETECT_BUFF_BLUE
 #else

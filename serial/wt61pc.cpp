@@ -73,7 +73,7 @@ bool IMUSerial::processData(int bytes)
             }
             else
             {
-                if (rdata[i] == (check_sum&0xff))
+                if (rdata[i] == check_sum&0xff)
                 {
                     getAcc(acc_data);
                     check_sum = 0;
@@ -92,7 +92,7 @@ bool IMUSerial::processData(int bytes)
             }
             else
             {
-                if (rdata[i] == (check_sum&0xff))
+                if (rdata[i] == check_sum&0xff)
                 {
                     getGyro(gryo_data);
                     check_sum = 0;
@@ -111,7 +111,7 @@ bool IMUSerial::processData(int bytes)
             }
             else
             {
-                if (rdata[i] == (check_sum&0xff))
+                if (rdata[i] == check_sum&0xff)
                 {
                     getQuat(quat_data);
                     check_sum = 0;

@@ -17,9 +17,8 @@ Autoaim::Autoaim()
     // cout<<"...."<<endl;
     lost_cnt = 0;
     is_last_target_exists = false;
-    is_target_switched = true;
     last_target_area = 0;
-    input_size = {640,640};
+    input_size = {416,416};
     auto predictor_tmp = predictor_param_loader.generate();
     predictor.initParam(predictor_param_loader);
 
@@ -97,23 +96,28 @@ bool Autoaim::updateSpinScore()
             spin_status = UNKNOWN;
         else
             spin_status = spin_status_map[(*score).first];
-        cout<<(*score).first<<"--:"<<(*score).second<<" "<<spin_status<<endl;
+        // cout<<(*score).first<<"--"<<(*score).second<<" "<<spin_status<<endl;
 
         // 若分数过低移除此元素
-        if (abs((*score).second) <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
+        if ((*score).second <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
         {
-            fmt::print(fmt::fg(fmt::color::red), "[SpinScore] Removing {}.\n", (*score).first);
+            fmt::print(fmt::fg(fmt::color::red), "[AUTOAIM] SpinScore Removing\n");
+
+            #ifdef SAVE_AUTOAIM_LOG
+                LOG(INFO)<<"[AUTOAIM] SpinScore Removing";
+            #endif //SAVE_AUTOAIM_LOG
+
             spin_status_map.erase((*score).first);
             score = spin_score_map.erase(score);
             continue;
         }
         // 
         if (spin_status != UNKNOWN)
-            (*score).second = 0.978 * (*score).second - 1 * abs((*score).second) / (*score).second;
+            (*score).second = 0.978 * (*score).second;
         else
             (*score).second = 0.998 * (*score).second - 1 * abs((*score).second) / (*score).second;
         //当小于该值时移除该元素
-        if (abs((*score).second) < 3 || isnan((*score).second))
+        if (abs((*score).second) < 3)
         {
             spin_status_map.erase((*score).first);
             score = spin_score_map.erase(score);
@@ -121,10 +125,10 @@ bool Autoaim::updateSpinScore()
         }
         else if (abs((*score).second) >= anti_spin_judge_high_thres)
         {
-            (*score).second = anti_spin_judge_high_thres * abs((*score).second) / (*score).second;
-            if ((*score).second > 0)
+            (*score).second = anti_spin_judge_high_thres;
+            if ((*score).second < 0)
                 spin_status_map[(*score).first] = CLOCKWISE;
-            else if((*score).second < 0)
+            else if((*score).second > 0)
                 spin_status_map[(*score).first] = COUNTER_CLOCKWISE;
         }
         ++score;
@@ -212,46 +216,26 @@ Eigen::Vector4d FitSpaceCircle(std::vector<Eigen::Vector3d> pts)
 }
 
 /**
- * @brief 从ArmorTracker选出最佳Tracker
+ * @brief 从装甲板中选择最终目标
  * 
- * @param trackers Trackers
- * @param timestamp 本次时间戳 
- * @return ArmorTracker* 选中的ArmorTracker
+ * @param armors 装甲板vector
+ * @return Armor 所选取的装甲板
  */
-ArmorTracker* Autoaim::chooseTargetTracker(vector<ArmorTracker*> trackers, int timestamp)
+Armor Autoaim::chooseTargetArmor(vector<Armor> armors)
 {
     //TODO:优化打击逻辑
-    //TODO:本逻辑为哨兵逻辑
     float max_area = 0;
-    float min_horizonal_dist = 0;
     int target_idx = 0;
-
-    //若存在上次tracker则直接返回,若不存在则装甲板面积最大的Tracker
-    for (int i = 0; i < trackers.size(); i++)
+    for(int i = 0; i < armors.size(); i++)
     {
-        auto horizonal_dist_to_center = abs(trackers[i]->last_armor.center2d.x - 640);
-        if (trackers[i]->last_timestamp == timestamp)
+        auto area = calcTetragonArea(armors[i].apex2d);
+        if (area >= max_area)
         {
-            //若该Tracker为上次Tracker且本次仍在更新,则直接使用该装甲板
-            if (trackers[i]->last_selected_timestamp == prev_timestamp)
-                return trackers[i];
-            //若该装甲板面积较大且与目前最大面积差距较大，列为候选并记录该装甲板数据
-            else if (trackers[i]->last_armor.area >= max_area && (trackers[i]->last_armor.area / max_area > 1.2 || trackers[i]->last_armor.area / max_area < 0.8))
-            {
-                max_area = trackers[i]->last_armor.area;
-                min_horizonal_dist = horizonal_dist_to_center;
-                target_idx = i;
-            }
-            //若该装甲板面积较大且与目前最大面积差距较小，判断该装甲板与图像中心点的二维水平距离
-            else if ((trackers[i]->last_armor.area / max_area < 1.2 || trackers[i]->last_armor.area / max_area > 0.8) && horizonal_dist_to_center < min_horizonal_dist)
-            {
-                min_horizonal_dist = horizonal_dist_to_center;
-                target_idx = i;
-            }
+            max_area = area;
+            target_idx = i;
         }
     }
-    return trackers[target_idx];
-
+    return armors[target_idx];
 }
 
 /**
@@ -260,15 +244,8 @@ ArmorTracker* Autoaim::chooseTargetTracker(vector<ArmorTracker*> trackers, int t
  * @param armors 
  * @return string 
  */
-string Autoaim::chooseTargetID(vector<Armor> &armors, int timestamp)
+string Autoaim::chooseTargetID(vector<Armor> &armors)
 {
-    //TODO:自瞄逻辑修改
-    bool is_last_id_exists = false;
-    string target_key;
-    //该选择逻辑主要存在两层约束:
-    //英雄约束与上次目标约束
-    //若检测到危险距离内的英雄直接退出循环
-    //若检测到存在上次击打目标,时间较短,且该目标运动较小,则将其选为候选目标,若遍历结束未发现危险距离内的英雄则将其ID选为目标ID.
     for (auto armor : armors)
     {
         //若视野中存在英雄且距离小于危险距离，直接选为目标
@@ -276,18 +253,9 @@ string Autoaim::chooseTargetID(vector<Armor> &armors, int timestamp)
         {
             return armor.key;
         }
-        //若存在上次击打目标,时间较短,且该目标运动较小则将其选为候选目标,若遍历结束未发现危险距离内的英雄则将其ID选为目标ID.
-        else if (armor.id == last_armor.id && abs(armor.center3d_world.norm() - last_armor.center3d_world.norm()) < 0.1 && abs(timestamp - prev_timestamp) < 30)
-        {
-            is_last_id_exists = true;
-            target_key = armor.key;
-        }
     }
     //若不存在则返回面积最大的装甲板序号，即队列首元素序号
-    if (is_last_id_exists)
-        return target_key;
-    else
-        return (*armors.begin()).key;
+    return (*armors.begin()).key;
 }
 
 
@@ -344,10 +312,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     //     fmt::print(fmt::fg(fmt::color::golden_rod), "Infer: {} ms\n",dr_infer_ms);
     // }
         lost_cnt++;
-        // cout<<lost_cnt<<endl;
         is_last_target_exists = false;
         last_target_area = 0;
-        data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
         return false;
     }
 #ifdef ASSIST_LABEL
@@ -375,7 +341,6 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         Armor armor;
         armor.id = object.cls;
         armor.color = object.color;
-        armor.conf = object.prob;
         if (object.color == 0)
             armor.key = "B" + to_string(object.cls);
         if (object.color == 1)
@@ -389,6 +354,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         {
             armor.apex2d[i] += Point2f((float)roi_offset.x,(float)roi_offset.y);
         }
+
         Point2f apex_sum;
         for(auto apex : armor.apex2d)
             apex_sum +=apex;
@@ -397,31 +363,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         // auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_ITERATIVE);
 
         std::vector<Point2f> points_pic(armor.apex2d, armor.apex2d + 4);
-        // std::vector<Point2f> tmp;
-        // for (auto rrect.)
-        TargetType target_type = SMALL;
-        //计算长宽比,确定装甲板类型
-        RotatedRect points_pic_rrect = minAreaRect(points_pic);
-        auto apex_wh_ratio = max(points_pic_rrect.size.height, points_pic_rrect.size.width) /
-                                 min(points_pic_rrect.size.height, points_pic_rrect.size.width);
-        //若大于长宽阈值或为哨兵、英雄装甲板
-        if (apex_wh_ratio > armor_type_wh_thres || object.cls == 1 || object.cls == 0)
-            target_type = BIG;
-        // for (auto pic : points_pic)
-        //     cout<<pic<<endl;
-        // cout<<target_type<<endl;
-        auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_IPPE);
-        //防止装甲板类型出错导致解算问题，首先尝试切换装甲板类型，若仍无效则直接跳过该装甲板
-        if (pnp_result.armor_cam.norm() > 10)
-        {
-            if (target_type == SMALL)
-                target_type = BIG;
-            else if (target_type == BIG)
-                target_type = SMALL;
-            pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_IPPE);
-            if (pnp_result.armor_cam.norm() > 10)
-                continue;
-        }
+        auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, SOLVEPNP_IPPE);
+        // auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_IPPE_SQUARE);
 
         armor.center3d_world = pnp_result.armor_world;
         armor.center3d_cam = pnp_result.armor_cam;
@@ -447,7 +390,6 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         lost_cnt++;
         is_last_target_exists = false;
         last_target_area = 0;
-        data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
         return false;
     }
     ///------------------------生成/分配ArmorTracker----------------------------
@@ -468,8 +410,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         else if (predictors_with_same_key == 1)
         {
             auto candidate = trackers_map.find((*armor).key);
-            auto delta_t = src.timestamp - (*candidate).second.prev_timestamp;
-            auto delta_dist = ((*armor).center3d_world - (*candidate).second.prev_armor.center3d_world).norm();
+            auto delta_t = src.timestamp - (*candidate).second.pre_timestamp;
+            auto delta_dist = ((*armor).center3d_world - (*candidate).second.pre_armor.center3d_world).norm();
             auto velocity = (delta_dist / delta_t) * 1e3;
             //若匹配则使用此ArmorTracker
             if (velocity <= max_v)
@@ -496,8 +438,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             //遍历所有同Key预测器，匹配速度最小且更新时间最近的ArmorTracker
             for (auto iter = candiadates.first; iter != candiadates.second; ++iter)
             {
-                auto delta_t = src.timestamp - (*iter).second.prev_timestamp;
-                auto delta_dist = ((*armor).center3d_world - (*iter).second.prev_armor.center3d_world).norm();
+                auto delta_t = src.timestamp - (*iter).second.pre_timestamp;
+                auto delta_dist = ((*armor).center3d_world - (*iter).second.pre_armor.center3d_world).norm();
                 auto velocity = (delta_dist / delta_t) * 1e3;
                 if (velocity <= max_v && velocity <= min_v && delta_t <= min_delta_t)
                 {
@@ -557,33 +499,36 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                 //确定新增装甲板与历史装甲板
                 if ((*candidate).second.is_initialized)
                 {
-                    last_armor_center = (*candidate).second.last_armor.center2d.x;
+                    last_armor_center = (*candidate).second.last_armor.center3d_cam[0];
                     last_armor_timestamp = (*candidate).second.last_timestamp;
                     ++candidate;
-                    new_armor_center = (*candidate).second.last_armor.center2d.x;
-                    new_armor_timestamp = (*candidate).second.last_timestamp;
+                    if (!(*candidate).second.is_initialized)
+                        {
+                            new_armor_center = (*candidate).second.last_armor.center3d_cam[0];
+                            new_armor_timestamp = (*candidate).second.last_timestamp;
+                        }
+                    else
+                        continue;
                 }
                 else
                 {
-                    new_armor_center = (*candidate).second.last_armor.center2d.x;
+                    new_armor_center = (*candidate).second.last_armor.center3d_cam[0];
                     new_armor_timestamp = (*candidate).second.last_timestamp;
                     ++candidate;
-                    last_armor_center = (*candidate).second.last_armor.center2d.x;
-                    last_armor_timestamp = (*candidate).second.last_timestamp;
+                    if ((*candidate).second.is_initialized)
+                        {
+                            last_armor_center = (*candidate).second.last_armor.center3d_cam[0];
+                            last_armor_timestamp = (*candidate).second.last_timestamp;
+                        }
+                    else
+                        continue;
                 }
                 auto spin_movement = new_armor_center - last_armor_center;
-
-                if (spin_score_map.count(cnt.first) == 0)
-                {
-                    if (abs(spin_movement) > 10 && last_armor_timestamp == new_armor_timestamp)
-                        spin_score_map[cnt.first] = 300 * spin_movement / abs(spin_movement);
-                }
-                else if (abs(spin_movement) > 10 && last_armor_timestamp == new_armor_timestamp)
-                {
-                    spin_score_map[cnt.first] = anti_spin_max_r_multiple * spin_score_map[cnt.first];
-                }
-                // cout<<spin_score_map[cnt.first]<<endl;
-
+                // cout<<last_armor_timestamp<<" : "<<new_armor_timestamp<<endl;
+                if (spin_score_map[cnt.first] == 0 && abs(spin_movement) > 0.05 && last_armor_timestamp == new_armor_timestamp)
+                    spin_score_map[cnt.first] = 100 * spin_movement / abs(spin_movement);
+                else if (abs(spin_movement) > 0.05 && last_armor_timestamp == new_armor_timestamp)
+                    spin_score_map[cnt.first] = 2 * spin_score_map[cnt.first];
             }
         }
     }
@@ -596,7 +541,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     // }
 #endif //USING_SPIN_DETECT
     ///-----------------------------判断击打车辆------------------------------------------
-    auto target_id = chooseTargetID(armors, src.timestamp);
+    auto target_id = chooseTargetID(armors);
     auto ID_candiadates = trackers_map.equal_range(target_id);
     ///---------------------------获取最终装甲板序列---------------------------------------
     bool is_target_spinning;
@@ -627,30 +572,23 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         auto available_candidates_cnt = 0;
         for (auto iter = ID_candiadates.first; iter != ID_candiadates.second; ++iter)
         {
-            if ((*iter).second.last_timestamp == src.timestamp)
-            {
-                final_armors.push_back((*iter).second.last_armor);
-                final_trackers.push_back(&(*iter).second);
-            }
-            else
-            {
-                continue;
-            }
-            // 若Tracker未完成初始化，不考虑使用
-            if (!(*iter).second.is_initialized || (*iter).second.history_info.size() < 3)
-            {
-                continue;
-            }
-            else
-            {
-                final_trackers.push_back(&(*iter).second);
-                available_candidates_cnt++;
-            }
+            //FIXME:目标选择存在问题，可能选择到历史装甲板
+            final_armors.push_back((*iter).second.last_armor);
+            //若Tracker未完成初始化，不考虑使用
+            // if (!(*iter).second.is_initialized || (*iter).second.history_info.size() < 3)
+            // {
+            //     continue;
+            // }
+            // else
+            // {
+            //     final_trackers.push_back(&(*iter).second);
+            //     available_candidates_cnt++;
+            // }
         }
-        if (available_candidates_cnt == 0)
-        {
-            cout<<"Invalid"<<endl;
-        }
+        // if (available_candidates_cnt == 0)
+        // {
+        //     cout<<"Invalid"<<endl;   
+        // }
         // else
         // {   //TODO:改进旋转中心识别方法
         //     //FIXME:目前在目标小陀螺时并移动时，旋转中心的确定可能存在问题，故该语句块中的全部计算结果均暂未使用
@@ -703,7 +641,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         }
 #ifdef USING_PREDICT
         Eigen::Vector3d predict_value;
-        auto delta_t = src.timestamp - prev_timestamp;
+        auto delta_t = src.timestamp - last_timestamp;
         auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
         auto velocity = (delta_dist / delta_t) * 1e3;
         if (target.key != last_armor.key || velocity > max_v)
@@ -727,25 +665,20 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     {
         for (auto iter = ID_candiadates.first; iter != ID_candiadates.second; ++iter)
         {
-            // final_armors.push_back((*iter).second.last_armor);
-            final_trackers.push_back(&(*iter).second);
+            //FIXME:目标选择存在问题，可能选择到历史装甲板
+            final_armors.push_back((*iter).second.last_armor);
         }
-        //进行目标选择
-        auto tracker = chooseTargetTracker(final_trackers, src.timestamp);
-        tracker->last_selected_timestamp = src.timestamp;
-        tracker->selected_cnt++;
-        target = tracker->last_armor;
+        //选取最大的装甲板进行击打
+        target = chooseTargetArmor(final_armors);
 
 #ifdef USING_PREDICT
-        auto delta_t = src.timestamp - prev_timestamp;
+        auto delta_t = src.timestamp - last_timestamp;
         auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
         auto velocity = (delta_dist / delta_t) * 1e3;
 
-        //目前类别预测不是十分稳定,若之后仍有问题，可以考虑去除类别判断条件
         if (target.key != last_armor.key || velocity > max_v)
         {
             predictor.initParam(predictor_param_loader);
-            // cout<<"initing"<<endl;
             aiming_point = target.center3d_cam;
         }
         else
@@ -785,35 +718,23 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     cnt++;
     usleep(5000);
 #endif //ASSIST_LABEL
-    Eigen::Vector3d predict_value;
-    auto delta_t = src.timestamp - prev_timestamp;
-    auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
-    auto velocity = (delta_dist / delta_t) * 1e3;
-
-    //判断装甲板是否切换，若切换将变量置1
-    if(target.key != last_armor.key || velocity > max_v)
-        is_target_switched = true;
-    else
-        is_target_switched = false;
-
     //获取装甲板中心与装甲板面积以下一次ROI截取使用
     last_roi_center = target.center2d;
     last_armor = target;
     lost_cnt = 0;
-    prev_timestamp = src.timestamp;
+    last_timestamp = src.timestamp;
     last_target_area = target.area;
     last_aiming_point = aiming_point;
     is_last_target_exists = true;
 
 #ifdef SHOW_AIM_CROSS
-    line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), {0,255,0}, 1);
-    line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), {0,255,0}, 1);
+        line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), {0,255,0}, 1);
+        line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), {0,255,0}, 1);
 #endif //SHOW_AIM_CROSS
 
 #ifdef SHOW_ALL_ARMOR
     for (auto armor :armors)
     {
-        putText(src.img, fmt::format("{:.2f}", armor.conf),armor.apex2d[3],FONT_HERSHEY_SIMPLEX, 1, {0, 255, 0}, 2);
         if (armor.color == 0)
             putText(src.img, fmt::format("B{}",armor.id),armor.apex2d[0],FONT_HERSHEY_SIMPLEX, 1, {255, 100, 0}, 2);
         if (armor.color == 1)
@@ -851,6 +772,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     imshow("dst",src.img);
     waitKey(1);
 #endif //SHOW_IMG
+
 #ifdef PRINT_LATENCY
     //降低输出频率，避免影响帧率
     if (src.timestamp % 10 == 0)
@@ -871,15 +793,15 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     fmt::print(fmt::fg(fmt::color::green_yellow), "Dist: {} m\n",(float)target.center3d_cam.norm());
     fmt::print(fmt::fg(fmt::color::white), "Target: {} \n",target.key);
     fmt::print(fmt::fg(fmt::color::orange_red), "Is Spinning: {} \n",is_target_spinning);
-    fmt::print(fmt::fg(fmt::color::orange_red), "Is Switched: {} \n",is_target_switched);
 #endif //PRINT_TARGET_INFO
+
 #ifdef SAVE_AUTOAIM_LOG
     LOG(INFO) <<"[AUTOAIM] LATENCY: "<< "Crop: " << dr_crop_ms << " ms" << " Infer: " << dr_infer_ms << " ms" << " Predict: " << dr_predict_ms << " ms" << " Total: " << dr_full_ms << " ms";
-    LOG(INFO) <<"[AUTOAIM] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)target.center3d_cam.norm()
-                    << " Target: " << target.key << " Is Spinning: " << is_target_spinning<< " Is Switched: " << is_target_switched;
-    LOG(INFO) <<"[AUTOAIM] PREDICTED: "<<"X: "<<aiming_point[0]<<" Y: "<<aiming_point[1]<<" Z: " << aiming_point[2];
+    LOG(INFO) <<"[AUTOAIM] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)target.center3d_cam.norm() << " Target: " << target.key << " Is Spinning: " << is_target_spinning;
 #endif //SAVE_AUTOAIM_LOG
 
-    data = {(float)angle[1], (float)angle[0], (float)target.center3d_cam.norm(), is_target_switched, 1, is_target_spinning, 0};
+    data = {(float)angle[1], (float)angle[0], (float)target.center3d_cam.norm(), 0, 1, is_target_spinning, 1};
+    // cout<<target.center3d_world<<endl;
     return true;
+
 }

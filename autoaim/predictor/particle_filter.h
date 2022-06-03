@@ -33,7 +33,6 @@ private:
     int num_particle;
 
     Eigen::MatrixXd process_noise_cov;
-    Eigen::MatrixXd observe_noise_cov;
     Eigen::MatrixXd weights;
 
     Eigen::MatrixXd matrix_estimate;

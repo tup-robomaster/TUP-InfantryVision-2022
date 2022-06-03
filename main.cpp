@@ -40,15 +40,10 @@ int main(int argc,char* argv[])
     std::thread serial_watcher(&serialWatcher, ref(serial));
     std::thread receiver(&dataReceiver, ref(serial), ref(data_receiver), time_start);
     #ifdef SAVE_MAIN_LOG
-        LOG(INFO) << "[MAIN] serial_watcher(with IMU) start!"<<endl;
+        LOG(INFO) << "[MAIN] serial_watcher(with IMU) start!"<<endl;;
     #endif //SAVE_MAIN_LOG
 #endif //USING_IMU_C_BOARD
 
-// #ifdef USING_IMU_WIT
-//     IMUSerial serial_imu(SERIAL_ID_IMU, BAUD_IMU);
-//     std::thread serial_watcher(&serialWatcher, ref(serial), ref (serial_imu));
-//     std::thread receiver(&dataReceiver, ref(serial_imu), ref(data_receiver), time_start);
-// #endif //USING_IMU_WIT
 
     std::thread task_producer(&producer, ref(task_factory), ref(data_receiver), time_start);
 #ifdef SAVE_MAIN_LOG
@@ -105,3 +100,9 @@ int main(int argc,char* argv[])
 
     return 0;
 }
+
+// #ifdef USING_IMU_WIT
+//     IMUSerial serial_imu(SERIAL_ID_IMU, BAUD_IMU);
+//     std::thread serial_watcher(&serialWatcher, ref(serial), ref (serial_imu));
+//     std::thread receiver(&dataReceiver, ref(serial_imu), ref(data_receiver), time_start);
+// #endif //USING_IMU_WIT

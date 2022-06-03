@@ -24,9 +24,9 @@
 
 using namespace std;
 using namespace cv;
-const string camera_name = "KE0200110076";
 
-enum TargetType {SMALL, BIG, BUFF};
+const string camera_name = "KE0200110075";
+
 /**
  * @brief 存储任务所需数据的结构体
  * 

@@ -81,33 +81,33 @@ bool CoordSolver::loadParam(string coord_path,string param_name)
  * @param method PnP解算方法
  * @return PnPInfo 
  */
-PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Matrix3d &rmat_imu, enum TargetType type, int method=SOLVEPNP_IPPE)
+PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Matrix3d &rmat_imu, int method)
 {
 
     std::vector<Point3d> points_world;
     std::vector<Point2f> vecotr_apex = {points_pic[0], points_pic[1], points_pic[2], points_pic[3]};
 
     //长度为4进入装甲板模式
-
+    if (points_pic.size() == 4)
+    {
+        RotatedRect points_pic_rrect = minAreaRect(vecotr_apex);
+        auto apex_wh_ratio = max(points_pic_rrect.size.height, points_pic_rrect.size.width) / min(points_pic_rrect.size.height, points_pic_rrect.size.width);
         //大于长宽比阈值使用大装甲板世界坐标
-    if (type == BIG)
-    {
-        points_world = {
-            {-0.1125,0.027,0},
-            {-0.1125,-0.027,0},
-            {0.1125,-0.027,0},
-            {0.1125,0.027,0}};
-    }
-    else if (type == SMALL)
-    {
-        points_world = {
-            {-0.066,0.027,0},
-            {-0.066,-0.027,0},
-            {0.066,-0.027,0},
-            {0.066,0.027,0}};
+        if(apex_wh_ratio > armor_type_wh_thres)
+            points_world = {
+                {-0.1125,0.027,0},
+                {-0.1125,-0.027,0},
+                {0.1125,-0.027,0},
+                {0.1125,0.027,0}};
+        else
+            points_world = {
+                {-0.066,0.027,0},
+                {-0.066,-0.027,0},
+                {0.066,-0.027,0},
+                {0.066,0.027,0}};
     }
     //长度为5进入大符模式
-    else if (type == BUFF)
+    else if (points_pic.size() == 5)
     {
         points_world = {
         {-0.1125,0.027,0},
@@ -331,6 +331,7 @@ Eigen::Vector3d CoordSolver::camToWorld(const Eigen::Vector3d &point_camera, con
     point_camera_tmp << point_camera[0], point_camera[1], point_camera[2], 1;
     point_imu_tmp = transform_ic * point_camera_tmp;
     point_imu << point_imu_tmp[0], point_imu_tmp[1], point_imu_tmp[2];
+    cout<<point_imu<<endl;
     point_imu -= t_iw;
     return rmat * point_imu;
 }
