@@ -13,8 +13,8 @@ static constexpr int NUM_COLORS = 4;   // Number of color
 static constexpr int TOPK = 128;       // TopK
 static constexpr float NMS_THRESH = 0.3;
 static constexpr float BBOX_CONF_THRESH = 0.75;
-static constexpr float FFT_CONF_ERROR = 0.15;
-static constexpr float FFT_MIN_IOU = 0.9;
+static constexpr float MERGE_CONF_ERROR = 0.15;
+static constexpr float MERGE_MIN_IOU = 0.9;
 
 static inline int argmax(const float *ptr, int len) 
 {
@@ -246,7 +246,7 @@ static void nms_sorted_bboxes(std::vector<ArmorObject>& faceobjects, std::vector
             {
                 keep = 0;
                 //Stored for FFT
-                if (iou > FFT_MIN_IOU && abs(a.prob - b.prob) < FFT_CONF_ERROR 
+                if (iou > MERGE_MIN_IOU && abs(a.prob - b.prob) < MERGE_CONF_ERROR 
                                         && a.cls == b.cls && a.color == b.color)
                 {
                     for (int i = 0; i < 4; i++)
@@ -308,7 +308,7 @@ bool ArmorDetector::initModel(string path)
 {
     ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "../.cache"}});
     // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
-    ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
+    // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
     // Step 1. Read a model in OpenVINO Intermediate Representation (.xml and
     // .bin files) or ONNX (.onnx file) format
     network = ie.ReadNetwork(path);
@@ -333,8 +333,8 @@ bool ArmorDetector::initModel(string path)
     // output_info->setPrecision(Precision::FP16);
     // Step 3. Loading a model to the device
     // executable_network = ie.LoadNetwork(network, "MULTI:GPU");
-    executable_network = ie.LoadNetwork(network, "GPU");
-    // executable_network = ie.LoadNetwork(network, "CPU");
+    // executable_network = ie.LoadNetwork(network, "GPU");
+    executable_network = ie.LoadNetwork(network, "CPU");
 
     // Step 4. Create an infer request
     infer_request = executable_network.CreateInferRequest();

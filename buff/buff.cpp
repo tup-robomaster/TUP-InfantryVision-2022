@@ -372,6 +372,9 @@ bool Buff::run(TaskData &src,VisionData &data)
     auto angle = coordsolver.getAngle(hit_point_cam,rmat_imu);
     auto time_predict = std::chrono::steady_clock::now();
     double dr_full_ms = std::chrono::duration<double,std::milli>(time_predict - time_start).count();
+    double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
+    double dr_infer_ms = std::chrono::duration<double,std::milli>(time_infer - time_crop).count();
+    double dr_predict_ms = std::chrono::duration<double,std::milli>(time_predict - time_infer).count();
 
 #ifdef SHOW_FPS
     putText(src.img, fmt::format("FPS: {}",int(1000 / dr_full_ms)), {10, 25}, FONT_HERSHEY_SIMPLEX, 1, {0,255,0});
@@ -386,9 +389,6 @@ bool Buff::run(TaskData &src,VisionData &data)
     //降低输出频率，避免影响帧率
     if (src.timestamp % 10 == 0)
     {
-        double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
-        double dr_infer_ms = std::chrono::duration<double,std::milli>(time_infer - time_crop).count();
-        double dr_predict_ms = std::chrono::duration<double,std::milli>(time_predict - time_infer).count();
         fmt::print(fmt::fg(fmt::color::gray), "-----------TIME------------\n");
         fmt::print(fmt::fg(fmt::color::blue_violet), "Crop: {} ms\n"   ,dr_crop_ms);
         fmt::print(fmt::fg(fmt::color::golden_rod), "Infer: {} ms\n",dr_infer_ms);
@@ -401,14 +401,14 @@ bool Buff::run(TaskData &src,VisionData &data)
     fmt::print(fmt::fg(fmt::color::gray), "-----------INFO------------\n");
     fmt::print(fmt::fg(fmt::color::blue_violet), "Yaw: {} \n",angle[0]);
     fmt::print(fmt::fg(fmt::color::golden_rod), "Pitch: {} \n",angle[1]);
-    fmt::print(fmt::fg(fmt::color::green_yellow), "Dist: {} m\n",(float)target.armor3d_cam.norm());
+    fmt::print(fmt::fg(fmt::color::green_yellow), "Dist: {} m\n",(float)hit_point_cam.norm());
 #endif //PRINT_TARGET_INFO
 
 #ifdef SAVE_BUFF_LOG
-    // LOG(INFO) <<"[BUFF] LATENCY: "<< "Crop: " << dr_crop_ms << " ms" << " Infer: " << dr_infer_ms << " ms" << " Predict: " << dr_predict_ms << " ms" << " Total: " << dr_full_ms << " ms";
-    // LOG(INFO) <<"[BUFF] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)target.center3d_cam.norm();
+    LOG(INFO) <<"[BUFF] LATENCY: "<< "Crop: " << dr_crop_ms << " ms" << " Infer: " << dr_infer_ms << " ms" << " Predict: " << dr_predict_ms << " ms" << " Total: " << dr_full_ms << " ms";
+    LOG(INFO) <<"[BUFF] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)hit_point_cam.norm();
 #endif //SAVE_BUFF_LOG
 
-    data = {(float)angle[1], (float)angle[0], (float)target.armor3d_cam.norm(), 0, 1, 1, 1};
+    data = {(float)angle[1], (float)angle[0], (float)hit_point_cam.norm(), 0, 1, 1, 1};
     return true;
 }

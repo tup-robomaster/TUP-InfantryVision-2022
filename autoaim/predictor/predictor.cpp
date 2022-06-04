@@ -18,7 +18,8 @@ ArmorPredictor::~ArmorPredictor()
 ArmorPredictor ArmorPredictor::generate()
 {
     ArmorPredictor new_predictor;
-    new_predictor.pf.initParam(pf);
+    new_predictor.pf_pos.initParam(pf_pos);
+    new_predictor.pf_v.initParam(pf_v);
     new_predictor.fitting_disabled = false;
 
     return new_predictor;
@@ -27,7 +28,8 @@ ArmorPredictor ArmorPredictor::generate()
 bool ArmorPredictor::initParam(ArmorPredictor &predictor_loader)
 {
     history_info.clear();
-    pf.initParam(predictor_loader.pf);
+    pf_pos.initParam(predictor_loader.pf_pos);
+    pf_v.initParam(predictor_loader.pf_v);
     fitting_disabled = false;
     
     return true;
@@ -36,6 +38,7 @@ bool ArmorPredictor::initParam(ArmorPredictor &predictor_loader)
 bool ArmorPredictor::initParam(string coord_path)
 {
     YAML::Node config = YAML::LoadFile(coord_path);
+<<<<<<< HEAD
 <<<<<<< HEAD
     if(config.IsNull())
     {
@@ -48,6 +51,10 @@ bool ArmorPredictor::initParam(string coord_path)
 =======
     pf.initParam(config,"autoaim");
 >>>>>>> main
+=======
+    pf_pos.initParam(config,"pos");
+    pf_v.initParam(config,"v");
+>>>>>>> main
     fitting_disabled = false;
     
     return true;
@@ -58,18 +65,29 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
 {
     auto t1=std::chrono::steady_clock::now();
     TargetInfo target = {xyz, (int)xyz.norm(), timestamp};
-    
-    //当队列长度小于3，仅更新队列
-    if (history_info.size() < 3)
+    //-----------------对位置进行粒子滤波,以降低测距噪声影响-------------------------------------
+    Eigen::VectorXd measure (2);
+    measure << xyz[0], xyz[1];
+    bool is_pos_filter_ready = pf_pos.update(measure);
+    Eigen::VectorXd predict_pos_xy = pf_pos.predict();
+    Eigen::Vector3d predict_pos = {predict_pos_xy[0], predict_pos_xy[1], xyz[2]};
+    //若位置粒子滤波器未完成初始化或滤波结果与目前位置相距过远,则本次不对目标位置做滤波,直接向队列压入原值
+    if (!is_pos_filter_ready || (predict_pos - xyz).norm() > 0.1)
     {
         history_info.push_back(target);
-        last_target = target;
-        return xyz;
     }
+    //若位置粒子滤波器已完成初始化且预测值大小恰当,则对目标位置做滤波
+    else
+    {
+        target.xyz[0] = predict_pos[0];
+        target.xyz[1] = predict_pos[1];
+        history_info.push_back(target);
+    }
+    //FIXME:
+    //-----------------进行滑窗滤波,备选方案,暂未使用-------------------------------------
     auto d_xyz = target.xyz - last_target.xyz;
     auto delta_t = timestamp - last_target.timestamp;
     auto last_dist = history_info.back().dist;
-    // auto delta_time_estimate = (last_dist / bullet_speed) * 1e3 + delay;
     auto delta_time_estimate = (last_dist / bullet_speed) * 1e3 + delay;
     auto time_estimate = delta_time_estimate + history_info.back().timestamp - history_info.front().timestamp;
     //如速度过大,可认为为噪声干扰,进行滑窗滤波滤除
@@ -85,27 +103,33 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     // target = {filtered_xyz, (int)filtered_xyz.norm(), timestamp};
     // history_info.pop_back();
 
-    //当队列长度不足时不使用拟合
-    if (history_info.size() < min_fitting_len)
+    //---------------根据目前队列长度选用合适的滤波器------------------------------------
+    //当队列长度小于3，仅更新队列
+    if (history_info.size() < 3)
     {
-        history_info.push_back(target);
+        last_target = target;
+        return xyz;
+    }
+    //当队列长度不足时不使用拟合
+    else if (history_info.size() < min_fitting_len)
+    {
         fitting_disabled = true;
     }
     //当队列时间跨度过长时不使用拟合
     else if (target.timestamp - history_info.front().timestamp >= max_timespan)
     {
         history_info.pop_front();
-        history_info.push_back(target);
         fitting_disabled = true;
     }
-    else if (history_info.size() <= history_deque_len)
+    //其余状况下皆可以进行拟合
+    else
     {
-        history_info.push_back(target);
         fitting_disabled = false;
         //若队列过长，移除首元素
         if (history_info.size() > history_deque_len)
             history_info.pop_front();
     }
+
     
 #ifdef DISABLE_FITTING
     fitting_disabled = true;
@@ -123,8 +147,8 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     }
     else
     {
-        auto get_pf_available = std::async(std::launch::deferred, [=, &result_pf](){return predict_pf_run(target, result_pf, delta_time_estimate);});
-        auto get_fitting_available = std::async(std::launch::deferred, [=, &result_fitting](){return predict_fitting_run(result_fitting, time_estimate);});
+        auto get_pf_available = std::async(std::launch::async, [=, &result_pf](){return predict_pf_run(target, result_pf, delta_time_estimate);});
+        auto get_fitting_available = std::async(std::launch::async, [=, &result_fitting](){return predict_fitting_run(result_fitting, time_estimate);});
 
         is_pf_available = get_pf_available.get();
         is_fitting_available = get_fitting_available.get();
@@ -133,13 +157,17 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     //进行融合
     if (is_fitting_available.xyz_status[0] && !fitting_disabled)
         result[0] = result_fitting[0];
-    else
+    else if (is_pf_available.xyz_status[0])
         result[0] = result_pf[0];
+    else
+        result[0] = xyz[0];
 
     if (is_fitting_available.xyz_status[1] && !fitting_disabled)
         result[1] = result_fitting[1];
-    else
+    else if (is_pf_available.xyz_status[1])
         result[1] = result_pf[1];
+    else
+        result[1] = xyz[1];
 
     if (is_fitting_available.xyz_status[2] && !fitting_disabled)
         result[2] = result_fitting[2];
@@ -154,15 +182,15 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     if (cnt < 2000)
     {
         auto x = cnt * 5;
-        cv::circle(pic_x,cv::Point2f((timestamp) / 10,xyz[0] * 100 + 200),1,cv::Scalar(0,0,255),1);
-        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[0] * 100 + 200),1,cv::Scalar(0,255,0),1);
-        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[0] * 100 + 200),1,cv::Scalar(255,255,0),1);
+        cv::circle(pic_x,cv::Point2f((timestamp) / 10,xyz[0] * 100),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[0] * 100),1,cv::Scalar(0,255,0),1);
+        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[0] * 100),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result[0]+ 200),1,cv::Scalar(255,255,255),1);
 
 
-        cv::circle(pic_y,cv::Point2f((timestamp) / 10,xyz[1] * 100 + 200),1,cv::Scalar(0,0,255),1);
-        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[1] * 100 + 200),1,cv::Scalar(0,255,0),1);
-        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[1] * 100 + 200),1,cv::Scalar(255,255,0),1);
+        cv::circle(pic_y,cv::Point2f((timestamp) / 10,xyz[1] * 100 + 500),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[1] * 100 + 500),1,cv::Scalar(0,255,0),1);
+        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[1] * 100 + 500),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result[1]+ 200),1,cv::Scalar(255,255,255),1);
 
         cv::circle(pic_z,cv::Point2f((timestamp) / 10,xyz[2] * 100 + 200),1,cv::Scalar(0,0,255),1);
@@ -215,37 +243,32 @@ inline Eigen::Vector3d ArmorPredictor::shiftWindowFilter(int start_idx=0)
 ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, Vector3d &result, int time_estimated)
 {
     PredictStatus is_available;
-    //使用线性运动模型
-    Eigen::VectorXd measure_v (2);
 
-    Eigen::Vector3d v_sum = {0, 0, 0};
-    Eigen::Vector3d v_xyz = {0, 0, 0};
-    //使用逐差法求解现在速度
-    int max_iter = 2;
-    int back_idx = history_info.size() - 1;
+    //采取中心差分法,使用 t, t-1, t-2时刻速度,计算t-1时刻的速度
+    auto target_prev = history_info.at(history_info.size() - 3);
+    auto target_next = target;
+    auto v_xyz = (target_next.xyz - target_prev.xyz) / (target_next.timestamp - target_prev.timestamp) * 1e3;
+    auto t = target_next.timestamp - history_info.at(history_info.size() - 2).timestamp;
 
-    for (int i = 0; i < max_iter; i++)
-    {
-        auto next = history_info[back_idx - i];
-        auto prev = history_info[back_idx - i - 2];
-        v_sum += (next.xyz - prev.xyz) / (next.timestamp - prev.timestamp) * 1e3; 
-    }
-    v_xyz = v_sum / max_iter;
-    // cout<<v_xyz.norm()<<endl;
-
-    measure_v << v_xyz[0], v_xyz[1];
-
-    is_available.xyz_status[0] = pf.is_ready;
-    is_available.xyz_status[1] = pf.is_ready;
+    is_available.xyz_status[0] = pf_v.is_ready;
+    is_available.xyz_status[1] = pf_v.is_ready;
+    // cout<<v_xyz<<endl;
 
     //Update
-    pf.update(measure_vx)
-    auto result_v = pf.predict();
+    Eigen::VectorXd measure (2);
+    measure << v_xyz[0], v_xyz[1];
+    pf_v.update(measure);
+
+    //Predict
+    auto result_v = pf_v.predict();
 
 
-    result << result_v[0], result_v[1], 0;
-    result = result  * (time_estimated / 1000.f) + target.xyz;
+    auto predict_x = target.xyz[0] + result_v[0] * (time_estimated + t) / 1e3;
+    auto predict_y = target.xyz[1] + result_v[1] * (time_estimated + t) / 1e3;
 
+
+    result << predict_x, predict_y, target.xyz[2];
+    // cout<<result<<endl;
 
     return is_available;
 }
@@ -317,6 +340,6 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
     auto x_pred = params_x[0] + params_x[1] * cos(params_x[3] * time_estimated) + params_x[2] * sin(params_x[3] * time_estimated);
     auto y_pred = params_y[0] + params_y[1] * cos(params_y[3] * time_estimated) + params_y[2] * sin(params_y[3] * time_estimated);
 
-    result = {x_pred,y_pred,dc[2]};
+    result = {x_pred, y_pred, dc[2]};
     return is_available;
 }

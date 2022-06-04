@@ -6,9 +6,9 @@
 
 #define SAVE_VIDEO               // save video
 
-#define SAVE_LOG_ALL                // save log
+// #define SAVE_LOG_ALL                // save log
 
-#define USING_IMU                //是否使用陀螺仪数据
+// #define USING_IMU                //是否使用陀螺仪数据
 //===========================================================================//
 
 
@@ -18,8 +18,10 @@
 //                              硬件设备选项
 //---------------------------------------------------------------------------//
 
-#define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+// #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+#define USING_HAIKANG               //是否使用海康相机
 
+<<<<<<< HEAD
 /**** 大恒相机型号 ****/ 
 // #define CAMERA_ID_73 
 #ifndef CAMERA_ID_73
@@ -27,6 +29,9 @@
 #endif
 
 // #define DEBUG_WITHOUT_COM           //无串口调试
+=======
+#define DEBUG_WITHOUT_COM           //无串口调试
+>>>>>>> main
 //===========================================================================//
 
 
@@ -34,7 +39,7 @@
 //                              图像DEBUG相关选项
 //---------------------------------------------------------------------------//
 
-#define SHOW_INPUT      //显示送入神经网络的图像
+// #define SHOW_INPUT      //显示送入神经网络的图像
 
 #define SHOW_IMG        //是否显示检测Armor后的图像
 //===========================================================================//
@@ -47,15 +52,19 @@
 #define USING_ROI   //Using roi
 #define SHOW_ROI    //Show roi
 
+<<<<<<< HEAD
 #define PRINT_LATENCY //输出运行时间
+=======
+// #define PRINT_LATENCY //输出运行时
+>>>>>>> main
 
 #define PRINT_TARGET_INFO //是否输出目标信息
 
-#define USING_PREDICT           //是否启用预测
+// #define USING_PREDICT           //是否启用预测
 
-#define USING_SPIN_DETECT //是否检测陀螺
+// #define USING_SPIN_DETECT //是否检测陀螺
 
-#define DISABLE_FITTING //是否禁用曲线拟合
+// #define DISABLE_FITTING //是否禁用曲线拟合
 //===========================================================================//
 
 
@@ -65,8 +74,8 @@
 
 // #define ASSIST_LABEL //辅助数据集标注
 
-#define DRAW_PREDICT //是否显示预测图像(使用时需使视野内仅存在一块装甲板)
-//===========================================================================//
+// #define DRAW_PREDICT //是否显示预测图像(使用时需使视野内仅存在一块装甲板)
+// ===========================================================================//
 
 
 //---------------------------------------------------------------------------//
@@ -96,7 +105,9 @@
 #endif // SHOW_IMG
 
 #ifndef USING_DAHENG
-    #define USING_USB_CAMERA
+    #ifndef USING_HAIKANG
+        #define USING_USB_CAMERA
+    #endif // USING_HAIKANG
 #endif // USING_DAHENG
 
 #ifndef DETECT_RED

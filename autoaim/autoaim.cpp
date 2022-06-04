@@ -28,7 +28,7 @@ Autoaim::Autoaim()
     is_last_target_exists = false;
     is_target_switched = true;
     last_target_area = 0;
-    input_size = {640,640};
+    input_size = {720,720};
     auto predictor_tmp = predictor_param_loader.generate();
     predictor.initParam(predictor_param_loader);
 
@@ -263,14 +263,14 @@ ArmorTracker* Autoaim::chooseTargetTracker(vector<ArmorTracker*> trackers, int t
             if (trackers[i]->last_selected_timestamp == prev_timestamp)
                 return trackers[i];
             //若该装甲板面积较大且与目前最大面积差距较大，列为候选并记录该装甲板数据
-            else if (trackers[i]->last_armor.area >= max_area && abs(trackers[i]->last_armor.area - max_area) > 300)
+            else if (trackers[i]->last_armor.area >= max_area && (trackers[i]->last_armor.area / max_area > 1.2 || trackers[i]->last_armor.area / max_area < 0.8))
             {
                 max_area = trackers[i]->last_armor.area;
                 min_horizonal_dist = horizonal_dist_to_center;
                 target_idx = i;
             }
             //若该装甲板面积较大且与目前最大面积差距较小，判断该装甲板与图像中心点的二维水平距离
-            else if (abs(trackers[i]->last_armor.area - max_area) <= 300 && horizonal_dist_to_center < min_horizonal_dist)
+            else if ((trackers[i]->last_armor.area / max_area < 1.2 || trackers[i]->last_armor.area / max_area > 0.8) && horizonal_dist_to_center < min_horizonal_dist)
             {
                 min_horizonal_dist = horizonal_dist_to_center;
                 target_idx = i;
@@ -443,7 +443,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             target_type = BIG;
         // for (auto pic : points_pic)
         //     cout<<pic<<endl;
-        // cout<<endl;
+        // cout<<target_type<<endl;
         auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_IPPE);
         //防止装甲板类型出错导致解算问题，首先尝试切换装甲板类型，若仍无效则直接跳过该装甲板
         if (pnp_result.armor_cam.norm() > 10)
@@ -671,21 +671,21 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             {
                 continue;
             }
-            // 若Tracker未完成初始化，不考虑使用
-            if (!(*iter).second.is_initialized || (*iter).second.history_info.size() < 3)
-            {
-                continue;
-            }
-            else
-            {
-                final_trackers.push_back(&(*iter).second);
-                available_candidates_cnt++;
-            }
+            // // 若Tracker未完成初始化，不考虑使用
+            // if (!(*iter).second.is_initialized || (*iter).second.history_info.size() < 3)
+            // {
+            //     continue;
+            // }
+            // else
+            // {
+            //     final_trackers.push_back(&(*iter).second);
+            //     available_candidates_cnt++;
+            // }
         }
-        if (available_candidates_cnt == 0)
-        {
-            cout<<"Invalid"<<endl;   
-        }
+        // if (available_candidates_cnt == 0)
+        // {
+        //     cout<<"Invalid"<<endl;
+        // }
         // else
         // {   //TODO:改进旋转中心识别方法
         //     //FIXME:目前在目标小陀螺时并移动时，旋转中心的确定可能存在问题，故该语句块中的全部计算结果均暂未使用
@@ -873,6 +873,9 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 #endif //SHOW_PREDICT
 
     auto angle = coordsolver.getAngle(aiming_point,rmat_imu);
+    //若预测出错则直接世界坐标系下坐标作为击打点
+    if (isnan(angle[0]) || isnan(angle[0]))
+        angle = coordsolver.getAngle(target.center3d_world,rmat_imu);
     auto time_predict = std::chrono::steady_clock::now();
 
     double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
@@ -915,7 +918,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     LOG(INFO) <<"[AUTOAIM] LATENCY: "<< "Crop: " << dr_crop_ms << " ms" << " Infer: " << dr_infer_ms << " ms" << " Predict: " << dr_predict_ms << " ms" << " Total: " << dr_full_ms << " ms";
     LOG(INFO) <<"[AUTOAIM] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)target.center3d_cam.norm()
                     << " Target: " << target.key << " Is Spinning: " << is_target_spinning<< " Is Switched: " << is_target_switched;
-    LOG(INFO) <<"[AUTOAIM] TARGET_COORD: "<<"X: "<<target.center3d_world[0]<<" Y: "<<target.center3d_world[1]<<" Z: " << target.center3d_world[2];
+    LOG(INFO) <<"[AUTOAIM] PREDICTED: "<<"X: "<<aiming_point[0]<<" Y: "<<aiming_point[1]<<" Z: " << aiming_point[2];
 #endif //SAVE_AUTOAIM_LOG
 
     //pitch + yaw + dist
