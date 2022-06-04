@@ -17,6 +17,7 @@ find_package(Ceres REQUIRED COMPONENTS EigenSparse)
 find_package(fmt REQUIRED)
 find_package(glog REQUIRED)
 
+include_directories(${PROJECT_SOURCE_DIR} /HaiKang_SDK/include/)
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIRS})
 include_directories(${InferenceEngine_INCLUDE_DIRS})
@@ -64,6 +65,7 @@ add_executable(Infantry_Vision main.cpp
             ${PROJECT_SOURCE_DIR}/serial/wt61pc.h
             ${PROJECT_SOURCE_DIR}/serial/CRC_Check.cpp
             ${PROJECT_SOURCE_DIR}/serial/CRC_Check.h
+            ${PROJECT_SOURCE_DIR}/HaiKang_SDK/HaiKangCamera.cpp
 )
 
 # add_executable(autoaim autoaim.cpp
@@ -78,6 +80,10 @@ add_executable(Infantry_Vision main.cpp
 #                         )
 target_link_libraries(Infantry_Vision ${OpenCV_LIBRARIES} ${InferenceEngine_LIBRARIES} ${Eigen3_LIBRARIES}
                          yaml-cpp gxiapi Ceres::ceres fftw3 fmt::fmt glog matplotlib_cpp::matplotlib_cpp)
+
+# 包含海康相机动态链接库
+find_library(MVS_LIB libMvCameraControl.so /opt/MVS/lib/64/)
+target_link_libraries(Infantry_Vision ${MVS_LIB})
 
 # set(LINK_DIR /opt/intel/openvino_2021/deployment_tools/inference_engine/lib/intel64)
 

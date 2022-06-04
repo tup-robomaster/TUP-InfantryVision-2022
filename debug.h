@@ -4,11 +4,11 @@
 
 // #define DETECT_RED  //红色检测，不启用默认为蓝色检测
 
-#define SAVE_VIDEO               // save video
+// #define SAVE_VIDEO               // save video
 
-#define SAVE_LOG_ALL                // save log
+// #define SAVE_LOG_ALL                // save log
 
-#define USING_IMU                //是否使用陀螺仪数据
+// #define USING_IMU                //是否使用陀螺仪数据
 //===========================================================================//
 
 
@@ -18,9 +18,10 @@
 //                              硬件设备选项
 //---------------------------------------------------------------------------//
 
-#define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+// #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+#define USING_HAIKANG               //是否使用海康相机
 
-// #define DEBUG_WITHOUT_COM           //无串口调试
+#define DEBUG_WITHOUT_COM           //无串口调试
 //===========================================================================//
 
 
@@ -44,11 +45,11 @@
 
 #define PRINT_TARGET_INFO //是否输出目标信息
 
-#define USING_PREDICT           //是否启用预测
+// #define USING_PREDICT           //是否启用预测
 
-#define USING_SPIN_DETECT //是否检测陀螺
+// #define USING_SPIN_DETECT //是否检测陀螺
 
-#define DISABLE_FITTING //是否禁用曲线拟合
+// #define DISABLE_FITTING //是否禁用曲线拟合
 //===========================================================================//
 
 
@@ -89,7 +90,9 @@
 #endif // SHOW_IMG
 
 #ifndef USING_DAHENG
-    #define USING_USB_CAMERA
+    #ifndef USING_HAIKANG
+        #define USING_USB_CAMERA
+    #endif // USING_HAIKANG
 #endif // USING_DAHENG
 
 #ifndef DETECT_RED
