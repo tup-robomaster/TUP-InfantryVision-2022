@@ -102,8 +102,8 @@ bool Autoaim::updateSpinScore()
         // 若分数过低移除此元素
         if (abs((*score).second) <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
         {
-            fmt::print(fmt::fg(fmt::color::red), "[SpinScore] Removing {}.\n", (*score).first);
-            LOG(INFO)<<"[SpinScore] Removing "<<(*score).first;
+            fmt::print(fmt::fg(fmt::color::red), "[SpinDetection] Removing {}.\n", (*score).first);
+            LOG(INFO)<<"[SpinDetection] Removing "<<(*score).first;
             spin_status_map.erase((*score).first);
             score = spin_score_map.erase(score);
             continue;
@@ -543,47 +543,51 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     ///------------------------检测装甲板变化情况,计算各车陀螺分数----------------------------
     for (auto cnt : new_armors_cnt_map)
     {
+        //只在该类别新增装甲板时数量为1时计算陀螺分数
         if (cnt.second == 1)
         {
             auto same_armors_cnt = trackers_map.count(cnt.first);
-            //当存在同时存在两块同类别装甲板Tracker时才进入陀螺状态识别
-            if (same_armors_cnt == 2)
+            if (same_armors_cnt >= 2)
             {
-                auto candidates = trackers_map.equal_range(cnt.first);
+                //遍历所有同Key预测器，确定左右侧的Tracker
+                ArmorTracker *new_tracker = nullptr;
+                ArmorTracker *last_tracker = nullptr;
                 double last_armor_center;
                 double last_armor_timestamp;
                 double new_armor_center;
                 double new_armor_timestamp;
-                auto candidate = candidates.first;
-                //确定新增装甲板与历史装甲板
-                if ((*candidate).second.is_initialized)
+                int best_prev_timestamp = 0;    //候选ArmorTracker的最近时间戳
+                for (auto iter = candiadates.first; iter != candiadates.second; ++iter)
                 {
-                    last_armor_center = (*candidate).second.last_armor.center2d.x;
-                    last_armor_timestamp = (*candidate).second.last_timestamp;
-                    ++candidate;
-                    new_armor_center = (*candidate).second.last_armor.center2d.x;
-                    new_armor_timestamp = (*candidate).second.last_timestamp;
+                    //若未完成初始化则视为新增tracker
+                    if (!(*iter).second.is_initialized)
+                        new_tracker = &(*iter).second;
+                    else if ((*iter).second.last_timestamp > best_prev_timestamp && (*iter).second.is_initialized)
+                    {
+                        best_prev_timestamp = (*iter).second.last_timestamp;
+                        last_tracker = &(*iter).second;
+                    }
+                    
                 }
-                else
-                {
-                    new_armor_center = (*candidate).second.last_armor.center2d.x;
-                    new_armor_timestamp = (*candidate).second.last_timestamp;
-                    ++candidate;
-                    last_armor_center = (*candidate).second.last_armor.center2d.x;
-                    last_armor_timestamp = (*candidate).second.last_timestamp;
-                }
+                new_armor_center = new_tracker->last_armor.center2d.x;
+                new_armor_timestamp = new_tracker->last_timestamp;
+                last_armor_center = last_tracker->last_armor.center2d.x;
+                last_armor_timestamp = last_tracker->last_timestamp;
                 auto spin_movement = new_armor_center - last_armor_center;
-                LOG(INFO)<<"spin: "<<spin_movement;
+                LOG(INFO)<<"[SpinDetection] Candidate Spin Movement Detected : "<<cnt.first<<" : "<<spin_movement;
                 if (abs(spin_movement) > 10 && (new_armor_timestamp == last_armor_timestamp))
                 {
+                    //若无该元素则插入新元素
                     if (spin_score_map.count(cnt.first) == 0)
                     {
                         spin_score_map[cnt.first] = 1000 * spin_movement / abs(spin_movement);
                     }
+                    //若已有该元素且目前旋转方向与记录不同,则对目前分数进行10倍惩罚
                     else if (spin_movement * spin_score_map[cnt.first] < 0)
                     {
                         spin_score_map[cnt.first] *= 0.1;
                     }
+                    //若已有该元素则更新元素
                     else
                     {
                         spin_score_map[cnt.first] = anti_spin_max_r_multiple * spin_score_map[cnt.first];
