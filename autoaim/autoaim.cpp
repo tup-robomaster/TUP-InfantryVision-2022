@@ -582,7 +582,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                     }
                     else if (spin_movement * spin_score_map[cnt.first] < 0)
                     {
-                        spin_score_map[cnt.first] /= 0.1;
+                        spin_score_map[cnt.first] *= 0.1;
                     }
                     else
                     {

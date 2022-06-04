@@ -129,15 +129,6 @@ bool Buff::run(TaskData &src,VisionData &data)
         imshow("dst",src.img);
         waitKey(1);
 #endif //SHOW_IMG
-    // if (src.timestamp % 10 == 0)
-    // {
-    //     auto time_infer = std::chrono::steady_clock::now();
-    //     double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
-    //     double dr_infer_ms = std::chrono::duration<double,std::milli>(time_infer - time_crop).count();
-    //     fmt::print(fmt::fg(fmt::color::gray), "-----------TIME------------\n");
-    //     fmt::print(fmt::fg(fmt::color::blue_violet), "Crop: {} ms\n"   ,dr_crop_ms);
-    //     fmt::print(fmt::fg(fmt::color::golden_rod), "Infer: {} ms\n",dr_infer_ms);
-    // }
         lost_cnt++;
         is_last_target_exists = false;
         last_target_area = 0;
@@ -206,7 +197,8 @@ bool Buff::run(TaskData &src,VisionData &data)
                 auto current_roll = (*fan).euler[0];
                 auto last_roll = (*iter).last_fan.euler[0];
                 
-                //TODO:使用轴角所测得的旋转角度存在一定问题，噪声较大，未排查
+                //----------------------------计算轴角度,求解转速----------------------------
+                //TODO:改进帧差法,使用隔一帧的角度位置
                 auto delta_angle_axised = eulerToAngleAxisd((*fan).euler - (*iter).last_fan.euler);
                 double rotate_speed = delta_angle_axised.angle() / delta_t * 1e3;//计算角速度(rad/s)
                 // cout<<delta_angle_axised.angle<<endl;
@@ -252,14 +244,13 @@ bool Buff::run(TaskData &src,VisionData &data)
     Fan target;
     bool is_target_exists = chooseTarget(fans, target);
 
+    //若不存在待击打扇叶则返回false
     if (!is_target_exists)
     {
-
 #ifdef SHOW_IMG
         imshow("dst",src.img);
         waitKey(1);
 #endif //SHOW_IMG
-
         lost_cnt++;
         is_last_target_exists = false;
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
@@ -282,6 +273,7 @@ bool Buff::run(TaskData &src,VisionData &data)
             avail_tracker_cnt++;
         }
     }
+    //若不存在可用的扇叶则返回false
     if (avail_tracker_cnt == 0)
     {
 #ifdef SHOW_IMG
@@ -327,13 +319,20 @@ bool Buff::run(TaskData &src,VisionData &data)
     //Pc = R * Pw + T
     hit_point_world = (rotMat * hit_point_world) + target.armor3d_world;
     hit_point_cam = coordsolver.worldToCam(hit_point_world, rmat_imu);
-    auto r_center_cam = coordsolver.worldToCam(target.centerR3d_cam, rmat_imu);
+    auto r_center_cam = coordsolver.worldToCam(target.centerR3d_world, rmat_imu);
     // auto r_center_cam = coordsolver.worldToCam(mean_r_center, rmat_imu);
     auto center2d_src = coordsolver.reproject(r_center_cam);
     auto target2d = coordsolver.reproject(hit_point_cam);
     lost_cnt = 0;
     last_roi_center = center2d_src;
     is_last_target_exists = true;
+
+    auto angle = coordsolver.getAngle(hit_point_cam,rmat_imu);
+    auto time_predict = std::chrono::steady_clock::now();
+    double dr_full_ms = std::chrono::duration<double,std::milli>(time_predict - time_start).count();
+    double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
+    double dr_infer_ms = std::chrono::duration<double,std::milli>(time_infer - time_crop).count();
+    double dr_predict_ms = std::chrono::duration<double,std::milli>(time_predict - time_infer).count();
 
 #ifdef SHOW_ALL_FANS
     for (auto fan : fans)
@@ -359,12 +358,6 @@ bool Buff::run(TaskData &src,VisionData &data)
     circle(src.img, target2d, 5, Scalar(0, 255, 0), 2);
 #endif //SHOW_PREDICT
 
-    auto angle = coordsolver.getAngle(hit_point_cam,rmat_imu);
-    auto time_predict = std::chrono::steady_clock::now();
-    double dr_full_ms = std::chrono::duration<double,std::milli>(time_predict - time_start).count();
-    double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
-    double dr_infer_ms = std::chrono::duration<double,std::milli>(time_infer - time_crop).count();
-    double dr_predict_ms = std::chrono::duration<double,std::milli>(time_predict - time_infer).count();
 
 #ifdef SHOW_FPS
     putText(src.img, fmt::format("FPS: {}",int(1000 / dr_full_ms)), {10, 25}, FONT_HERSHEY_SIMPLEX, 1, {0,255,0});
