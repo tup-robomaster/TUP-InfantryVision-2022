@@ -98,7 +98,7 @@ bool Autoaim::updateSpinScore()
         else
             spin_status = spin_status_map[(*score).first];
         cout<<(*score).first<<"--:"<<(*score).second<<" "<<spin_status<<endl;
-        LOG(INFO)<<(*score).first<<"--:"<<(*score).second<<" "<<spin_status;
+        LOG(INFO)<<"[SpinDetection] Current Spin score :"<<(*score).first<<" : "<<(*score).second<<" "<<spin_status;
         // 若分数过低移除此元素
         if (abs((*score).second) <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
         {
@@ -349,6 +349,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         is_last_target_exists = false;
         last_target_area = 0;
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
+        LOG(WARNING) <<"[AUTOAIM] No target detected!";
         return false;
     }
 #ifdef ASSIST_LABEL
@@ -449,6 +450,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         is_last_target_exists = false;
         last_target_area = 0;
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
+        LOG(WARNING) <<"[AUTOAIM] No available armor exists!";
         return false;
     }
     ///------------------------生成/分配ArmorTracker----------------------------

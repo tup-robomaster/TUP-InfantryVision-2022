@@ -133,6 +133,7 @@ bool Buff::run(TaskData &src,VisionData &data)
         is_last_target_exists = false;
         last_target_area = 0;
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
+        LOG(WARNING) <<"[BUFF] No target detected!";
         return false;
     }
     auto time_infer = std::chrono::steady_clock::now();
@@ -254,6 +255,7 @@ bool Buff::run(TaskData &src,VisionData &data)
         lost_cnt++;
         is_last_target_exists = false;
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
+        LOG(WARNING) <<"[BUFF] No available target fan or Multiple target fan detected!";
         return false;
     }
 
@@ -279,6 +281,7 @@ bool Buff::run(TaskData &src,VisionData &data)
 #ifdef SHOW_IMG
         imshow("dst",src.img);
         waitKey(1);
+        LOG(WARNING) <<"[BUFF] No available fan tracker exist!";
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
 #endif //SHOW_IMG
         return false;
@@ -300,6 +303,7 @@ bool Buff::run(TaskData &src,VisionData &data)
 #ifdef SHOW_IMG
         imshow("dst",src.img);
         waitKey(1);
+        LOG(WARNING) <<"[BUFF] Predictor is still progressing!";
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
 #endif //SHOW_IMG
         return false;
