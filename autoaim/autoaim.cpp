@@ -98,11 +98,12 @@ bool Autoaim::updateSpinScore()
         else
             spin_status = spin_status_map[(*score).first];
         cout<<(*score).first<<"--:"<<(*score).second<<" "<<spin_status<<endl;
-
+        LOG(INFO)<<(*score).first<<"--:"<<(*score).second<<" "<<spin_status;
         // 若分数过低移除此元素
         if (abs((*score).second) <= anti_spin_judge_low_thres && spin_status != UNKNOWN)
         {
             fmt::print(fmt::fg(fmt::color::red), "[SpinScore] Removing {}.\n", (*score).first);
+            LOG(INFO)<<"[SpinScore] Removing "<<(*score).first;
             spin_status_map.erase((*score).first);
             score = spin_score_map.erase(score);
             continue;
@@ -530,7 +531,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             //删除元素后迭代器会失效，需先行获取下一元素
             auto next = iter;
             // cout<<(*iter).second.last_timestamp<<"  "<<src.timestamp<<endl;
-            if (src.timestamp - (*iter).second.last_timestamp > max_delta_t)
+            if ((src.timestamp - (*iter).second.last_timestamp) > max_delta_t)
                 next = trackers_map.erase(iter);
             else
                 ++next;
@@ -572,18 +573,22 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                     last_armor_timestamp = (*candidate).second.last_timestamp;
                 }
                 auto spin_movement = new_armor_center - last_armor_center;
-
-                if (spin_score_map.count(cnt.first) == 0)
+                LOG(INFO)<<"spin: "<<spin_movement;
+                if (abs(spin_movement) > 10 && (new_armor_timestamp == last_armor_timestamp))
                 {
-                    if (abs(spin_movement) > 10 && last_armor_timestamp == new_armor_timestamp)
-                        spin_score_map[cnt.first] = 300 * spin_movement / abs(spin_movement);
+                    if (spin_score_map.count(cnt.first) == 0)
+                    {
+                        spin_score_map[cnt.first] = 1000 * spin_movement / abs(spin_movement);
+                    }
+                    else if (spin_movement * spin_score_map[cnt.first] < 0)
+                    {
+                        spin_score_map[cnt.first] /= 0.1;
+                    }
+                    else
+                    {
+                        spin_score_map[cnt.first] = anti_spin_max_r_multiple * spin_score_map[cnt.first];
+                    }
                 }
-                else if (abs(spin_movement) > 10 && last_armor_timestamp == new_armor_timestamp)
-                {
-                    spin_score_map[cnt.first] = anti_spin_max_r_multiple * spin_score_map[cnt.first];
-                }
-                // cout<<spin_score_map[cnt.first]<<endl;
-
             }
         }
     }
@@ -791,7 +796,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     auto velocity = (delta_dist / delta_t) * 1e3;
 
     //判断装甲板是否切换，若切换将变量置1
-    if(target.key != last_armor.key || velocity > max_v)
+    if((target.key != last_armor.key || velocity > max_v) && is_last_target_exists)
         is_target_switched = true;
     else
         is_target_switched = false;
@@ -837,7 +842,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     auto angle = coordsolver.getAngle(aiming_point,rmat_imu);
     //若预测出错则直接世界坐标系下坐标作为击打点
     if (isnan(angle[0]) || isnan(angle[0]))
-        angle = coordsolver.getAngle(target.center3d_world,rmat_imu);
+        angle = coordsolver.getAngle(target.center3d_cam,rmat_imu);
     auto time_predict = std::chrono::steady_clock::now();
 
     double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
