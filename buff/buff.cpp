@@ -170,6 +170,7 @@ bool Buff::run(TaskData &src,VisionData &data)
         fan.armor3d_world = pnp_result.armor_world;
         fan.centerR3d_cam = pnp_result.R_cam;
         fan.centerR3d_world = pnp_result.R_world;
+        auto apex_sum = fan.apex2d[0] + fan.apex2d[1] + fan.apex2d[3] + fan.apex2d[4];
 
         fan.armor2d = apex_sum / 4.f;
         fan.centerR2d = fan.apex2d[2];
@@ -186,7 +187,7 @@ bool Buff::run(TaskData &src,VisionData &data)
     {
         if (trackers.size() == 0)
         {
-            FanTracker fan_tracker(fan, src.timestamp)
+            FanTracker fan_tracker((*fan), src.timestamp);
             trackers_tmp.push_back(fan_tracker);
         }
         else
@@ -194,24 +195,29 @@ bool Buff::run(TaskData &src,VisionData &data)
             for (auto iter = trackers.begin(); iter != trackers.end(); iter++)
             {
                 double delta_t;
-                double auto delta_angle_axised;
+                double delta_angle_axised;
                 double rotate_speed;
                 //----------------------------计算轴角度,求解转速----------------------------
                 //TODO:改进帧差法,使用隔一帧的角度位置
-                delta_t = src.timestamp - (*iter).last_timestamp;                    
-                auto trans = fan.centerR2d - (*iter).last_fan.centerR2d;
-                auto new_arm = fan.armor2d - fan.centerR2d;
-                auto last_arm = (*iter).armor2d - (*iter).centerR2d;
+                delta_t = src.timestamp - (*iter).last_timestamp;
+                // cout<<delta_t<<endl;                  
+                auto new_arm = (*fan).armor2d - (*fan).centerR2d;
+                auto last_arm = (*iter).last_fan.armor2d - (*iter).last_fan.centerR2d;
                 //a为新扇叶中心,以该点为坐标原点,b为新扇叶臂长,c为旧扇叶臂长
                 Eigen::Vector2d A = {0,0};
                 Eigen::Vector2d B = {new_arm.x, new_arm.y};
                 Eigen::Vector2d C = {last_arm.x, last_arm.y};
-                auto rotate_vector = C - B;
+                auto a = C - B;
+                // cout<<new_arm<<endl;
+                // cout<<last_arm<<endl;
+                // cout<<endl;
                 //使用点陈发
-                auto sign = (C.dot(B) < 0) ? 1 : -1;
-                auto cos_alpha = (B.squaredNorm() + C.squaredNorm() - A.squaredNorm()) / (2 * B.norm() * C.norm());
+                auto sign = (B.dot(a) < 0) ? 1 : -1;
+                auto cos_alpha = (B.squaredNorm() + C.squaredNorm() - a.squaredNorm()) / (2 * B.norm() * C.norm());
+
                 auto delta_theta = sign * acos(cos_alpha);
                 rotate_speed = delta_theta / delta_t * 1e3;//计算角速度(rad/s)
+                cout<<rotate_speed<<endl;
                 // if (!(*iter).is_initialized)
                 // {
                 //     delta_t = src.timestamp - (*iter).last_timestamp;
@@ -245,12 +251,13 @@ bool Buff::run(TaskData &src,VisionData &data)
                 if (fabs(rotate_speed) <= max_v)
                 {
                     FanTracker fan_tracker = (*iter);
-                    fan_tracker.update(fan, src.timestamp);
+                    fan_tracker.update((*fan), src.timestamp);
+                    fan_tracker.rotate_speed = rotate_speed;
                     break;
                 }
                 else if (trackers.size() < fans.size())
                 {
-                    FanTracker fan_tracker(fan,src.timestamp);
+                    FanTracker fan_tracker((*fan),src.timestamp);
                     trackers_tmp.push_back(fan_tracker);
                     break;
                 }

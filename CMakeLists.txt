@@ -39,6 +39,7 @@ add_executable(Infantry_Vision main.cpp
             ${PROJECT_SOURCE_DIR}/autoaim/predictor/particle_filter.h
             ${PROJECT_SOURCE_DIR}/autoaim/predictor/predictor.cpp
             ${PROJECT_SOURCE_DIR}/autoaim/predictor/predictor.h
+            ${PROJECT_SOURCE_DIR}/buff/fan_tracker.cpp
             ${PROJECT_SOURCE_DIR}/buff/fan_tracker.h            
             ${PROJECT_SOURCE_DIR}/buff/buff.cpp
             ${PROJECT_SOURCE_DIR}/buff/buff.h

@@ -144,7 +144,7 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
     plt::plot(plt_time, plt_speed,"bx");
     plt::plot(plt_time, plt_fitted,"r-");
     // plt::show();
-    plt::pause(0.001);
+    plt::pause(0.1);
 #endif //DRAW_PREDICT
     return true;
 }

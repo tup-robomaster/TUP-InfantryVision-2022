@@ -1,4 +1,5 @@
 #include "fan_tracker.h"
+
 /**
  * @brief 构造一个ArmorTracker对象
  * 
@@ -12,11 +13,11 @@ FanTracker::FanTracker(Fan src, int src_timestamp)
     history_info.push_back(src);
 }
 
-bool FanTracker::update(FanTracker new_fan,int new_timestamp)
+bool FanTracker::update(Fan new_fan,int new_timestamp)
 {
     if (history_info.size() < max_history_len)
     {
-        is_prev_fan_exists = true;
+        is_last_fan_exists = true;
         history_info.push_back(new_fan);
     }
     else
