@@ -283,6 +283,7 @@ bool Buff::run(TaskData &src,VisionData &data)
         waitKey(1);
         LOG(WARNING) <<"[BUFF] No available fan tracker exist!";
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
+        lost_cnt++;
 #endif //SHOW_IMG
         return false;
     }

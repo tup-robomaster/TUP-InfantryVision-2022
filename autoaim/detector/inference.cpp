@@ -242,10 +242,10 @@ static void nms_sorted_bboxes(std::vector<ArmorObject>& faceobjects, std::vector
             float inter_area = intersection_area(a, b);
             float union_area = areas[i] + areas[picked[j]] - inter_area;
             float iou = inter_area / union_area;
-            if (iou > nms_threshold)
+            if (iou > nms_threshold || isnan(iou))
             {
                 keep = 0;
-                //Stored for FFT
+                //Stored for Merge
                 if (iou > MERGE_MIN_IOU && abs(a.prob - b.prob) < MERGE_CONF_ERROR 
                                         && a.cls == b.cls && a.color == b.color)
                 {
