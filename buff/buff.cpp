@@ -163,7 +163,7 @@ bool Buff::run(TaskData &src,VisionData &data)
 
         std::vector<Point2f> points_pic(fan.apex2d, fan.apex2d + 5);
         TargetType target_type = BUFF;
-        auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_EPNP);
+        auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_ITERATIVE);
         fan.centerR2d = fan.apex2d[2];
 
         fan.armor3d_cam = pnp_result.armor_cam;
@@ -200,8 +200,12 @@ bool Buff::run(TaskData &src,VisionData &data)
                 
                 //----------------------------计算轴角度,求解转速----------------------------
                 //TODO:改进帧差法,使用隔一帧的角度位置
+                // auto delta_x = ((*fan).armor3d_world - (*iter).last_fan.armor3d_world).norm();
+                // auto omega = (delta_x / 0.565);
+                // double rotate_speed = omega / delta_t * 1e3;//计算角速度(rad/s)
                 auto delta_angle_axised = eulerToAngleAxisd((*fan).euler - (*iter).last_fan.euler);
                 double rotate_speed = delta_angle_axised.angle() / delta_t * 1e3;//计算角速度(rad/s)
+                cout<<rotate_speed<<endl;
                 // cout<<delta_angle_axised.angle<<endl;
                 //将Roll表示范围由[-180,180]转换至[0，360]
                 // if (current_roll <= 0)

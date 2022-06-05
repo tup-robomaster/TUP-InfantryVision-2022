@@ -50,8 +50,8 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
 #ifdef USING_VIDEO
     sleep(6);//防止网络加载完成前视频开始播放
-    VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
-    // VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/sample.mp4");
+    // VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
+    VideoCapture cap("/home/tup/sample.avi");
 #endif //USING_VIDEO
 
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
@@ -99,7 +99,6 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
 #ifdef USING_VIDEO
         cap >> src.img;
-        auto time_cap = std::chrono::steady_clock::now();
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // sleep(0.02);
         waitKey(33.3);
@@ -120,7 +119,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
 #ifdef SAVE_VIDEO
         frame_cnt++;
-        if(frame_cnt % 5 == 0)
+        if(frame_cnt % 10 == 0)
         {
             frame_cnt = 0;
             //异步读写加速,避免阻塞生产者
@@ -167,7 +166,7 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
         mode = dst.mode;
 
 #ifdef DEBUG_WITHOUT_COM
-        mode = 1;
+        mode = 4;
 #endif //DEBUG_WITHOUT_COM
 
 #ifdef SAVE_TRANSMIT_LOG
@@ -261,7 +260,7 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
         // Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         //FIXME:注意此处mode设置
         int mode = serial.mode;
-        // int mode = 1;
+        // int mode = 4;
         Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         Eigen::Vector3d acc = {serial.acc[0],serial.acc[1],serial.acc[2]};;
         Eigen::Vector3d gyro = {serial.gyro[0],serial.gyro[1],serial.gyro[2]};;
