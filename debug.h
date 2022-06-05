@@ -38,13 +38,13 @@
 //                              INFO及预测相关选项
 //---------------------------------------------------------------------------//
 
-// #define USING_ROI   //Using roi
+#define USING_ROI   //Using roi
 
 // #define PRINT_LATENCY //输出运行时
 
 #define PRINT_TARGET_INFO //是否输出目标信息
 
-// #define USING_PREDICT           //是否启用预测
+#define USING_PREDICT           //是否启用预测
 
 #define USING_SPIN_DETECT //是否检测陀螺
 
@@ -91,6 +91,7 @@
 #ifndef USING_DAHENG
     #define USING_USB_CAMERA
 #endif // USING_DAHENG
+// #define USING_VIDEO
 
 #ifndef DETECT_RED
     #define DETECT_BLUE

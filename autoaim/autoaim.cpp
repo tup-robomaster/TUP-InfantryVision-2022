@@ -237,14 +237,14 @@ ArmorTracker* Autoaim::chooseTargetTracker(vector<ArmorTracker*> trackers, int t
             if (trackers[i]->last_selected_timestamp == prev_timestamp)
                 return trackers[i];
             //若该装甲板面积较大且与目前最大面积差距较大，列为候选并记录该装甲板数据
-            else if (trackers[i]->last_armor.area >= max_area && (trackers[i]->last_armor.area / max_area > 1.2 || trackers[i]->last_armor.area / max_area < 0.8))
+            else if (trackers[i]->last_armor.area >= max_area && (trackers[i]->last_armor.area / max_area > 1.4 || trackers[i]->last_armor.area / max_area < 0.6))
             {
                 max_area = trackers[i]->last_armor.area;
                 min_horizonal_dist = horizonal_dist_to_center;
                 target_idx = i;
             }
             //若该装甲板面积较大且与目前最大面积差距较小，判断该装甲板与图像中心点的二维水平距离
-            else if ((trackers[i]->last_armor.area / max_area < 1.2 || trackers[i]->last_armor.area / max_area > 0.8) && horizonal_dist_to_center < min_horizonal_dist)
+            else if ((trackers[i]->last_armor.area / max_area < 1.4 || trackers[i]->last_armor.area / max_area > 0.6) && horizonal_dist_to_center < min_horizonal_dist)
             {
                 min_horizonal_dist = horizonal_dist_to_center;
                 target_idx = i;
@@ -551,6 +551,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             auto same_armors_cnt = trackers_map.count(cnt.first);
             if (same_armors_cnt >= 2)
             {
+                cout<<"1"<<endl;
                 //遍历所有同Key预测器，确定左右侧的Tracker
                 ArmorTracker *new_tracker = nullptr;
                 ArmorTracker *last_tracker = nullptr;
@@ -559,6 +560,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                 double new_armor_center;
                 double new_armor_timestamp;
                 int best_prev_timestamp = 0;    //候选ArmorTracker的最近时间戳
+                auto candiadates = trackers_map.equal_range(cnt.first);
                 for (auto iter = candiadates.first; iter != candiadates.second; ++iter)
                 {
                     //若未完成初始化则视为新增tracker
@@ -571,28 +573,31 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                     }
                     
                 }
-                new_armor_center = new_tracker->last_armor.center2d.x;
-                new_armor_timestamp = new_tracker->last_timestamp;
-                last_armor_center = last_tracker->last_armor.center2d.x;
-                last_armor_timestamp = last_tracker->last_timestamp;
-                auto spin_movement = new_armor_center - last_armor_center;
-                LOG(INFO)<<"[SpinDetection] Candidate Spin Movement Detected : "<<cnt.first<<" : "<<spin_movement;
-                if (abs(spin_movement) > 10 && (new_armor_timestamp == last_armor_timestamp))
+                if (new_tracker != nullptr && last_tracker != nullptr)
                 {
-                    //若无该元素则插入新元素
-                    if (spin_score_map.count(cnt.first) == 0)
+                    new_armor_center = new_tracker->last_armor.center2d.x;
+                    new_armor_timestamp = new_tracker->last_timestamp;
+                    last_armor_center = last_tracker->last_armor.center2d.x;
+                    last_armor_timestamp = last_tracker->last_timestamp;
+                    auto spin_movement = new_armor_center - last_armor_center;
+                    LOG(INFO)<<"[SpinDetection] Candidate Spin Movement Detected : "<<cnt.first<<" : "<<spin_movement;
+                    if (abs(spin_movement) > 10 && (new_armor_timestamp == last_armor_timestamp))
                     {
-                        spin_score_map[cnt.first] = 1000 * spin_movement / abs(spin_movement);
-                    }
-                    //若已有该元素且目前旋转方向与记录不同,则对目前分数进行10倍惩罚
-                    else if (spin_movement * spin_score_map[cnt.first] < 0)
-                    {
-                        spin_score_map[cnt.first] *= 0.1;
-                    }
-                    //若已有该元素则更新元素
-                    else
-                    {
-                        spin_score_map[cnt.first] = anti_spin_max_r_multiple * spin_score_map[cnt.first];
+                        //若无该元素则插入新元素
+                        if (spin_score_map.count(cnt.first) == 0)
+                        {
+                            spin_score_map[cnt.first] = 1000 * spin_movement / abs(spin_movement);
+                        }
+                        //若已有该元素且目前旋转方向与记录不同,则对目前分数进行10倍惩罚
+                        else if (spin_movement * spin_score_map[cnt.first] < 0)
+                        {
+                            spin_score_map[cnt.first] *= 0.1;
+                        }
+                        //若已有该元素则更新元素
+                        else
+                        {
+                            spin_score_map[cnt.first] = anti_spin_max_r_multiple * spin_score_map[cnt.first];
+                        }
                     }
                 }
             }
@@ -847,7 +852,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 
     auto angle = coordsolver.getAngle(aiming_point,rmat_imu);
     //若预测出错则直接世界坐标系下坐标作为击打点
-    if (isnan(angle[0]) || isnan(angle[0]))
+    if (isnan(angle[0]) || isnan(angle[1]))
         angle = coordsolver.getAngle(target.center3d_cam,rmat_imu);
     auto time_predict = std::chrono::steady_clock::now();
 

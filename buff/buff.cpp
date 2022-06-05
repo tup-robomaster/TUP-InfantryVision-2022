@@ -163,8 +163,8 @@ bool Buff::run(TaskData &src,VisionData &data)
 
         std::vector<Point2f> points_pic(fan.apex2d, fan.apex2d + 5);
         TargetType target_type = BUFF;
-        auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_EPNP);
-        auto apex_sum = object.apex[0] + object.apex[1] + object.apex[3] + object.apex[4];
+        auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_ITERATIVE);
+        fan.centerR2d = fan.apex2d[2];
 
         fan.armor3d_cam = pnp_result.armor_cam;
         fan.armor3d_world = pnp_result.armor_world;

@@ -85,7 +85,6 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
 {
 
     std::vector<Point3d> points_world;
-    std::vector<Point2f> vecotr_apex = {points_pic[0], points_pic[1], points_pic[2], points_pic[3]};
 
     //长度为4进入装甲板模式
 
@@ -115,6 +114,12 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
         {0,-0.565,-0.05},
         {0.1125,-0.027,0},
         {0.1125,0.027,0}};
+        // points_world = {
+        // {-0.1125,0.027,0},
+        // {-0.1125,-0.027,0},
+        // {0,-0.565,-0.05},
+        // {0.1125,-0.027,0},
+        // {0.1125,0.027,0}};
     }
     Mat rvec;
     Mat rmat;
@@ -131,7 +136,7 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
     Rodrigues(rvec,rmat);
     cv2eigen(rmat, rmat_eigen);
     cv2eigen(tvec, tvec_eigen);
-    if (type == SMALL || type == BIG)
+    if (type == BIG || type == SMALL)
     {
         result.armor_cam = tvec_eigen;
         result.armor_world = camToWorld(result.armor_cam, rmat_imu);

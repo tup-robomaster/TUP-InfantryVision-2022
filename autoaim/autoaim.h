@@ -44,7 +44,7 @@ private:
     const int max_lost_cnt = 5;                 //最大丢失目标帧数
     const int max_armors = 8;                   //视野中最多装甲板数
     const int max_v = 8;                        //两次预测间最大速度(m/s)
-    const int max_delta_t = 100;                //使用同一预测器的最大时间间隔(ms)
+    const int max_delta_t = 50;                //使用同一预测器的最大时间间隔(ms)
 
     int anti_spin_judge_high_thres = 4.5e4;//大于该阈值认为该车已开启陀螺
     int anti_spin_judge_low_thres = 2e3;//小于该阈值认为该车已关闭陀螺
