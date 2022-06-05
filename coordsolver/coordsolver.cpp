@@ -131,7 +131,7 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
     Rodrigues(rvec,rmat);
     cv2eigen(rmat, rmat_eigen);
     cv2eigen(tvec, tvec_eigen);
-    if (points_pic.size() == 4)
+    if (type == SMALL || type == BIG)
     {
         result.armor_cam = tvec_eigen;
         result.armor_world = camToWorld(result.armor_cam, rmat_imu);

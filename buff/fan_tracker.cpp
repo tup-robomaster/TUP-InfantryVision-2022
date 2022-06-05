@@ -1,0 +1,36 @@
+#include "fan_tracker.h"
+/**
+ * @brief 构造一个ArmorTracker对象
+ * 
+ * @param src Armor对象
+ */
+FanTracker::FanTracker(Fan src, int src_timestamp)
+{
+    last_fan = src;
+    last_timestamp = src_timestamp;
+    is_initialized = false;
+    history_info.push_back(src);
+}
+
+bool FanTracker::update(FanTracker new_fan,int new_timestamp)
+{
+    if (history_info.size() < max_history_len)
+    {
+        is_prev_fan_exists = true;
+        history_info.push_back(new_fan);
+    }
+    else
+    {
+        is_initialized = true;
+        history_info.pop_front();
+        history_info.push_back(new_fan);
+    }
+
+    prev_fan = last_fan;
+    prev_timestamp = last_timestamp;
+    
+    last_fan = new_fan;
+    last_timestamp = new_timestamp;
+
+    return true;
+}

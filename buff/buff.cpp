@@ -164,12 +164,16 @@ bool Buff::run(TaskData &src,VisionData &data)
         std::vector<Point2f> points_pic(fan.apex2d, fan.apex2d + 5);
         TargetType target_type = BUFF;
         auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_EPNP);
-        fan.centerR2d = fan.apex2d[2];
+        auto apex_sum = object.apex[0] + object.apex[1] + object.apex[3] + object.apex[4];
 
         fan.armor3d_cam = pnp_result.armor_cam;
         fan.armor3d_world = pnp_result.armor_world;
         fan.centerR3d_cam = pnp_result.R_cam;
         fan.centerR3d_world = pnp_result.R_world;
+
+        fan.armor2d = apex_sum / 4.f;
+        fan.centerR2d = fan.apex2d[2];
+
         fan.euler = pnp_result.euler;
 
         fans.push_back(fan);
@@ -182,27 +186,49 @@ bool Buff::run(TaskData &src,VisionData &data)
     {
         if (trackers.size() == 0)
         {
-            FanTracker fan_tracker;
-            fan_tracker.last_fan = (*fan);
-            fan_tracker.last_timestamp = src.timestamp;
-            fan_tracker.is_last_fan_exists = false;//初始化
-            fan_tracker.rotate_speed = 0;
+            FanTracker fan_tracker(fan, src.timestamp)
             trackers_tmp.push_back(fan_tracker);
         }
         else
         {
             for (auto iter = trackers.begin(); iter != trackers.end(); iter++)
             {
-                double delta_t = src.timestamp - (*iter).last_timestamp;
-                double delta_theta;
-                auto current_roll = (*fan).euler[0];
-                auto last_roll = (*iter).last_fan.euler[0];
-                
+                double delta_t;
+                double auto delta_angle_axised;
+                double rotate_speed;
                 //----------------------------计算轴角度,求解转速----------------------------
                 //TODO:改进帧差法,使用隔一帧的角度位置
-                auto delta_angle_axised = eulerToAngleAxisd((*fan).euler - (*iter).last_fan.euler);
-                double rotate_speed = delta_angle_axised.angle() / delta_t * 1e3;//计算角速度(rad/s)
+                delta_t = src.timestamp - (*iter).last_timestamp;                    
+                auto trans = fan.centerR2d - (*iter).last_fan.centerR2d;
+                auto new_arm = fan.armor2d - fan.centerR2d;
+                auto last_arm = (*iter).armor2d - (*iter).centerR2d;
+                //a为新扇叶中心,以该点为坐标原点,b为新扇叶臂长,c为旧扇叶臂长
+                Eigen::Vector2d A = {0,0};
+                Eigen::Vector2d B = {new_arm.x, new_arm.y};
+                Eigen::Vector2d C = {last_arm.x, last_arm.y};
+                auto rotate_vector = C - B;
+                //使用点陈发
+                auto sign = (C.dot(B) < 0) ? 1 : -1;
+                auto cos_alpha = (B.squaredNorm() + C.squaredNorm() - A.squaredNorm()) / (2 * B.norm() * C.norm());
+                auto delta_theta = sign * acos(cos_alpha);
+                rotate_speed = delta_theta / delta_t * 1e3;//计算角速度(rad/s)
+                // if (!(*iter).is_initialized)
+                // {
+                //     delta_t = src.timestamp - (*iter).last_timestamp;
+                    
+                    
+                //     // delta_angle_axised = eulerToAngleAxisd((*fan).euler - (*iter).last_fan.euler);
+                    
+                //     rotate_speed = delta_angle_axised.angle() / delta_t * 1e3;//计算角速度(rad/s)
+                // }
+                // else
+                // {
+
+                // }
                 // cout<<delta_angle_axised.angle<<endl;
+                // auto current_roll = (*fan).euler[0];
+                // auto last_roll = (*iter).last_fan.euler[0];
+                // double delta_theta;
                 //将Roll表示范围由[-180,180]转换至[0，360]
                 // if (current_roll <= 0)
                 //     current_roll += CV_2PI;
@@ -219,20 +245,12 @@ bool Buff::run(TaskData &src,VisionData &data)
                 if (fabs(rotate_speed) <= max_v)
                 {
                     FanTracker fan_tracker = (*iter);
-                    fan_tracker.last_fan = (*fan);
-                    fan_tracker.last_timestamp = src.timestamp;
-                    fan_tracker.is_last_fan_exists = true;
-                    fan_tracker.rotate_speed = rotate_speed;
-                    trackers_tmp.push_back(fan_tracker);
+                    fan_tracker.update(fan, src.timestamp);
                     break;
                 }
                 else if (trackers.size() < fans.size())
                 {
-                    FanTracker fan_tracker;
-                    fan_tracker.last_fan = (*fan);
-                    fan_tracker.last_timestamp = src.timestamp;
-                    fan_tracker.is_last_fan_exists = false;//初始化
-                    fan_tracker.rotate_speed = 0;
+                    FanTracker fan_tracker(fan,src.timestamp);
                     trackers_tmp.push_back(fan_tracker);
                     break;
                 }
