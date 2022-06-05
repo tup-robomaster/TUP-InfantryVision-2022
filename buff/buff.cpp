@@ -172,10 +172,8 @@ bool Buff::run(TaskData &src,VisionData &data)
         fan.centerR3d_world = pnp_result.R_world;
         auto apex_sum = fan.apex2d[0] + fan.apex2d[1] + fan.apex2d[3] + fan.apex2d[4];
 
-        fan.armor2d = apex_sum / 4.f;
-        fan.centerR2d = fan.apex2d[2];
 
-        fan.euler = pnp_result.euler;
+        fan.rmat = pnp_result.rmat;
 
         fans.push_back(fan);
     }
@@ -198,56 +196,24 @@ bool Buff::run(TaskData &src,VisionData &data)
                 double delta_angle_axised;
                 double rotate_speed;
                 //----------------------------计算轴角度,求解转速----------------------------
-                //TODO:改进帧差法,使用隔一帧的角度位置
-                delta_t = src.timestamp - (*iter).last_timestamp;
-                // cout<<delta_t<<endl;                  
-                auto new_arm = (*fan).armor2d - (*fan).centerR2d;
-                auto last_arm = (*iter).last_fan.armor2d - (*iter).last_fan.centerR2d;
-                //a为新扇叶中心,以该点为坐标原点,b为新扇叶臂长,c为旧扇叶臂长
-                Eigen::Vector2d A = {0,0};
-                Eigen::Vector2d B = {new_arm.x, new_arm.y};
-                Eigen::Vector2d C = {last_arm.x, last_arm.y};
-                auto a = C - B;
-                // cout<<new_arm<<endl;
-                // cout<<last_arm<<endl;
-                // cout<<endl;
-                //使用点陈发
-                auto sign = (B.dot(a) < 0) ? 1 : -1;
-                auto cos_alpha = (B.squaredNorm() + C.squaredNorm() - a.squaredNorm()) / (2 * B.norm() * C.norm());
-
-                auto delta_theta = sign * acos(cos_alpha);
-                rotate_speed = delta_theta / delta_t * 1e3;//计算角速度(rad/s)
-                cout<<rotate_speed<<endl;
-                // if (!(*iter).is_initialized)
-                // {
-                //     delta_t = src.timestamp - (*iter).last_timestamp;
-                    
-                    
-                //     // delta_angle_axised = eulerToAngleAxisd((*fan).euler - (*iter).last_fan.euler);
-                    
-                //     rotate_speed = delta_angle_axised.angle() / delta_t * 1e3;//计算角速度(rad/s)
-                // }
-                // else
-                // {
-
-                // }
-                // cout<<delta_angle_axised.angle<<endl;
-                // auto current_roll = (*fan).euler[0];
-                // auto last_roll = (*iter).last_fan.euler[0];
-                // double delta_theta;
-                //将Roll表示范围由[-180,180]转换至[0，360]
-                // if (current_roll <= 0)
-                //     current_roll += CV_2PI;
-                // if (last_roll <= 0)
-                //     last_roll += CV_2PI;
-                // //计算delta_theta使用
-                // if ((*fan).euler[0] > 0 && (*fan).euler[0] < (0.5 * CV_PI) && (*iter).last_fan.euler[0] > (1.5 * CV_PI))
-                //     delta_theta = CV_2PI + (*fan).euler[0] - (*iter).last_fan.euler[0];
-                // else if ((*fan).euler[0] > (1.5 * CV_PI) && (*iter).last_fan.euler[0] > 0 && (*iter).last_fan.euler[0] < (0.5 * CV_PI))
-                //     delta_theta = -CV_2PI + (*fan).euler[0] - (*iter).last_fan.euler[0];
-                // else
-                //     delta_theta = (*fan).euler[0] - (*iter).last_fan.euler[0];
-                // double rotate_speed = delta_theta / delta_t * 1e3;//计算角速度(rad/s)
+                if (is_initialized)
+                {
+                    delta_t = src.timestamp - (*iter).prev_timestamp;
+                    //目前扇叶到上一次扇叶的旋转矩阵
+                    auto relative_rmat = (*iter).prev_fan.rmat.transpose() * (*fan).rmat;
+                    //TODO:使用点乘判断旋转方向
+                    delta_angle_axised = Eigen::AngleAxisd(relative_rmat).angle();
+                }
+                else
+                {
+                    delta_t = src.timestamp - (*iter).last_timestamp;
+                    //目前扇叶到上一次扇叶的旋转矩阵
+                    auto relative_rmat = (*iter).last_fan.rmat.transpose() * (*fan).rmat;
+                    //TODO:使用点乘判断旋转方向
+                    delta_angle_axised = Eigen::AngleAxisd(relative_rmat).angle();
+                }
+                // delta_angle_axised = eulerToAngleAxisd((*fan).euler - (*iter).last_fan.euler);
+                rotate_speed = delta_angle_axised.angle() / delta_t * 1e3;//计算角速度(rad/s)
                 if (fabs(rotate_speed) <= max_v)
                 {
                     FanTracker fan_tracker = (*iter);
@@ -344,10 +310,9 @@ bool Buff::run(TaskData &src,VisionData &data)
     // cout<<hit_point_world<<endl;
     Eigen::Vector3d hit_point_cam = {0,0,0};
     // Eigen::Vector3d euler_rad = target.euler;
-    Eigen::Vector3d euler_rad = target.euler;
-    auto rotMat = eulerToRotationMatrix(euler_rad);
+    // Eigen::Vector3d euler_rad = target.euler;
     //Pc = R * Pw + T
-    hit_point_world = (rotMat * hit_point_world) + target.armor3d_world;
+    hit_point_world = (target.rmat * hit_point_world) + target.armor3d_world;
     hit_point_cam = coordsolver.worldToCam(hit_point_world, rmat_imu);
     auto r_center_cam = coordsolver.worldToCam(target.centerR3d_world, rmat_imu);
     // auto r_center_cam = coordsolver.worldToCam(mean_r_center, rmat_imu);

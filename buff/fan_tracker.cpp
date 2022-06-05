@@ -15,9 +15,9 @@ FanTracker::FanTracker(Fan src, int src_timestamp)
 
 bool FanTracker::update(Fan new_fan,int new_timestamp)
 {
+    is_last_fan_exists = true;
     if (history_info.size() < max_history_len)
     {
-        is_last_fan_exists = true;
         history_info.push_back(new_fan);
     }
     else

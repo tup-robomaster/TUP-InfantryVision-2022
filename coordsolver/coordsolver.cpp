@@ -152,6 +152,7 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
         Eigen::Matrix3d rmat_eigen_world = rmat_imu * transform_ic.block(0, 0, 3, 3) * rmat_eigen;
         // result.euler = rotationMatrixToEulerAngles(rmat_eigen_world);
         result.euler = rotationMatrixToEulerAngles(rmat_eigen_world);
+        result.rmat = rmat_eigen_world;
     }
     
     return result;
