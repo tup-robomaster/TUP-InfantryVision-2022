@@ -4,6 +4,7 @@
 #include <typeinfo>
 using namespace std;
 
+#pragma once
 class BaseException
 {
 public:
@@ -35,6 +36,7 @@ public:
 
 class pathError : public BaseException
 {
+public:
     virtual void what()
     {
         std::cerr << "未检测到串口路径！" << endl;

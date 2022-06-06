@@ -4,14 +4,12 @@
 
 // #define DETECT_RED  //红色检测，不启用默认为蓝色检测
 
-#define SAVE_VIDEO               // save video
+// #define SAVE_VIDEO               // save video
 
 // #define SAVE_LOG_ALL                // save log
 
 // #define USING_IMU                //是否使用陀螺仪数据
 //===========================================================================//
-
-
 
 //TODO:确保比赛时下面的宏定义均为合理的注释状态
 //---------------------------------------------------------------------------//
@@ -19,19 +17,16 @@
 //---------------------------------------------------------------------------//
 
 // #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
-#define USING_HAIKANG               //是否使用海康相机
+// #define USING_HAIKANG               //是否使用海康相机
 
-<<<<<<< HEAD
 /**** 大恒相机型号 ****/ 
 // #define CAMERA_ID_73 
 #ifndef CAMERA_ID_73
     // #define CAMERA_ID_75 //默认相机型号为76
 #endif
-
 // #define DEBUG_WITHOUT_COM           //无串口调试
-=======
 #define DEBUG_WITHOUT_COM           //无串口调试
->>>>>>> main
+
 //===========================================================================//
 
 
@@ -49,14 +44,13 @@
 //                              INFO及预测相关选项
 //---------------------------------------------------------------------------//
 
-#define USING_ROI   //Using roi
-#define SHOW_ROI    //Show roi
+// #define USING_ROI   //Using roi
+#ifdef USING_ROI
+    #define SHOW_ROI    //Show roi
+#endif 
 
-<<<<<<< HEAD
 #define PRINT_LATENCY //输出运行时间
-=======
 // #define PRINT_LATENCY //输出运行时
->>>>>>> main
 
 #define PRINT_TARGET_INFO //是否输出目标信息
 

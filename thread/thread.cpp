@@ -6,8 +6,8 @@
 **/
 bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factory, std::chrono::_V2::steady_clock::time_point time_start)
 {
-    constexpr string config_name = "../params/config.yaml";
-    constexpr string param_name = "param_name";
+    const string config_name = "../params/config.yaml";
+    const string param_name = "param_name";
 
 #ifdef USING_DAHENG
     YAML::Node config = YAML::LoadFile(config_name);
@@ -138,6 +138,8 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // src.timestamp = DaHeng.Get_TIMESTAMP();
 #endif //USING_DAHENG
+
+#ifdef USING_HAIKANG
         auto HaiKang_stauts = HaiKang.GetMat(src.img);
         if (!HaiKang_stauts)
         {
@@ -150,8 +152,6 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
             goto start_get_img;
         }
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
-#ifdef USING_HAIKANG
-
 #endif
 
 #ifdef USING_VIDEO
@@ -279,16 +279,9 @@ bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory)
             usleep(5000);
             continue;
         }
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 #ifdef DEBUG_WITHOUT_COM
         //发送数据格式转换
-=======
-        
->>>>>>> main
-=======
->>>>>>> main
         serial.TransformData(transmit);
         try
         {

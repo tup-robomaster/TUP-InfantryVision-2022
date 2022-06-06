@@ -172,7 +172,7 @@ bool Buff::run(TaskData &src,VisionData &data)
         if (object.color == 0)
             fan.key = "B" + string(object.cls == 0 ? "Activated" : "Target");
         if (object.color == 1)
-            fan.key = "R" + string(object.cl s == 0 ? "Activated" : "Target");
+            fan.key = "R" + string(object.cls == 0 ? "Activated" : "Target");
         memcpy(fan.apex2d, object.apex, 5 * sizeof(cv::Point2f));
         for(int i = 0; i < 5; i++)
         {
