@@ -73,7 +73,7 @@ public:
     BuffPredictor();
     ~BuffPredictor();
     bool predict(double speed, int dist, int timestamp, double &result);
-    double calcAimingAngleOffset(double params[4], double t0, double t1);
+    double calcAimingAngleOffset(double params[4], double t0, double t1, int mode);
     double shiftWindowFilter(int start_idx);
 };
 

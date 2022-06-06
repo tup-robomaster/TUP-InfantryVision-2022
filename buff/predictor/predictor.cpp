@@ -65,6 +65,7 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
     for (auto target_info : history_info)
         rotate_speed_sum += target_info.speed;
     params[3] = rotate_speed_sum / history_info.size();
+    // cout<<rotate_speed_sum<<endl;
 
     //TODO:小符模式不需要额外计算,也可增加判断，小符模式给定恒定转速进行击打
     //若为大符模式且函数未确定
@@ -125,8 +126,7 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
     float delta_time_estimate = ((double)dist / bullet_speed) * 1e3 + delay;
     float timespan = history_info.back().timestamp - history_info.front().timestamp;
     float time_estimate = delta_time_estimate + timespan;
-    result = calcAimingAngleOffset(params, timespan / 1e3, time_estimate / 1e3);
-
+    result = calcAimingAngleOffset(params, timespan / 1e3, time_estimate / 1e3, mode);
     last_target = target;
 
 #ifdef DRAW_PREDICT
@@ -154,9 +154,10 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
  * @param params 拟合方程参数
  * @param t0 积分下限
  * @param t1 积分上限
+ * @param mode 模式
  * @return 角度提前量(rad)
 */
-double BuffPredictor::calcAimingAngleOffset(double params[4], double t0, double t1)
+double BuffPredictor::calcAimingAngleOffset(double params[4], double t0, double t1 , int mode)
 {
     auto a = params[0];
     auto omega = params[1];
@@ -167,7 +168,7 @@ double BuffPredictor::calcAimingAngleOffset(double params[4], double t0, double 
 
     //f(x) = a * sin(ω * t + θ) + b
     //对目标函数进行积分
-    if (a == 0 && omega == 0 && theta == 0)//适用于小符模式
+    if (mode == 0)//适用于小符模式
     {
         theta0 = b * t0;
         theta1 = b * t1;

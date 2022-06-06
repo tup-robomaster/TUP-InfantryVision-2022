@@ -164,15 +164,13 @@ bool Buff::run(TaskData &src,VisionData &data)
         std::vector<Point2f> points_pic(fan.apex2d, fan.apex2d + 5);
         TargetType target_type = BUFF;
         auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_ITERATIVE);
-        fan.centerR2d = fan.apex2d[2];
 
         fan.armor3d_cam = pnp_result.armor_cam;
         fan.armor3d_world = pnp_result.armor_world;
         fan.centerR3d_cam = pnp_result.R_cam;
         fan.centerR3d_world = pnp_result.R_world;
-        auto apex_sum = fan.apex2d[0] + fan.apex2d[1] + fan.apex2d[3] + fan.apex2d[4];
 
-
+        fan.euler = pnp_result.euler;
         fan.rmat = pnp_result.rmat;
 
         fans.push_back(fan);
@@ -193,16 +191,21 @@ bool Buff::run(TaskData &src,VisionData &data)
             for (auto iter = trackers.begin(); iter != trackers.end(); iter++)
             {
                 double delta_t;
-                double delta_angle_axised;
+                Eigen::AngleAxisd angle_axisd;
                 double rotate_speed;
-                //----------------------------计算轴角度,求解转速----------------------------
-                if (is_initialized)
+                double sign;
+                //----------------------------计算角度,求解转速----------------------------
+                // 目前扇叶到上一次扇叶的旋转矩阵
+                auto relative_rmat = (*iter).last_fan.rmat.transpose() * (*fan).rmat;
+                if ((*iter).is_initialized)
                 {
                     delta_t = src.timestamp - (*iter).prev_timestamp;
                     //目前扇叶到上一次扇叶的旋转矩阵
                     auto relative_rmat = (*iter).prev_fan.rmat.transpose() * (*fan).rmat;
-                    //TODO:使用点乘判断旋转方向
-                    delta_angle_axised = Eigen::AngleAxisd(relative_rmat).angle();
+                    // cout<<relative_rmat<<endl;
+                    // cout<<"..."<<endl;
+                    angle_axisd = Eigen::AngleAxisd(relative_rmat);
+                    sign = ((*fan).centerR3d_world.dot(angle_axisd.axis()) > 0 ) ? 1 : -1;
                 }
                 else
                 {
@@ -210,15 +213,25 @@ bool Buff::run(TaskData &src,VisionData &data)
                     //目前扇叶到上一次扇叶的旋转矩阵
                     auto relative_rmat = (*iter).last_fan.rmat.transpose() * (*fan).rmat;
                     //TODO:使用点乘判断旋转方向
-                    delta_angle_axised = Eigen::AngleAxisd(relative_rmat).angle();
+                    angle_axisd = Eigen::AngleAxisd(relative_rmat);
+                    sign = ((*fan).centerR3d_world.dot(angle_axisd.axis()) > 0 ) ? 1 : -1;
                 }
-                // delta_angle_axised = eulerToAngleAxisd((*fan).euler - (*iter).last_fan.euler);
-                rotate_speed = delta_angle_axised.angle() / delta_t * 1e3;//计算角速度(rad/s)
+                // cout<<sign<<endl;
+                // cout<<delta_angle_axisd.angle()<< " : "<<delta_angle_axised<<endl;
+                // cout<<delta_t<<endl;
+                // cout<<"..."<<endl;
+                // cout<<angle_axisd.axis()<<endl;
+                // cout<<endl;
+                rotate_speed = (angle_axisd.angle()) / delta_t * 1e3;//计算角速度(rad/s)
+                // cout<<angle_axisd.axis()<<endl;
+                // cout<<endl;
+                // cout<<rotate_speed<<endl;
                 if (fabs(rotate_speed) <= max_v)
                 {
                     FanTracker fan_tracker = (*iter);
                     fan_tracker.update((*fan), src.timestamp);
                     fan_tracker.rotate_speed = rotate_speed;
+                    trackers_tmp.push_back(fan_tracker);
                     break;
                 }
                 else if (trackers.size() < fans.size())
@@ -303,6 +316,7 @@ bool Buff::run(TaskData &src,VisionData &data)
 
     ///------------------------计算击打点----------------------------
     //将角度转化至[-PI,PI范围内]
+    // cout<<theta_offset<<endl;
     theta_offset = rangedAngleRad(theta_offset);
     // cout<<theta_offset<<endl;
     //由offset生成欧拉角和旋转矩阵
