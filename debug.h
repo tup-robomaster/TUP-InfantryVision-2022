@@ -8,6 +8,7 @@
 
 #define SAVE_LOG_ALL                // Save log
 
+#TODO: 开启此选项请关闭无串口调试模式
 // #define USING_IMU                //是否使用陀螺仪数据
 //===========================================================================//
 
@@ -91,7 +92,7 @@
 // #ifndef USING_DAHENG
 //     #define USING_USB_CAMERA
 // #endif // USING_DAHENG
-#define USING_VIDEO
+// #define USING_VIDEO
 
 #ifndef DETECT_RED
     #define DETECT_BLUE
