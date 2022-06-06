@@ -320,7 +320,7 @@ BuffDetector::~BuffDetector()
 //TODO:change to your dir
 bool BuffDetector::initModel(string path)
 {
-    ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "../TUP-InfantryVision-2022-main/.cache"}});
+    ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "../.cache"}});
     // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
     ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
     // Step 1. Read a model in OpenVINO Intermediate Representation (.xml and
