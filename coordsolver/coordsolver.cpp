@@ -23,7 +23,7 @@ CoordSolver::~CoordSolver()
  * @param param_name 参数组名称
  * @return bool 加载是否成功
  */
-bool CoordSolver::loadParam(string coord_path,string param_name)
+bool CoordSolver::loadParam(string coord_path, string param_name)
 {
     YAML::Node config = YAML::LoadFile(coord_path);
     if(config.IsNull())
@@ -43,8 +43,8 @@ bool CoordSolver::loadParam(string coord_path,string param_name)
     this->max_iter = config[param_name]["max_iter"].as<int>();
     this->stop_error = config[param_name]["stop_error"].as<float>();
     this->R_K_iter = config[param_name]["R_K_iter"].as<int>();
-    this->k = config[param_name]["LARM_K"].as<double>();
-    this->g = config[param_name]["G"].as<double>();
+    this->k = config[param_name]["LATM_K"].as<float>();
+    this->g = config[param_name]["G"].as<float>();
 
     //初始化内参矩阵
     auto read_vector = config[param_name]["Intrinsic"].as<vector<float>>();

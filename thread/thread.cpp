@@ -20,7 +20,6 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     
     // 初始化大恒相机参数
     DaHengCamera DaHeng;
-    
     DaHeng.StartDevice(1);
     // 设置分辨率
     DaHeng.SetResolution(1,1);
@@ -29,15 +28,12 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-<<<<<<< HEAD
     DaHeng.SetExposureTime(config[param_name]["Exposure_time"].as<int>()); 
     // 设置
     DaHeng.SetGAIN(3, config[param_name]["Exposure_gain"].as<double>());
-=======
     DaHeng.SetExposureTime(6000);
     // 设置1
     DaHeng.SetGAIN(3, 14);
->>>>>>> main
     // 是否启用自动白平衡7
     // DaHeng.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
@@ -361,7 +357,7 @@ bool serialWatcher(SerialPort &serial)
 #endif // DEBUG_WITHOUT_COM
 
     while(1)
-    {
+    {   
         sleep(1);
         //检测文件夹是否存在或串口需要初始化
         if (access(serial.device.path.c_str(),F_OK) == -1 || serial.need_init)

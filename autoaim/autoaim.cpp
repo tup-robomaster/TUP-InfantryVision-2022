@@ -12,7 +12,6 @@ ofstream file;
 Autoaim::Autoaim()
 {
     detector.initModel(network_path);
-
     try
     {
         predictor_param_loader.initParam(predict_param_path);
@@ -22,8 +21,9 @@ Autoaim::Autoaim()
         e.what();
     }
 
-    coordsolver.loadParam(camera_param_path,camera_name);
+    coordsolver.loadParam(camera_param_path, camera_name);
     // cout<<"...."<<endl;
+    
     lost_cnt = 0;
     is_last_target_exists = false;
     is_target_switched = true;
