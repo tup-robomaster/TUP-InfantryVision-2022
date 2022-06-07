@@ -151,6 +151,7 @@ bool Buff::run(TaskData &src,VisionData &data)
         Fan fan;
         fan.id = object.cls;
         fan.color = object.color;
+        fan.conf = object.prob;
         if (object.color == 0)
             fan.key = "B" + string(object.cls == 0 ? "Activated" : "Target");
         if (object.color == 1)
@@ -205,7 +206,7 @@ bool Buff::run(TaskData &src,VisionData &data)
         {
             //1e9无实际意义，仅用于以非零初始化
             double min_v = 1e9;
-            int min_delta_t = 1e9;
+            int min_last_delta_t = 1e9;
             bool is_best_candidate_exist = false;
             std::vector<FanTracker>::iterator best_candidate;
             for (auto iter = trackers.begin(); iter != trackers.end(); iter++)
@@ -245,9 +246,9 @@ bool Buff::run(TaskData &src,VisionData &data)
                 // cout<<angle_axisd.axis()<<endl;
                 // cout<<endl;
                 // cout<<rotate_speed<<endl;
-                if (rotate_speed <= max_v && rotate_speed <= min_v && delta_t <= min_delta_t)
+                if (rotate_speed <= max_v && rotate_speed <= min_v && (src.timestamp - (*iter).last_timestamp) <= min_last_delta_t)
                 {
-                    min_delta_t = delta_t;
+                    min_last_delta_t = src.timestamp - (*iter).last_timestamp;
                     min_v = rotate_speed;
                     best_candidate = iter;
                     is_best_candidate_exist = true;
@@ -302,7 +303,7 @@ bool Buff::run(TaskData &src,VisionData &data)
     //计算平均转速与平均R字中心坐标
     for(auto tracker: trackers)
     {
-        if (tracker.is_last_fan_exists)
+        if (tracker.is_last_fan_exists && tracker.last_timestamp == src.timestamp)
         {
             rotate_speed_sum += tracker.rotate_speed;
             r_center_sum += tracker.last_fan.centerR3d_world;
@@ -362,11 +363,27 @@ bool Buff::run(TaskData &src,VisionData &data)
     // auto r_center_cam = coordsolver.worldToCam(mean_r_center, rmat_imu);
     auto center2d_src = coordsolver.reproject(r_center_cam);
     auto target2d = coordsolver.reproject(hit_point_cam);
-    lost_cnt = 0;
-    last_roi_center = center2d_src;
-    is_last_target_exists = true;
 
     auto angle = coordsolver.getAngle(hit_point_cam,rmat_imu);
+
+    lost_cnt = 0;
+    last_roi_center = center2d_src;
+    last_timestamp = src.timestamp;
+    last_fan = target;
+    is_last_target_exists = true;
+
+
+    //-----------------判断扇叶是否发生切换-------------------------
+    bool is_switched = false;
+    auto delta_t = src.timestamp - last_timestamp;
+    auto relative_rmat = last_fan.rmat.transpose() * target.rmat;
+    //TODO:使用点乘判断旋转方向
+    auto angle_axisd = Eigen::AngleAxisd(relative_rmat);
+    // sign = ((*fan).centerR3d_world.dot(angle_axisd.axis()) > 0 ) ? 1 : -1;
+    auto rotate_speed = (angle_axisd.angle()) / delta_t * 1e3;//计算角速度(rad/s)
+    if (abs(rotate_speed) > max_v)
+        is_switched = true;
+    
     auto time_predict = std::chrono::steady_clock::now();
     double dr_full_ms = std::chrono::duration<double,std::milli>(time_predict - time_start).count();
     double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
@@ -376,6 +393,7 @@ bool Buff::run(TaskData &src,VisionData &data)
 #ifdef SHOW_ALL_FANS
     for (auto fan : fans)
     {
+        putText(src.img, fmt::format("{:.2f}", fan.conf),fan.apex2d[4],FONT_HERSHEY_SIMPLEX, 1, {0, 255, 0}, 2);
         if (fan.color == 0)
             putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
         if (fan.color == 1)
@@ -424,6 +442,7 @@ bool Buff::run(TaskData &src,VisionData &data)
     fmt::print(fmt::fg(fmt::color::blue_violet), "Yaw: {} \n",angle[0]);
     fmt::print(fmt::fg(fmt::color::golden_rod), "Pitch: {} \n",angle[1]);
     fmt::print(fmt::fg(fmt::color::green_yellow), "Dist: {} m\n",(float)hit_point_cam.norm());
+    fmt::print(fmt::fg(fmt::color::orange_red), "Is Switched: {} \n",is_switched);
 #endif //PRINT_TARGET_INFO
 
 #ifdef SAVE_BUFF_LOG
@@ -431,6 +450,6 @@ bool Buff::run(TaskData &src,VisionData &data)
     LOG(INFO) <<"[BUFF] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)hit_point_cam.norm();
 #endif //SAVE_BUFF_LOG
 
-    data = {(float)angle[1], (float)angle[0], (float)hit_point_cam.norm(), 0, 1, 1, 1};
+    data = {(float)angle[1], (float)angle[0], (float)hit_point_cam.norm(), is_switched, 1, 1, 1};
     return true;
 }

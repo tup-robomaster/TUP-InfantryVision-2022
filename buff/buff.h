@@ -37,6 +37,8 @@ private:
     const double fan_length = 0.565; //大符臂长(R字中心至装甲板中心)
     const double no_crop_thres = 2e-3;      //禁用ROI裁剪的装甲板占图像面积最大面积比值
 
+    Fan last_fan;
+
     BuffDetector detector;
     BuffPredictor predictor;
     CoordSolver coordsolver;

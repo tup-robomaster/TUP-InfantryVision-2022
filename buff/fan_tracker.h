@@ -15,6 +15,7 @@ struct Fan
 {
     int id;
     int color;
+    double conf;
     string key;
     Point2f apex2d[5];
 
