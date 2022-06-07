@@ -39,7 +39,7 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
     auto delta_speed = target.speed - last_target.speed;
     auto delta_t = timestamp - last_target.timestamp;
     auto accel = 1e3 * delta_speed / delta_t;//计算加速度,单位rad/s^2
-    if (fabs(accel) > max_a || fabs(speed) > max_v)
+    if (abs(accel) > max_a || abs(speed) > max_v)
     {
         history_info.push_back(target);
         auto filtered_speed = shiftWindowFilter(history_info.size() - window_size - 1);

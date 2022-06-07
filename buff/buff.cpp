@@ -177,16 +177,16 @@ bool Buff::run(TaskData &src,VisionData &data)
         fans.push_back(fan);
     }
     ///------------------------生成/分配FanTracker----------------------------
-    if (trackers_map.size() != 0)
+    if (trackers.size() != 0)
     {
         //维护Tracker队列，删除过旧的Tracker
-        for (auto iter = trackers_map.begin(); iter != trackers_map.end();)
+        for (auto iter = trackers.begin(); iter != trackers.end();)
         {
             //删除元素后迭代器会失效，需先行获取下一元素
             auto next = iter;
             // cout<<(*iter).second.last_timestamp<<"  "<<src.timestamp<<endl;
-            if ((src.timestamp - (*iter).second.last_timestamp) > max_delta_t)
-                next = trackers_map.erase(iter);
+            if ((src.timestamp - (*iter).last_timestamp) > max_delta_t)
+                next = trackers.erase(iter);
             else
                 ++next;
             iter = next;
@@ -263,7 +263,7 @@ bool Buff::run(TaskData &src,VisionData &data)
             if (is_best_candidate_exist)
             {
                 (*best_candidate).update((*fan), src.timestamp);
-                (*best_candidate).rotate_speed = rotate_speed;
+                (*best_candidate).rotate_speed = min_v;
             }
             else
             {
@@ -324,7 +324,7 @@ bool Buff::run(TaskData &src,VisionData &data)
     }
     mean_rotate_speed = rotate_speed_sum / avail_tracker_cnt;
     mean_r_center = r_center_sum / avail_tracker_cnt;
-    double theta_offset;
+    double theta_offset = 0;
     ///------------------------进行预测----------------------------
     // predictor.mode = 1;
     if (src.mode == 3)
@@ -333,7 +333,7 @@ bool Buff::run(TaskData &src,VisionData &data)
     else if (src.mode == 4)
         //进入大能量机关识别模式
         predictor.mode = 1;
-
+    // cout<<mean_rotate_speed<<endl;
     if (!predictor.predict(mean_rotate_speed, int(mean_r_center.norm()), src.timestamp, theta_offset))
     {
 #ifdef SHOW_IMG
@@ -366,13 +366,6 @@ bool Buff::run(TaskData &src,VisionData &data)
 
     auto angle = coordsolver.getAngle(hit_point_cam,rmat_imu);
 
-    lost_cnt = 0;
-    last_roi_center = center2d_src;
-    last_timestamp = src.timestamp;
-    last_fan = target;
-    is_last_target_exists = true;
-
-
     //-----------------判断扇叶是否发生切换-------------------------
     bool is_switched = false;
     auto delta_t = src.timestamp - last_timestamp;
@@ -383,6 +376,14 @@ bool Buff::run(TaskData &src,VisionData &data)
     auto rotate_speed = (angle_axisd.angle()) / delta_t * 1e3;//计算角速度(rad/s)
     if (abs(rotate_speed) > max_v)
         is_switched = true;
+
+    lost_cnt = 0;
+    last_roi_center = center2d_src;
+    last_timestamp = src.timestamp;
+    last_fan = target;
+    is_last_target_exists = true;
+
+
     
     auto time_predict = std::chrono::steady_clock::now();
     double dr_full_ms = std::chrono::duration<double,std::milli>(time_predict - time_start).count();
@@ -412,7 +413,7 @@ bool Buff::run(TaskData &src,VisionData &data)
 
 #ifdef SHOW_PREDICT
     circle(src.img, center2d_src, 5, Scalar(0, 0, 255), 2);
-    circle(src.img, target2d, 5, Scalar(0, 255, 0), 2);
+    circle(src.img, target2d, 5, Scalar(255, 255, 255), 2);
 #endif //SHOW_PREDICT
 
 
@@ -447,7 +448,7 @@ bool Buff::run(TaskData &src,VisionData &data)
 
 #ifdef SAVE_BUFF_LOG
     LOG(INFO) <<"[BUFF] LATENCY: "<< "Crop: " << dr_crop_ms << " ms" << " Infer: " << dr_infer_ms << " ms" << " Predict: " << dr_predict_ms << " ms" << " Total: " << dr_full_ms << " ms";
-    LOG(INFO) <<"[BUFF] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)hit_point_cam.norm();
+    LOG(INFO) <<"[BUFF] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)hit_point_cam.norm()<<"Is Switched:"<<is_switched;
 #endif //SAVE_BUFF_LOG
 
     data = {(float)angle[1], (float)angle[0], (float)hit_point_cam.norm(), is_switched, 1, 1, 1};

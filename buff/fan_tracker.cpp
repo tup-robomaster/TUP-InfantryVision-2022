@@ -10,6 +10,7 @@ FanTracker::FanTracker(Fan src, int src_timestamp)
     last_fan = src;
     last_timestamp = src_timestamp;
     is_initialized = false;
+    is_last_fan_exists = false;
     history_info.push_back(src);
 }
 

@@ -8,7 +8,7 @@
 
 #define SAVE_LOG_ALL                // Save log
 
-#TODO: 开启此选项请关闭无串口调试模式
+// #TODO: 开启此选项请关闭无串口调试模式
 // #define USING_IMU                //是否使用陀螺仪数据
 //===========================================================================//
 
@@ -19,7 +19,7 @@
 //                              硬件设备选项
 //---------------------------------------------------------------------------//
 
-// #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+#define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
 
 #define DEBUG_WITHOUT_COM           //无串口调试
 //===========================================================================//
@@ -89,9 +89,9 @@
     #define SHOW_AIM_CROSS//是否绘制十字瞄准线
 #endif // SHOW_IMG
 
-// #ifndef USING_DAHENG
-//     #define USING_USB_CAMERA
-// #endif // USING_DAHENG
+#ifndef USING_DAHENG
+    #define USING_USB_CAMERA
+#endif // USING_DAHENG
 // #define USING_VIDEO
 
 #ifndef DETECT_RED
