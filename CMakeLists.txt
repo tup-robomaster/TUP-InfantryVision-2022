@@ -81,7 +81,7 @@ add_executable(Infantry_Vision main.cpp
 target_link_libraries(Infantry_Vision ${OpenCV_LIBRARIES} ${InferenceEngine_LIBRARIES} ${Eigen3_LIBRARIES}
                          yaml-cpp gxiapi Ceres::ceres fftw3 fmt::fmt glog matplotlib_cpp::matplotlib_cpp)
 
-# 包含海康相机动态链接库
+# 链接海康相机动态库
 find_library(MVS_LIB libMvCameraControl.so /opt/MVS/lib/64/)
 target_link_libraries(Infantry_Vision ${MVS_LIB})
 

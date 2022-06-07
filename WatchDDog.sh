@@ -1,7 +1,6 @@
 #!/bin/bash 
 
 source /opt/intel/openvino_2021/bin/setupvars.sh
-<<<<<<< HEAD
 
 sec=1
 cnt=0
@@ -13,16 +12,6 @@ cd /home/liubiao/Desktop/$name/build/
 cmake .. && make clean && 
 make -j8 
 
-=======
-sec=1 
-cnt=0 
-name=TUP-InfantryVision-2022-main
-program_name=Infantry_Vision
-cd /home/tup/$name/build/
-#make clean && 
-make -j6
-./$program_name
->>>>>>> main
 while [ 1 ] 
 do
     count=`ps -ef | grep $name | grep -v "grep" | wc -l`    # 查看进程数
@@ -33,7 +22,6 @@ do
     # fi
     echo "Thread count: $count" 
     echo "Expection count: $cnt" 
-<<<<<<< HEAD
     # cd /home/liubiao/$name/build/
 
     #检查串口是否连接（未打开则等待）
@@ -49,35 +37,25 @@ do
     done
     (sudo chmod 777 /dev/ttyACM0 || chmod 777 /dev/ttyACM1)  # 给串口权限
     
-    if [ $count -gt 2 ]; then
-=======
-    if [ $count -gt 1 ]; then 
->>>>>>> main
+    if [ $count -gt 2 ]; then 
         echo "The $name is still alive!" 
         sleep $sec 
     else  
         echo "Starting $name..." 
-<<<<<<< HEAD
         # gnome-terminal -- bash -c "cd /home/tup/Desktop/$name/build/;
         # ./$name;exec bash;" 
         cd /home/liubiao/Desktop/$name/build/   #TODO:程序build文件夹路径
         make -j8 && ./$name
         echo "$name has started!"   
-=======
         gnome-terminal -- bash -c "cd /home/tup/$name/build/;
         ./$program_name;exec bash;" 
         echo "$program_name has started!"   
->>>>>>> main
         sleep $sec 
-
         ((cnt=cnt+1)) 
         if [ $cnt -gt 9 ]; then 
-<<<<<<< HEAD
             #reboot              #比赛前打开
             echo "reboot!"       #调试时打开
-=======
             echo "reboot!"
->>>>>>> main
         fi 
     fi 
 done

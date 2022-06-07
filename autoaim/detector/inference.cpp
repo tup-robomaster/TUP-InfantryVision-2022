@@ -31,20 +31,20 @@ static inline int argmax(const float *ptr, int len)
  * @param transform_matrix Transform Matrix of Resize
  * @return Image after resize
  */
-inline cv::Mat scaledResize(cv::Mat& img, Eigen::Matrix<float,3,3> &transform_matrix)
+inline cv::Mat scaledResize(cv::Mat& img, Eigen::Matrix<float,3,3> &transform_matrix, int &dw, int &dh, float &rescale_ratio)
 {
-    float r = std::min(INPUT_W / (img.cols * 1.0), INPUT_H / (img.rows * 1.0));
-    int unpad_w = r * img.cols;
-    int unpad_h = r * img.rows;
+    rescale_ratio = std::min(INPUT_W / (img.cols * 1.0), INPUT_H / (img.rows * 1.0));
+    int unpad_w = rescale_ratio * img.cols;
+    int unpad_h = rescale_ratio * img.rows;
     
-    int dw = INPUT_W - unpad_w;
-    int dh = INPUT_H - unpad_h;
+    dw = INPUT_W - unpad_w;
+    dh = INPUT_H - unpad_h;
 
     dw /= 2;
     dh /= 2;
     
-    transform_matrix << 1.0 / r, 0, -dw / r,
-                        0, 1.0 / r, -dh / r,
+    transform_matrix << 1.0 / rescale_ratio, 0, -dw / rescale_ratio,
+                        0, 1.0 / rescale_ratio, -dh / rescale_ratio,
                         0, 0, 1;
     
     Mat re;
@@ -361,7 +361,7 @@ bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
 #endif // SAVE_AUTOAIM_LOG
         return false;
     }
-    cv::Mat pr_img = scaledResize(src,transfrom_matrix);
+    cv::Mat pr_img = scaledResize(src, transfrom_matrix, dw, dh, rescale_ratio);
 #ifdef SHOW_INPUT
     namedWindow("network_input",0);
     imshow("network_input",pr_img);
@@ -370,7 +370,7 @@ bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
     cv::Mat pre;
     cv::Mat pre_split[3];
     pr_img.convertTo(pre,CV_32F);
-    cv::split(pre,pre_split);
+    cv::split(pre, pre_split);
 
     Blob::Ptr imgBlob = infer_request.GetBlob(input_name);     // just wrap Mat data by Blob::Ptr
     InferenceEngine::MemoryBlob::Ptr mblob = InferenceEngine::as<InferenceEngine::MemoryBlob>(imgBlob);

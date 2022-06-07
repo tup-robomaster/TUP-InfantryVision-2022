@@ -29,15 +29,15 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-<<<<<<< HEAD
+
     DaHeng.SetExposureTime(config[param_name]["Exposure_time"].as<int>()); 
     // 设置
     DaHeng.SetGAIN(3, config[param_name]["Exposure_gain"].as<double>());
-=======
+
     DaHeng.SetExposureTime(6000);
     // 设置1
     DaHeng.SetGAIN(3, 14);
->>>>>>> main
+
     // 是否启用自动白平衡7
     // DaHeng.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
@@ -73,14 +73,13 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 是否启用自动白平衡7
     // HaiKang.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
-    HaiKang.Set_BALANCE(0, 1700);
+    HaiKang.Set_BALANCE(0, 1514);
     HaiKang.Set_BALANCE(1, 1000);
-    HaiKang.Set_BALANCE(2, 1950);
+    HaiKang.Set_BALANCE(2, 2022);
 #endif
 
 #ifdef USING_USB_CAMERA
     VideoCapture cap(0);
-    // VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Open USB Camera success\n");
     #ifdef SAVE_LOG_ALL
         LOG(INFO) << "[CAMERA] Open USB Camera success";
@@ -279,16 +278,9 @@ bool dataTransmitter(SerialPort &serial,Factory<VisionData> &transmit_factory)
             usleep(5000);
             continue;
         }
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 #ifdef DEBUG_WITHOUT_COM
         //发送数据格式转换
-=======
-        
->>>>>>> main
-=======
->>>>>>> main
         serial.TransformData(transmit);
         try
         {

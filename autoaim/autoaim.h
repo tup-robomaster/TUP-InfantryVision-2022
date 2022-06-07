@@ -28,11 +28,16 @@ private:
     bool is_target_switched;
     int lost_cnt;
     int prev_timestamp;
-    double last_target_area;
+
+    int dw, dh;             //letterbox对原图像resize的padding区域的宽度和高度
+    float rescale_ratio;    //缩放比例 
+
+    double last_target_area;    //
     Point2i last_roi_center;
     Eigen::Vector3d last_aiming_point;
     Point2i roi_offset;
-    Size2d input_size;
+    Size2d input_size;    //
+    
     std::vector<ArmorTracker> trackers;
     std::multimap<string, ArmorTracker> trackers_map;      //预测器Map
     std::map<string,int> new_armors_cnt_map;    //装甲板计数map，记录新增装甲板数

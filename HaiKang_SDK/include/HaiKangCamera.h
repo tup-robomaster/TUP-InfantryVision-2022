@@ -42,7 +42,7 @@ public:
     bool SetStreamOn();
 
     //设置图像分辨率
-    bool SetResolution(int width = 1280, int height = 1024);
+    bool SetResolution(int width = 1440, int height = 1080);
     
     //设置曝光时间
     bool SetExposureTime(float ExposureTime);
@@ -74,10 +74,5 @@ public:
     //读取相机时间戳
     int Get_TIMESTAMP();
 
-    static void* WorkThread(void* pUser);
-    static bool PrintDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo);
-    void open_HaiKang_camera(int exposure_time, float exposure_gain, float b_balance, float g_balance, float r_balance);
-
     ~HaiKangCamera();
-
 };

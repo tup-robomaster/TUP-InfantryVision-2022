@@ -24,11 +24,14 @@ Autoaim::Autoaim()
 
     coordsolver.loadParam(camera_param_path,camera_name);
     // cout<<"...."<<endl;
+
+    dw = 0;
+    dh = 0;
     lost_cnt = 0;
     is_last_target_exists = false;
     is_target_switched = true;
     last_target_area = 0;
-    input_size = {720,720};
+    input_size = {720,720}; //
     auto predictor_tmp = predictor_param_loader.generate();
     predictor.initParam(predictor_param_loader);
 
@@ -62,48 +65,73 @@ Point2i Autoaim::cropImageByROI(Mat &img)
             return Point2i(0,0);
         }
     }
-    //若目标大小大于阈值
+
+    //若目标大小大于阈值（目标大小在原图像中的面积占比）
     // cout<<last_target_area / img.size().area()<<endl;
     if ((last_target_area / img.size().area()) > no_crop_thres)
     {
         return Point2i(0,0);
     }
 
+    //计算上一帧roi中心在原图像中的坐标
+    Point2i last_armor_center = Point2i(last_roi_center.x - this->dw, last_roi_center.y - this->dh) * (1 / this->rescale_ratio);
+
+    int roi_width = MAX(sqrt(pow(last_armor.apex2d[0].x - last_armor.apex2d[1].x, 2) + pow(last_armor.apex2d[0].y - last_armor.apex2d[1].y, 2)), 
+    sqrt(pow(last_armor.apex2d[1].x - last_armor.apex2d[2].x, 2) + pow(last_armor.apex2d[1].y - last_armor.apex2d[2].y, 2))) * (1 / this->rescale_ratio);
+    
+    int roi_height = MIN(sqrt(pow(last_armor.apex2d[0].x - last_armor.apex2d[1].x, 2) + pow(last_armor.apex2d[0].y - last_armor.apex2d[1].y, 2)), 
+    sqrt(pow(last_armor.apex2d[1].x - last_armor.apex2d[2].x, 2) + pow(last_armor.apex2d[1].y - last_armor.apex2d[2].y, 2))) * (1 / this->rescale_ratio);
+
     //根据丢失帧数逐渐扩大ROI大小
     if(lost_cnt == 2)
-    {   //丢失2帧ROI扩大1.5倍
-        input_size = input_size * 1.5;
+    {   //丢失2帧ROI扩大3.2倍
+        roi_width *= 3;
+        roi_height *= 3;
     }
     else if(lost_cnt == 3)
-    {   //丢失3帧ROI扩大2.5倍
-        input_size = input_size * 2.5;
+    {   //丢失3帧ROI扩大4.5倍
+        roi_width *= 4;
+        roi_height *= 4;
     }
     else if(lost_cnt == 4)
-    {   //丢失4帧ROI扩大3.5倍
-        input_size = input_size * 3.5;
+    {   //丢失4帧ROI扩大6倍
+        roi_width *= 6;
+        roi_height *= 6;
     }
     else if(lost_cnt == 5)
     {   //返回原图像
         return Point2i(0,0);
     }
 
-    //处理X越界
-    if (last_roi_center.x <= input_size.width / 2)
-        last_roi_center.x = input_size.width / 2;
-    else if (last_roi_center.x > (img.size().width - input_size.width / 2))
-        last_roi_center.x = img.size().width - input_size.width / 2;
-    //处理Y越界
-    if (last_roi_center.y <= input_size.height / 2)
-        last_roi_center.y = input_size.height / 2;
-    else if (last_roi_center.y > (img.size().height - input_size.height / 2))
-        last_roi_center.y = img.size().height - input_size.height / 2;
-
-    //左上角顶点
-    auto offset = last_roi_center - Point2i(input_size.width / 2, input_size.height / 2);
-    Rect roi_rect = Rect(offset, input_size);
+    //防止roi越界
+    if(last_armor_center.x + roi_width > img.size().width)
+        roi_width = img.size().width - last_armor_center.x;
+    
+    if(last_armor_center.y + roi_height > img.size().height)
+        roi_height = img.size().height - last_armor_center.y;
+    
+    Rect roi_rect = Rect(last_armor_center.x - roi_width / 2, last_armor_center.y - roi_height / 2, roi_width, roi_height);
     img(roi_rect).copyTo(img);
 
-    return offset;
+    return Point2i(0, 0);
+
+    // //处理X越界
+    // if (last_roi_center.x <= input_size.width / 2)
+    //     last_roi_center.x = input_size.width / 2;
+    // else if (last_roi_center.x > (img.size().width - .width / 2))
+    //     last_roi_center.x = img.size().width - input_size.width / 2;
+    // //处理Y越界
+    // if (last_roi_center.y <= input_size.height / 2)
+    //     last_roi_center.y = input_size.height / 2;
+    // else if (last_roi_center.y > (img.size().height - input_size.height / 2))
+    //     last_roi_center.y = img.size().height - input_size.height / 2;
+
+    // //左上角顶点
+    // auto offset = last_roi_center - Point2i(input_size.width / 2, input_size.height / 2);
+    // Rect roi_rect = Rect(offset, input_size);
+    // img(roi_rect).copyTo(img);
+
+    // return offset;
 }
 #endif //USING_ROI
 
@@ -837,6 +865,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     //获取装甲板中心与装甲板面积以下一次ROI截取使用
     last_roi_center = target.center2d;
     last_armor = target;
+
     lost_cnt = 0;
     prev_timestamp = src.timestamp;
     last_target_area = target.area;

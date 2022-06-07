@@ -365,13 +365,13 @@ bool BuffDetector::initModel(string path)
     return true;
 }
 
-bool BuffDetector::detect(Mat &src,std::vector<BuffObject>& objects)
+bool BuffDetector::detect(Mat &src,std::vector<BuffObject>& objects, int &dw, int &dh)
 {
     if (src.empty())
     {
         return false;
     }
-    cv::Mat pr_img = scaledResize(src,transfrom_matrix);
+    cv::Mat pr_img = scaledResize(src,transfrom_matrix, dw, dh);
 #ifdef SHOW_INPUT
     namedWindow("network_input",0);
     imshow("network_input",pr_img);

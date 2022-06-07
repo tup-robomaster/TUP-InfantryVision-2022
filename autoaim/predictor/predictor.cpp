@@ -38,8 +38,6 @@ bool ArmorPredictor::initParam(ArmorPredictor &predictor_loader)
 bool ArmorPredictor::initParam(string coord_path)
 {
     YAML::Node config = YAML::LoadFile(coord_path);
-<<<<<<< HEAD
-<<<<<<< HEAD
     if(config.IsNull())
     {
         throw openFileDefault();
@@ -48,13 +46,10 @@ bool ArmorPredictor::initParam(string coord_path)
     pf_x.initParam(config,"autoaim_x");
     pf_y.initParam(config,"autoaim_y");
     pf_z.initParam(config,"autoaim_z");
-=======
     pf.initParam(config,"autoaim");
->>>>>>> main
-=======
+
     pf_pos.initParam(config,"pos");
     pf_v.initParam(config,"v");
->>>>>>> main
     fitting_disabled = false;
     
     return true;
