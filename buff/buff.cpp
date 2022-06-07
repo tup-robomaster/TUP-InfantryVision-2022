@@ -176,6 +176,21 @@ bool Buff::run(TaskData &src,VisionData &data)
         fans.push_back(fan);
     }
     ///------------------------生成/分配FanTracker----------------------------
+    if (trackers_map.size() != 0)
+    {
+        //维护Tracker队列，删除过旧的Tracker
+        for (auto iter = trackers_map.begin(); iter != trackers_map.end();)
+        {
+            //删除元素后迭代器会失效，需先行获取下一元素
+            auto next = iter;
+            // cout<<(*iter).second.last_timestamp<<"  "<<src.timestamp<<endl;
+            if ((src.timestamp - (*iter).second.last_timestamp) > max_delta_t)
+                next = trackers_map.erase(iter);
+            else
+                ++next;
+            iter = next;
+        }
+    }
     //TODO:增加防抖
     std::vector<FanTracker> trackers_tmp;
     //为扇叶分配或新建最佳FanTracker
@@ -188,6 +203,11 @@ bool Buff::run(TaskData &src,VisionData &data)
         }
         else
         {
+            //1e9无实际意义，仅用于以非零初始化
+            double min_v = 1e9;
+            int min_delta_t = 1e9;
+            bool is_best_candidate_exist = false;
+            std::vector<FanTracker>::iterator best_candidate;
             for (auto iter = trackers.begin(); iter != trackers.end(); iter++)
             {
                 double delta_t;
@@ -195,9 +215,8 @@ bool Buff::run(TaskData &src,VisionData &data)
                 double rotate_speed;
                 double sign;
                 //----------------------------计算角度,求解转速----------------------------
-                // 目前扇叶到上一次扇叶的旋转矩阵
-                auto relative_rmat = (*iter).last_fan.rmat.transpose() * (*fan).rmat;
-                if ((*iter).is_initialized)
+                //若该扇叶完成初始化,且隔一帧时间较短
+                if ((*iter).is_initialized && (src.timestamp - (*iter).prev_timestamp) < max_delta_t)
                 {
                     delta_t = src.timestamp - (*iter).prev_timestamp;
                     //目前扇叶到上一次扇叶的旋转矩阵
@@ -226,25 +245,36 @@ bool Buff::run(TaskData &src,VisionData &data)
                 // cout<<angle_axisd.axis()<<endl;
                 // cout<<endl;
                 // cout<<rotate_speed<<endl;
-                if (fabs(rotate_speed) <= max_v)
+                if (rotate_speed <= max_v && rotate_speed <= min_v && delta_t <= min_delta_t)
                 {
-                    FanTracker fan_tracker = (*iter);
-                    fan_tracker.update((*fan), src.timestamp);
-                    fan_tracker.rotate_speed = rotate_speed;
-                    trackers_tmp.push_back(fan_tracker);
-                    break;
+                    min_delta_t = delta_t;
+                    min_v = rotate_speed;
+                    best_candidate = iter;
+                    is_best_candidate_exist = true;
                 }
-                else if (trackers.size() < fans.size())
-                {
-                    FanTracker fan_tracker((*fan),src.timestamp);
-                    trackers_tmp.push_back(fan_tracker);
-                    break;
-                }
+                // if (fabs(rotate_speed) <= max_v)
+                // {
+                //     (*iter).update((*fan), src.timestamp);
+                //     (*iter).rotate_speed = rotate_speed;
+                //     break;
+                // }
+            }
+            if (is_best_candidate_exist)
+            {
+                (*best_candidate).update((*fan), src.timestamp);
+                (*best_candidate).rotate_speed = rotate_speed;
+            }
+            else
+            {
+                FanTracker fan_tracker((*fan), src.timestamp);
+                trackers_tmp.push_back(fan_tracker);
             }
         }
     }
-    trackers = trackers_tmp;
-
+    for (auto new_tracker : trackers_tmp)
+    {
+        trackers.push_back(new_tracker);
+    }
     ///------------------------检测待激活扇叶是否存在----------------------------
     Fan target;
     bool is_target_exists = chooseTarget(fans, target);
