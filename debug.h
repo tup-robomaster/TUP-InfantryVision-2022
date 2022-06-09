@@ -5,6 +5,7 @@
 // #define DETECT_RED  //红色检测，不启用默认为蓝色检测
 
 // #define SAVE_VIDEO               // Save video
+// #define USING_VIDEO              // Using video
 
 #define SAVE_LOG_ALL                // Save log
 
@@ -19,7 +20,8 @@
 //                              硬件设备选项
 //---------------------------------------------------------------------------//
 
-#define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+// #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+#define USING_HIK                   //是否使用海康摄像头
 
 #define DEBUG_WITHOUT_COM           //无串口调试
 //===========================================================================//
@@ -90,9 +92,10 @@
 #endif // SHOW_IMG
 
 #ifndef USING_DAHENG
-    #define USING_USB_CAMERA
+    #ifndef USING_HIK
+        #define USING_USB_CAMERA
+    #endif // USING_HIK
 #endif // USING_DAHENG
-// #define USING_VIDEO
 
 #ifndef DETECT_RED
     #define DETECT_BLUE

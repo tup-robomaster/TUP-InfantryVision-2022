@@ -1,5 +1,6 @@
 
 #include "../camera/DaHengCamera.h"
+#include "../hik_camera/include/HaiKangCamera.h"
 #include "../autoaim/autoaim.h"
 #include "../buff/buff.h"
 #include "../serial/serialport.h"

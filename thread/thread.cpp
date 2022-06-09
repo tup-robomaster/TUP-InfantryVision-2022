@@ -36,6 +36,30 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // DaHeng.Set_Saturation(0,0);
 #endif //USING_DAHENG
 
+#ifdef USING_HIK
+    start_get_img:
+
+    HaiKangCamera HaiKang;
+
+    HaiKang.StartDevice(0);
+    // 设置分辨率
+    HaiKang.SetResolution(1440, 1080);
+    //更新时间戳，设置时间戳偏移量
+    HaiKang.UpdateTimestampOffset(time_start);
+    // 开始采集帧
+    HaiKang.SetStreamOn();
+    // 设置曝光事件
+    HaiKang.SetExposureTime(8000);
+    // 设置1
+    HaiKang.SetGAIN(3, 16);
+    // 是否启用自动白平衡7
+    // HaiKang.Set_BALANCE_AUTO(0);
+    // manual白平衡 BGR->012
+    HaiKang.Set_BALANCE(0, 1555);
+    HaiKang.Set_BALANCE(1, 1024);
+    HaiKang.Set_BALANCE(2, 2022);
+#endif //USING_HIK
+
 #ifdef USING_USB_CAMERA
     VideoCapture cap(0);
     // VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
@@ -46,6 +70,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
     // auto time_start = std::chrono::steady_clock::now();
 #endif //USING_USB_CAMERA
+
 
 
 #ifdef USING_VIDEO
@@ -96,6 +121,21 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // src.timestamp = DaHeng.Get_TIMESTAMP();
 #endif //USING_DAHENG
+
+#ifdef USING_HIK
+        auto HaiKang_stauts = HaiKang.GetMat(src.img);
+        if (!HaiKang_stauts)
+        {
+            fmt::print(fmt::fg(fmt::color::red), "[CAMERA] GetMat false return\n");
+
+            #ifdef SAVE_LOG_ALL
+                LOG(ERROR) << "[CAMERA] GetMat false return";
+            #endif //SAVE_LOG_ALL
+
+            goto start_get_img;
+        }
+        src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
+#endif
 
 #ifdef USING_VIDEO
         cap >> src.img;
@@ -166,7 +206,7 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
         mode = dst.mode;
 
 #ifdef DEBUG_WITHOUT_COM
-        mode = 3;
+        mode = 1;
 #endif //DEBUG_WITHOUT_COM
 
 #ifdef SAVE_TRANSMIT_LOG
