@@ -107,23 +107,24 @@ bool SerialPort::get_Mode()
     //    cout << "缓冲区为空" << endl;
         return false;
     }
-    bytes = read(fd, rdata, 45);
+    bytes = read(fd, rdata, 49);
     // cout<<bytes<<endl;
 
-    // if (rdata[0] == 0xA5 && Verify_CRC8_Check_Sum(rdata, 3))
-    // {
-    //     mode = rdata[1];
-    //     getQuat(&rdata[3]);
-    //     getGyro(&rdata[19]);
-    //     getAcc(&rdata[31]);
-    //     Verify_CRC16_Check_Sum(rdata,45);
-    //     //TODO:接收下位机发送的弹速
-    // }
-    mode = rdata[0];
-    getQuat(&rdata[1]);
-    getGyro(&rdata[17]);
-    getAcc(&rdata[29]);
-    getSpeed(&rdata[41]);
+    if (rdata[0] == 0xA5 && Verify_CRC8_Check_Sum(rdata, 3))
+    {
+        mode = rdata[1];
+        getQuat(&rdata[3]);
+        getGyro(&rdata[19]);
+        getAcc(&rdata[31]);
+        getSpeed(&rdata[43]);
+        Verify_CRC16_Check_Sum(rdata,45);
+        //TODO:接收下位机发送的弹速
+    }
+    // mode = rdata[0];
+    // getQuat(&rdata[1]);
+    // getGyro(&rdata[17]);
+    // getAcc(&rdata[29]);
+    // getSpeed(&rdata[41]);
     return true;
 }
 
@@ -460,9 +461,9 @@ bool SerialPort::getSpeed(unsigned char *data)
 {
     unsigned char* f1 = &data[0];
 
-    speed = exchange_data(f1);
+    bullet_speed = exchange_data(f1);
 
-    fmt::print(fmt::fg(fmt::color::white), "speed: {} \n", speed);
+    // fmt::print(fmt::fg(fmt::color::white), "speed: {} \n", bullet_speed);
     return true;
 }
 //////////////////////////////////////////////

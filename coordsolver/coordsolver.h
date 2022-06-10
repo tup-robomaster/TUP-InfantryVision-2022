@@ -49,7 +49,7 @@ public:
     inline double calcYaw(Eigen::Vector3d &xyz);
     inline double calcPitch(Eigen::Vector3d &xyz);
     Eigen::Vector2d calcYawPitch(Eigen::Vector3d &xyz);
-    bool setBulletSpeed(double speed)
+    bool setBulletSpeed(double speed);
     cv::Point2f reproject(Eigen::Vector3d &xyz);
 private:
     int max_iter;

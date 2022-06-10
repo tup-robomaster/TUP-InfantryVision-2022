@@ -301,13 +301,13 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
         // Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         //FIXME:注意此处mode设置
         int mode = serial.mode;
-        float speed = serial.bullet_speed;
+        float bullet_speed = serial.bullet_speed;
         
         // int mode = 4;
         Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         Eigen::Vector3d acc = {serial.acc[0],serial.acc[1],serial.acc[2]};;
         Eigen::Vector3d gyro = {serial.gyro[0],serial.gyro[1],serial.gyro[2]};;
-        MCUData mcu_status = {mode, acc, gyro, quat, speed, timestamp};
+        MCUData mcu_status = {mode, acc, gyro, quat, bullet_speed, timestamp};
         receive_factory.produce(mcu_status, timestamp);
         // Eigen::Vector3d vec = quat.toRotationMatrix().eulerAngles(2,1,0);
         // cout<<"Euler : "<<vec[0] * 180.f / CV_PI<<" "<<vec[1] * 180.f / CV_PI<<" "<<vec[2] * 180.f / CV_PI<<endl;

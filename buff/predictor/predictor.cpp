@@ -223,7 +223,7 @@ inline double BuffPredictor::shiftWindowFilter(int start_idx=0)
  * @return true 
  * @return false 
  */
-inline bool BuffPredictor::setBulletSpeed(double speed)
+bool BuffPredictor::setBulletSpeed(double speed)
 {
     bullet_speed = speed;
     return true;

@@ -247,9 +247,9 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     //Predict
     auto result_v = pf_v.predict();
 
-
-    auto predict_x = target.xyz[0] + result_v[0] * (time_estimated + t) / 1e3;
-    auto predict_y = target.xyz[1] + result_v[1] * (time_estimated + t) / 1e3;
+    //TODO:恢复速度预测
+    auto predict_x = target.xyz[0];
+    auto predict_y = target.xyz[1];
 
 
     result << predict_x, predict_y, target.xyz[2];
@@ -329,7 +329,7 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
     return is_available;
 }
 
-inline bool ArmorPredictor::setBulletSpeed(double speed)
+bool ArmorPredictor::setBulletSpeed(double speed)
 {
     bullet_speed = speed;
     return true;
