@@ -215,3 +215,16 @@ inline double BuffPredictor::shiftWindowFilter(int start_idx=0)
     }
     return total_sum / max_iter;
 }
+
+/**
+ * @brief 设置弹速
+ * 
+ * @param speed 传入弹速
+ * @return true 
+ * @return false 
+ */
+inline bool BuffPredictor::setBulletSpeed(double speed)
+{
+    bullet_speed = speed;
+    return true;
+}

@@ -328,3 +328,9 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
     result = {x_pred, y_pred, dc[2]};
     return is_available;
 }
+
+inline bool ArmorPredictor::setBulletSpeed(double speed)
+{
+    bullet_speed = speed;
+    return true;
+}

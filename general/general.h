@@ -34,6 +34,7 @@ enum TargetType {SMALL, BIG, BUFF};
 struct TaskData
 {
     int mode;
+    double bullet_speed;
     Mat img;
     Eigen::Quaterniond quat;
     int timestamp;//单位：ms

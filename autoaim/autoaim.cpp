@@ -850,10 +850,10 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     circle(src.img, aiming_2d, 2, {0, 255, 255}, 2);
 #endif //SHOW_PREDICT
 
-    auto angle = coordsolver.getAngle(aiming_point,rmat_imu);
+    auto angle = coordsolver.getAngle(aiming_point, rmat_imu);
     //若预测出错则直接世界坐标系下坐标作为击打点
     if (isnan(angle[0]) || isnan(angle[1]))
-        angle = coordsolver.getAngle(target.center3d_cam,rmat_imu);
+        angle = coordsolver.getAngle(target.center3d_cam, rmat_imu);
     auto time_predict = std::chrono::steady_clock::now();
 
     double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
@@ -862,7 +862,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     double dr_full_ms = std::chrono::duration<double,std::milli>(time_predict - time_start).count();
 
 #ifdef SHOW_FPS
-    putText(src.img, fmt::format("FPS: {}",int(1000 / dr_full_ms)), {10, 25}, FONT_HERSHEY_SIMPLEX, 1, {0,255,0});
+    putText(src.img, fmt::format("FPS: {}", int(1000 / dr_full_ms)), {10, 25}, FONT_HERSHEY_SIMPLEX, 1, {0,255,0});
 #endif //SHOW_FPS
 
 #ifdef SHOW_IMG

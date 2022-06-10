@@ -364,3 +364,8 @@ Eigen::Vector3d CoordSolver::worldToCam(const Eigen::Vector3d &point_world, cons
     return point_camera;
 }
 
+inline bool CoordSolver::setBulletSpeed(double speed)
+{
+    bullet_speed = speed;
+    return true;
+}

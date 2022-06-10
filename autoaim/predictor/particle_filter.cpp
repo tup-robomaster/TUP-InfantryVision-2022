@@ -15,7 +15,7 @@ bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix, Eigen::MatrixXd &cov)
     std::vector<normal_distribution<double>> normal_distribution_list;
 
     //假设各个变量不相关
-    for (int i = 0; i<cov.cols(); i++)
+    for (int i = 0; i < cov.cols(); i++)
     {
         normal_distribution<double> n(0,cov(i,i));
         normal_distribution_list.push_back(n);
@@ -25,10 +25,10 @@ bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix, Eigen::MatrixXd &cov)
     for (int col = 0; col < matrix.cols(); col++)
     {
         // cout<<normal_distribution_list[col](e)<<endl;
-        for(int row = 0;row < matrix.rows();row++)
+        for(int row = 0; row < matrix.rows(); row++)
         {
             auto tmp = normal_distribution_list[col](e);
-            matrix(row,col) = tmp;
+            matrix(row, col) = tmp;
             // matrix(row,col) = 1;
         }
     }
@@ -154,7 +154,7 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
         double n_eff = 1.0 / (matrix_weights.transpose() * matrix_weights).value();
         //TODO:有效粒子数少于一定值时进行重采样,该值需在实际调试过程中修改
         // if (error >= process_noise_cov(0,0) || n_eff < num_particle * 0.5)
-            resample();
+        resample();
     }
     else
     {
@@ -171,23 +171,23 @@ bool ParticleFilter::resample()
     //重采样采用低方差采样,复杂度为O(N),较轮盘法的O(NlogN)更小,实现可参考<Probablistic Robotics>
     std::random_device rd;
     default_random_engine e(rd());
-    std::uniform_real_distribution<> random {0.0, 1.f / num_particle};
+    std::uniform_real_distribution<> random {0.0, 1.d / num_particle};
 
     int i = 0;
     double c = matrix_weights(0,0);
     auto r = random(e);
     Eigen::MatrixXd matrix_particle_tmp = matrix_particle;
 
-    for (int m = 1; m <= num_particle; m++)
+    for (int m = 0; m < num_particle; m++)
     {
-        auto u = r + (m - 1) * (1.f / num_particle);
+        auto u = r + m * (1.d / num_particle);
         // 当 u > c 不进行采样
         while (u > c)
         {
             i++;
             c = c + matrix_weights(i,0);
         }
-        matrix_particle_tmp.row(m - 1) = matrix_particle.row(i);
+        matrix_particle_tmp.row(m) = matrix_particle.row(i);
     }
     Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
     randomlizedGaussianColwise(gaussian, process_noise_cov);

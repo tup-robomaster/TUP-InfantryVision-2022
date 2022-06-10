@@ -138,6 +138,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
             continue;
         src.quat = mcu_status.quat;
         src.mode = mcu_status.mode;
+        src.bullet_speed = mcu_status.bullet_speed;
         // cout<<delta_t<<endl;
 #endif //USING_IMU
 

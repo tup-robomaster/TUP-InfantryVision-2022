@@ -24,6 +24,7 @@ using namespace cv;
 struct MCUData
 {
     int mode;
+    double bullet_speed;
     Eigen::Vector3d acc;
     Eigen::Vector3d gyro;
     Eigen::Quaterniond quat;

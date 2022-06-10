@@ -55,14 +55,14 @@ private:
 
 private:
     double params[4];
+    double bullet_speed = 28;                                            //TODO:弹速可变
     std::deque<TargetInfo> history_info;                                    //目标队列
     const int max_timespan = 90000;                                         //最大时间跨度，大于该时间重置预测器(ms)
     const int max_cost = 40;                                                 //TODO:回归函数最大Cost
     const int max_v = 3;                                                  //设置最大速度,单位rad/s
     const int max_a = 3;                                                  //设置最大角加速度,单位rad/s^2
     const int history_deque_len = 80;                                       //队列长度   
-    const int bullet_speed = 28;                                            //TODO:弹速可变
-    const int delay = 200;                                                  //发弹延迟
+    const int delay = 150;                                                  //发弹延迟
     const int window_size = 2;                                              //滑动窗口大小
 
 public:
@@ -75,6 +75,7 @@ public:
     bool predict(double speed, int dist, int timestamp, double &result);
     double calcAimingAngleOffset(double params[4], double t0, double t1, int mode);
     double shiftWindowFilter(int start_idx);
+    bool setBulletSpeed(double speed);
 };
 
 

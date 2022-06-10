@@ -10,7 +10,7 @@ Buff::Buff()
     lost_cnt = 0;
     is_last_target_exists = false;
     // input_size = {640,384};
-    input_size = {416,416};
+    input_size = {640, 640};
 
     fmt::print(fmt::fg(fmt::color::pale_violet_red), "[BUFF] Buff init model success! Size: {} {}\n", input_size.height, input_size.width);
 

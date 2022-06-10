@@ -69,13 +69,14 @@ private:
     ParticleFilter pf_v;                                                  //速度粒子滤波
     std::deque<TargetInfo> history_info;                                  //目标队列
 
+    double bullet_speed = 28;                                          //TODO:弹速可变
+    
     const int max_timespan = 1000;                                        //最大时间跨度，大于该时间重置预测器(ms)
     const int max_cost = 1e-1;                                            //回归函数最大Cost
     const int max_v = 8;                                                  //设置最大速度,单位m/s
     const int history_deque_len = 10;                                     //队列长度
     const int min_fitting_len = 6;                                         //使用拟合的最短队列长度    
-    const int bullet_speed = 28;                                          //TODO:弹速可变
-    const int delay = 70;                                                 //发弹延迟(ms)
+    const int delay = 100;                                                 //发弹延迟(ms)
     const int window_size = 3;                                            //滑动窗口大小
 
 public:
@@ -86,6 +87,7 @@ public:
     ~ArmorPredictor();
     bool initParam(ArmorPredictor &predictor_loader);
     bool initParam(string coord_path);
+    bool setBulletSpeed(double speed);
     ArmorPredictor generate();
     Eigen::Vector3d predict(Eigen::Vector3d xyz,  int timestamp);
     Eigen::Vector3d shiftWindowFilter(int start_idx);
