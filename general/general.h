@@ -70,6 +70,7 @@ bool initMatrix(Eigen::MatrixXd &matrix,std::vector<T> &vector)
     return true;
 }
 
+float calcDistance(Point2f&, Point2f&);
 float calcTriangleArea(cv::Point2f pts[3]);
 float calcTetragonArea(cv::Point2f pts[4]);
 double rangedAngleRad(double &angle);

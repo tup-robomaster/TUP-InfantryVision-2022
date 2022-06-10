@@ -42,7 +42,7 @@
 //                              INFO及预测相关选项
 //---------------------------------------------------------------------------//
 
-// #define USING_ROI   //Using roi
+#define USING_ROI   //Using roi
 // #define SHOW_ROI    //Show roi
 
 #define PRINT_LATENCY       //输出运行时间

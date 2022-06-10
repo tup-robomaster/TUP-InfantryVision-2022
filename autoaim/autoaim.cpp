@@ -73,14 +73,13 @@ Point2i Autoaim::cropImageByROI(Mat &img)
         return Point2i(0,0);
     }
 
-    //计算上一帧roi中心在原图像中的坐标
+    // 计算上一帧roi中心在原图像中的坐标
     Point2i last_armor_center = Point2i(last_roi_center.x - this->dw, last_roi_center.y - this->dh) * (1 / this->rescale_ratio);
 
-    int roi_width = MAX(sqrt(pow(last_armor.apex2d[0].x - last_armor.apex2d[1].x, 2) + pow(last_armor.apex2d[0].y - last_armor.apex2d[1].y, 2)), 
-    sqrt(pow(last_armor.apex2d[1].x - last_armor.apex2d[2].x, 2) + pow(last_armor.apex2d[1].y - last_armor.apex2d[2].y, 2))) * (1 / this->rescale_ratio);
-    
-    int roi_height = MIN(sqrt(pow(last_armor.apex2d[0].x - last_armor.apex2d[1].x, 2) + pow(last_armor.apex2d[0].y - last_armor.apex2d[1].y, 2)), 
-    sqrt(pow(last_armor.apex2d[1].x - last_armor.apex2d[2].x, 2) + pow(last_armor.apex2d[1].y - last_armor.apex2d[2].y, 2))) * (1 / this->rescale_ratio);
+    float armor_h = calcDistance(last_armor.apex2d[0], last_armor.apex2d[1]);
+    float armor_w = calcDistance(last_armor.apex2d[1], last_armor.apex2d[2]);
+    int roi_width = MAX(armor_h, armor_w) * (1 / this->rescale_ratio);
+    int roi_height = MIN(armor_h, armor_w) * (1 / this->rescale_ratio);
 
     //根据丢失帧数逐渐扩大ROI大小
     if(lost_cnt == 2)
@@ -104,16 +103,17 @@ Point2i Autoaim::cropImageByROI(Mat &img)
     }
 
     //防止roi越界
-    if(last_armor_center.x + roi_width > img.size().width)
-        roi_width = img.size().width - last_armor_center.x;
+    if((last_armor_center.x + roi_width / 2)  > img.size().width)
+        roi_width = (img.size().width - last_armor_center.x) * 2;
     
-    if(last_armor_center.y + roi_height > img.size().height)
-        roi_height = img.size().height - last_armor_center.y;
+    if(last_armor_center.y + roi_height / 2 > img.size().height)
+        roi_height = (img.size().height - last_armor_center.y) * 2;
     
-    Rect roi_rect = Rect(last_armor_center.x - roi_width / 2, last_armor_center.y - roi_height / 2, roi_width, roi_height);
+    Point2i roi_left_top = Point2i(last_armor_center.x - roi_width / 2, last_armor_center.y - roi_height / 2);
+    Rect roi_rect = Rect(roi_left_top.x, roi_left_top.y, roi_width, roi_height);
     img(roi_rect).copyTo(img);
 
-    return Point2i(0, 0);
+    return roi_left_top;
 
     // //处理X越界
     // if (last_roi_center.x <= input_size.width / 2)
