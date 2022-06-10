@@ -106,9 +106,12 @@ bool Buff::run(TaskData &src,VisionData &data)
     auto input = src.img;
 
 #ifndef DEBUG_WITHOUT_COM
-    //设置弹速
-    predictor.setBulletSpeed(src.bullet_speed);
-    coordsolver.setBulletSpeed(src.bullet_speed);
+    //设置弹速,若弹速大于10m/s值,且弹速变化大于0.5m/s则更新
+    if (src.bullet_speed > 10 && abs(predictor.bullet_speed - src.bullet_speed) > 0.5)
+    {
+        predictor.setBulletSpeed(src.bullet_speed);
+        coordsolver.setBulletSpeed(src.bullet_speed);
+    }
 #endif
 
 #ifdef USING_IMU
@@ -389,7 +392,17 @@ bool Buff::run(TaskData &src,VisionData &data)
     last_fan = target;
     is_last_target_exists = true;
 
-
+    //若预测出错取消本次数据发送
+    if (isnan(angle[0]) || isnan(angle[1]))
+    {
+#ifdef SHOW_IMG
+        imshow("dst",src.img);
+        waitKey(1);
+        LOG(WARNING) <<"[BUFF] NAN Detected!";
+        data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
+#endif //SHOW_IMG
+        return false;
+    }
     
     auto time_predict = std::chrono::steady_clock::now();
     double dr_full_ms = std::chrono::duration<double,std::milli>(time_predict - time_start).count();
@@ -456,7 +469,6 @@ bool Buff::run(TaskData &src,VisionData &data)
     LOG(INFO) <<"[BUFF] LATENCY: "<< "Crop: " << dr_crop_ms << " ms" << " Infer: " << dr_infer_ms << " ms" << " Predict: " << dr_predict_ms << " ms" << " Total: " << dr_full_ms << " ms";
     LOG(INFO) <<"[BUFF] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)hit_point_cam.norm()<<"Is Switched:"<<is_switched;
 #endif //SAVE_BUFF_LOG
-
     data = {(float)angle[1], (float)angle[0], (float)hit_point_cam.norm(), is_switched, 1, 1, 1};
     return true;
 }

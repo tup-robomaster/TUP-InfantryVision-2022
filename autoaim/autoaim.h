@@ -39,7 +39,7 @@ private:
     std::map<string,SpinHeading> spin_status_map;    //反小陀螺，记录该车小陀螺状态
     std::map<string,double> spin_score_map;     //反小陀螺，记录各装甲板小陀螺可能性分数，大于0为逆时针旋转，小于0为顺时针旋转
 
-    const int armor_type_wh_thres = 2.6;      //大小装甲板长宽比阈值
+    const int armor_type_wh_thres = 3;      //大小装甲板长宽比阈值
 
     const int max_lost_cnt = 5;                 //最大丢失目标帧数
     const int max_armors = 8;                   //视野中最多装甲板数
