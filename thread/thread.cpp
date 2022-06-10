@@ -171,7 +171,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         }
 #endif //SAVE_VIDEO
 
-#ifdef USING_IMU
+#ifndef DEBUG_WITHOUT_COM
         //获取下位机数据
         MCUData mcu_status;
         if (!receive_factory.consume(mcu_status, src.timestamp))
@@ -179,8 +179,8 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         src.quat = mcu_status.quat;
         src.mode = mcu_status.mode;
         src.bullet_speed = mcu_status.bullet_speed;
-        // cout<<delta_t<<endl;
-#endif //USING_IMU
+#endif
+
 
         //用于辅助标注
         // DaHeng.SetExposureTime(1000 + src.timestamp % 100 * 30);
@@ -301,11 +301,13 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
         // Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         //FIXME:注意此处mode设置
         int mode = serial.mode;
+        float speed = serial.bullet_speed;
+        
         // int mode = 4;
         Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         Eigen::Vector3d acc = {serial.acc[0],serial.acc[1],serial.acc[2]};;
         Eigen::Vector3d gyro = {serial.gyro[0],serial.gyro[1],serial.gyro[2]};;
-        MCUData mcu_status = {mode, acc, gyro, quat, timestamp};
+        MCUData mcu_status = {mode, acc, gyro, quat, speed, timestamp};
         receive_factory.produce(mcu_status, timestamp);
         // Eigen::Vector3d vec = quat.toRotationMatrix().eulerAngles(2,1,0);
         // cout<<"Euler : "<<vec[0] * 180.f / CV_PI<<" "<<vec[1] * 180.f / CV_PI<<" "<<vec[2] * 180.f / CV_PI<<endl;

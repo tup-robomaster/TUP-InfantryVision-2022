@@ -307,6 +307,12 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     vector<Armor> armors;
     auto input = src.img;
 
+#ifndef DEBUG_WITHOUT_COM
+    //设置弹速
+    predictor.setBulletSpeed(src.bullet_speed);
+    coordsolver.setBulletSpeed(src.bullet_speed);
+#endif
+
 #ifdef USING_IMU
     Eigen::Matrix3d rmat_imu = src.quat.toRotationMatrix();
     // auto vec = rotationMatrixToEulerAngles(rmat_imu);
@@ -551,7 +557,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             auto same_armors_cnt = trackers_map.count(cnt.first);
             if (same_armors_cnt >= 2)
             {
-                cout<<"1"<<endl;
+                // cout<<"1"<<endl;
                 //遍历所有同Key预测器，确定左右侧的Tracker
                 ArmorTracker *new_tracker = nullptr;
                 ArmorTracker *last_tracker = nullptr;

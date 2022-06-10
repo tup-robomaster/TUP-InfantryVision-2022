@@ -89,11 +89,12 @@ public:
     int last_fd; //上一次串口号
     int baud;
     int mode;
-    int speed, databits, stopbits, parity;
+    int databits, stopbits, parity;
     unsigned char rdata[255];                 // raw_data
     float quat[4]; //四元数
     float acc[3]; //加速度
     float gyro[3]; //角速度
+    float speed;
     SerialPort(const string ID, const int BUAD);
     SerialPort(char *);
     bool initSerialPort();

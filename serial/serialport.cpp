@@ -110,15 +110,20 @@ bool SerialPort::get_Mode()
     bytes = read(fd, rdata, 45);
     // cout<<bytes<<endl;
 
-    if (rdata[0] == 0xA5 && Verify_CRC8_Check_Sum(rdata, 3))
-    {
-        mode = rdata[1];
-        getQuat(&rdata[3]);
-        getGyro(&rdata[19]);
-        getAcc(&rdata[31]);
-        Verify_CRC16_Check_Sum(rdata,45);
-        //TODO:接收下位机发送的弹速
-    }
+    // if (rdata[0] == 0xA5 && Verify_CRC8_Check_Sum(rdata, 3))
+    // {
+    //     mode = rdata[1];
+    //     getQuat(&rdata[3]);
+    //     getGyro(&rdata[19]);
+    //     getAcc(&rdata[31]);
+    //     Verify_CRC16_Check_Sum(rdata,45);
+    //     //TODO:接收下位机发送的弹速
+    // }
+    mode = rdata[0];
+    getQuat(&rdata[1]);
+    getGyro(&rdata[17]);
+    getAcc(&rdata[29]);
+    getSpeed(&rdata[41]);
     return true;
 }
 
@@ -443,6 +448,21 @@ bool SerialPort::getAcc(unsigned char *data)
     acc[1] = exchange_data(f2);
     acc[2] = exchange_data(f3);
     // fmt::print(fmt::fg(fmt::color::white), "acc: {} {} {} \n", acc[0], acc[1], acc[2]);
+    return true;
+}
+/**
+ * @brief 解算速度数据
+ * 
+ * @param data 速度首地址指针
+ * @return
+ */
+bool SerialPort::getSpeed(unsigned char *data)
+{
+    unsigned char* f1 = &data[0];
+
+    speed = exchange_data(f1);
+
+    fmt::print(fmt::fg(fmt::color::white), "speed: {} \n", speed);
     return true;
 }
 //////////////////////////////////////////////

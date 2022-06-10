@@ -435,6 +435,7 @@ bool BuffDetector::detect(Mat &src,std::vector<BuffObject>& objects)
     }
     if (objects.size() != 0)
         return true;
-    else return false;
+    else 
+        return false;
 
 }

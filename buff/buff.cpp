@@ -105,6 +105,12 @@ bool Buff::run(TaskData &src,VisionData &data)
     vector<Fan> fans;
     auto input = src.img;
 
+#ifndef DEBUG_WITHOUT_COM
+    //设置弹速
+    predictor.setBulletSpeed(src.bullet_speed);
+    coordsolver.setBulletSpeed(src.bullet_speed);
+#endif
+
 #ifdef USING_IMU
     Eigen::Matrix3d rmat_imu = src.quat.toRotationMatrix();
 #else
