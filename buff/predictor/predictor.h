@@ -31,13 +31,34 @@ private:
         // 残差的计算
         template <typename T>
         bool operator() (
-            const T* const params,     // 模型参数，有3维
-            T* residual ) const     // 残差
+            const T* params,     // 模型参数，有3维
+            const T* residual) const     // 残差
         {
             residual[0] = T (_y) - params[0] * ceres::sin(params[1] * T (_x) + params[2]); // f(x) = a * sin(ω * t + θ)
             return true;
         }
         const double _x, _y;    // x,y数据
+
+    };
+    struct CURVE_FITTING_COST_PHASE
+    {
+        CURVE_FITTING_COST_PHASE (double x, double y, double a, double omega)
+        {
+            _x = x;
+            _y = y;
+            _a = a;
+            _omega = omega;
+        }
+        // 残差的计算
+        template <typename T>
+        bool operator() (
+        const T* phase,     // 模型参数，有1维
+        const T* residual) const     // 残差
+        {
+            residual[0] = T (_y) - T (_a) * ceres::sin(T(_omega) * T (_x) + phase[0]); // f(x) = a * sin(ω * t + θ)
+            return true;
+        }
+        const double _x, _y, _a, _omega;    // x,y数据
     };
 
     //目标信息
@@ -55,7 +76,7 @@ private:
 
 private:
     double params[4];
-    double bullet_speed = 28;                                            //TODO:弹速可变
+    double bullet_speed = 28;                                            
     std::deque<TargetInfo> history_info;                                    //目标队列
     const int max_timespan = 90000;                                         //最大时间跨度，大于该时间重置预测器(ms)
     const int max_cost = 40;                                                 //TODO:回归函数最大Cost

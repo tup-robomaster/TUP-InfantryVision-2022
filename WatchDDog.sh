@@ -1,4 +1,10 @@
 #!/bin/bash 
+# source /opt/intel/openvino_2021/bin/setupvars.sh
+# sec=1 
+# cnt=0 
+# name=TUP-InfantryVision-2022-main
+# program_name=Infantry_Vision
+# cd /home/tcn/Desktop/$name/build/
 
 source /opt/intel/openvino_2021/bin/setupvars.sh
 sec=1 

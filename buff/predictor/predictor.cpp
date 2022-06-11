@@ -69,53 +69,90 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
 
     //TODO:小符模式不需要额外计算,也可增加判断，小符模式给定恒定转速进行击打
     //若为大符模式且函数未确定
-    if (mode == 1 && !is_params_confirmed)
+    if (mode == 1)
     {
-        ceres::Problem problem;
-        ceres::Solver::Options options;
-        ceres::Solver::Summary summary;       // 优化信息
-        double params_fitting[3] = {1, 1, 1};
-
-        //旋转方向，逆时针为正
-        if (rotate_speed_sum / fabs(rotate_speed_sum) >= 0)
-            rotate_sign = 1;
-        else
-            rotate_sign = -1;
-
-        for (auto target_info : history_info)
+        //拟合函数: f(x) = a * sin(ω * t + θ)
+        if (!is_params_confirmed)
         {
-            problem.AddResidualBlock (     // 向问题中添加误差项
-            // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-                new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 4> ( 
-                    new CURVE_FITTING_COST ((float)(target_info.timestamp) / 1e3,
-                                                                (target_info.speed - params[3]) * rotate_sign)
-                ),
-                new ceres::CauchyLoss(0.7),
-                params_fitting                 // 待估计参数
-            );
+            ceres::Problem problem;
+            ceres::Solver::Options options;
+            ceres::Solver::Summary summary;       // 优化信息
+            double params_fitting[3] = {1, 1, 1};
+
+            //旋转方向，逆时针为正
+            if (rotate_speed_sum / fabs(rotate_speed_sum) >= 0)
+                rotate_sign = 1;
+            else
+                rotate_sign = -1;
+
+            for (auto target_info : history_info)
+            {
+                problem.AddResidualBlock (     // 向问题中添加误差项
+                // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
+                    new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 3> ( 
+                        new CURVE_FITTING_COST ((float)(target_info.timestamp) / 1e3,
+                                                                    (target_info.speed - params[3]) * rotate_sign)
+                    ),
+                    new ceres::CauchyLoss(0.5),
+                    params_fitting                 // 待估计参数
+                );
+            }
+
+            //设置上下限
+            problem.SetParameterLowerBound(params_fitting,0,0.5);
+            problem.SetParameterUpperBound(params_fitting,0,2);
+            problem.SetParameterLowerBound(params_fitting,1,1);
+            problem.SetParameterUpperBound(params_fitting,1,3);
+            problem.SetParameterLowerBound(params_fitting,2,-CV_PI);
+            problem.SetParameterUpperBound(params_fitting,2,CV_PI);
+
+            ceres::Solve(options, &problem, &summary);
+            // cout<<"cost:"<<summary.final_cost<<endl;
+            if (summary.final_cost < max_cost)
+            {
+                params[0] = params_fitting[0] * rotate_sign;
+                params[1] = params_fitting[1];
+                params[2] = params_fitting[2];
+                is_params_confirmed = true;
+                cout<<"Confirmed!"<<endl;
+            }
+            else
+            {
+                return false;
+            }
         }
-
-        //设置上下限
-        problem.SetParameterLowerBound(params_fitting,0,0.5);
-        problem.SetParameterUpperBound(params_fitting,0,2);
-        problem.SetParameterLowerBound(params_fitting,1,1);
-        problem.SetParameterUpperBound(params_fitting,1,3);
-        problem.SetParameterLowerBound(params_fitting,2,-CV_PI);
-        problem.SetParameterUpperBound(params_fitting,2,CV_PI);
-
-        ceres::Solve(options, &problem, &summary);
-        cout<<"cost:"<<summary.final_cost<<endl;
-        if (summary.final_cost < max_cost)
-        {
-            params[0] = params_fitting[0] * rotate_sign;
-            params[1] = params_fitting[1];
-            params[2] = params_fitting[2];
-            is_params_confirmed = true;
-            cout<<"Confirmed!"<<endl;
-        }
         else
-        {
-            return false;
+        {            
+            ceres::Problem problem;
+            ceres::Solver::Options options;
+            ceres::Solver::Summary summary;       // 优化信息
+            double phase;
+
+            for (auto target_info : history_info)
+            {
+                problem.AddResidualBlock(     // 向问题中添加误差项
+                // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
+                    new ceres::AutoDiffCostFunction<CURVE_FITTING_COST_PHASE, 1, 1> ( 
+                        new CURVE_FITTING_COST_PHASE ((float)(target_info.timestamp) / 1e3,
+                                                                    (target_info.speed - params[3]) * rotate_sign, params[0], params[1])
+                    ),
+                    new ceres::CauchyLoss(0.5),
+                    &phase;                 // 待估计参数
+                );
+            }
+
+            //设置上下限
+
+            ceres::Solve(options, &problem, &summary);
+            cout<<"cost:"<<summary.final_cost<<endl;
+            if (summary.final_cost < max_cost)
+            {
+                params[2] = phase;
+            }
+            else
+            {
+                return false;
+            }
         }
         // cout<<summary.BriefReport()<<endl;
     }

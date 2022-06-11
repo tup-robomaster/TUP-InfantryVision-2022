@@ -250,7 +250,8 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     //TODO:恢复速度预测
     auto predict_x = target.xyz[0];
     auto predict_y = target.xyz[1];
-
+    // auto predict_x = target.xyz[0] + result_v[0] * (time_estimated + t) / 1e3;
+    // auto predict_y = target.xyz[1] + result_v[1] * (time_estimated + t) / 1e3;
 
     result << predict_x, predict_y, target.xyz[2];
     // cout<<result<<endl;
