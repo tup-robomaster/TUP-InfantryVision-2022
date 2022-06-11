@@ -19,6 +19,7 @@ Autoaim::Autoaim()
     is_last_target_exists = false;
     is_target_switched = true;
     last_target_area = 0;
+    last_bullet_speed = 0;
     input_size = {720,720};
     auto predictor_tmp = predictor_param_loader.generate();
     predictor.initParam(predictor_param_loader);
@@ -309,10 +310,11 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 
 #ifndef DEBUG_WITHOUT_COM
     //设置弹速,若弹速大于10m/s值,且弹速变化大于0.5m/s则更新
-    if (src.bullet_speed > 10 && abs(predictor.bullet_speed - src.bullet_speed) > 0.5)
+    if (src.bullet_speed > 10 && abs(src.bullet_speed - last_bullet_speed) > 0.5)
     {
         predictor.setBulletSpeed(src.bullet_speed);
         coordsolver.setBulletSpeed(src.bullet_speed);
+        last_bullet_speed = src.bullet_speed;
     }
 #endif
 

@@ -29,6 +29,7 @@ private:
     int lost_cnt;
     int prev_timestamp;
     double last_target_area;
+    double last_bullet_speed;
     Point2i last_roi_center;
     Eigen::Vector3d last_aiming_point;
     Point2i roi_offset;

@@ -32,7 +32,7 @@ private:
         template <typename T>
         bool operator() (
             const T* params,     // 模型参数，有3维
-            const T* residual) const     // 残差
+            T* residual) const     // 残差
         {
             residual[0] = T (_y) - params[0] * ceres::sin(params[1] * T (_x) + params[2]); // f(x) = a * sin(ω * t + θ)
             return true;
@@ -42,18 +42,12 @@ private:
     };
     struct CURVE_FITTING_COST_PHASE
     {
-        CURVE_FITTING_COST_PHASE (double x, double y, double a, double omega)
-        {
-            _x = x;
-            _y = y;
-            _a = a;
-            _omega = omega;
-        }
+        CURVE_FITTING_COST_PHASE (double x, double y, double a, double omega) : _x (x), _y (y), _a(a), _omega(omega){}
         // 残差的计算
         template <typename T>
         bool operator() (
         const T* phase,     // 模型参数，有1维
-        const T* residual) const     // 残差
+        T* residual) const     // 残差
         {
             residual[0] = T (_y) - T (_a) * ceres::sin(T(_omega) * T (_x) + phase[0]); // f(x) = a * sin(ω * t + θ)
             return true;

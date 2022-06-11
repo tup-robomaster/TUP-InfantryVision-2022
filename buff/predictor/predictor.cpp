@@ -137,7 +137,7 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
                                                                     (target_info.speed - params[3]) * rotate_sign, params[0], params[1])
                     ),
                     new ceres::CauchyLoss(0.5),
-                    &phase;                 // 待估计参数
+                    &phase                 // 待估计参数
                 );
             }
 

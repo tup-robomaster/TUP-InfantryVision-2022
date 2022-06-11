@@ -27,6 +27,7 @@ private:
     int lost_cnt;
     int last_timestamp;
     double last_target_area;
+    double last_bullet_speed;
     Point2i last_roi_center;
     Point2i roi_offset;
     Size2d input_size;

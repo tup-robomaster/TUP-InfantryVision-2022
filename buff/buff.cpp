@@ -11,7 +11,7 @@ Buff::Buff()
     is_last_target_exists = false;
     // input_size = {640,384};
     input_size = {640, 640};
-
+    last_bullet_speed = 0;
     fmt::print(fmt::fg(fmt::color::pale_violet_red), "[BUFF] Buff init model success! Size: {} {}\n", input_size.height, input_size.width);
 
 #ifdef SAVE_BUFF_LOG
@@ -107,10 +107,11 @@ bool Buff::run(TaskData &src,VisionData &data)
 
 #ifndef DEBUG_WITHOUT_COM
     //设置弹速,若弹速大于10m/s值,且弹速变化大于0.5m/s则更新
-    if (src.bullet_speed > 10 && abs(predictor.bullet_speed - src.bullet_speed) > 0.5)
+    if (src.bullet_speed > 10 && abs(src.bullet_speed - last_bullet_speed) > 0.5)
     {
         predictor.setBulletSpeed(src.bullet_speed);
         coordsolver.setBulletSpeed(src.bullet_speed);
+        last_bullet_speed = src.bullet_speed;
     }
 #endif
 
