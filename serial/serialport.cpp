@@ -107,7 +107,9 @@ bool SerialPort::get_Mode()
     //    cout << "缓冲区为空" << endl;
         return false;
     }
-    bytes = read(fd, rdata, 49);
+    // bytes = read(fd, rdata, 49);
+    bytes = read(fd, rdata, 50);
+    // bytes = read(fd, rdata, 45);
     // cout<<bytes<<endl;
 
     if (rdata[0] == 0xA5 && Verify_CRC8_Check_Sum(rdata, 3))
@@ -117,7 +119,7 @@ bool SerialPort::get_Mode()
         getGyro(&rdata[19]);
         getAcc(&rdata[31]);
         getSpeed(&rdata[43]);
-        Verify_CRC16_Check_Sum(rdata,45);
+        Verify_CRC16_Check_Sum(rdata,50);
         //TODO:接收下位机发送的弹速
     }
     // mode = rdata[0];

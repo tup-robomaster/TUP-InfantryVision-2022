@@ -33,7 +33,7 @@ int main(int argc,char* argv[])
     auto time_start = std::chrono::steady_clock::now();
     Factory<TaskData> task_factory(3);
     Factory<VisionData> data_transmit_factory(5);
-    MessageFilter<MCUData> data_receiver(50);
+    MessageFilter<MCUData> data_receiver(100);
     SerialPort serial(SERIAL_ID, BAUD);
     
 #ifdef USING_IMU_C_BOARD
@@ -91,7 +91,7 @@ int main(int argc,char* argv[])
 #ifdef SAVE_MAIN_LOG
     LOG(WARNING) << "[MAIN] transmitter end!";
 #endif //SAVE_MAIN_LOG
-
+ 
 #ifdef USING_IMU
     receiver.join();
     #ifdef SAVE_MAIN_LOG    

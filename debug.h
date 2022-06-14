@@ -4,6 +4,8 @@
 
 #define DETECT_RED  //红色检测，不启用默认为蓝色检测
 
+#define IGNORE_ENGINEER             //是否忽略工程
+
 // #define SAVE_VIDEO               // Save video
 
 #define SAVE_LOG_ALL                // Save log
@@ -19,8 +21,8 @@
 //                              硬件设备选项
 //---------------------------------------------------------------------------//
 
-#define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
-// #define USING_HIK                   //是否使用海康摄像头
+// #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+#define USING_HIK                   //是否使用海康摄像头
 // #define USING_VIDEO              // Using video
 // #define USING_USB_CAMERA
 
@@ -42,17 +44,17 @@
 //                              INFO及预测相关选项
 //---------------------------------------------------------------------------//
 
-// #define USING_ROI   //Using roi
+#define USING_ROI   //Using roi
 
 // #define PRINT_LATENCY //输出运行时
 
-#define PRINT_TARGET_INFO //是否输出目标信息
+// #define PRINT_TARGET_INFO //是否输出目标信息
 
-#define USING_PREDICT           //是否启用预测
+// #define USING_PREDICT           //是否启用预测
 
 #define USING_SPIN_DETECT //是否检测陀螺
 
-#define DISABLE_FITTING //是否禁用曲线拟合
+// #define DISABLE_FITTING //是否禁用曲线拟合
 //===========================================================================//
 
 
@@ -62,7 +64,7 @@
 
 // #define ASSIST_LABEL //辅助数据集标注
 
-#define DRAW_PREDICT //是否显示预测图像(使用时需使视野内仅存在一块装甲板)
+// #define DRAW_PREDICT //是否显示预测图像(使用时需使视野内仅存在一块装甲板)
 // ===========================================================================//
 
 

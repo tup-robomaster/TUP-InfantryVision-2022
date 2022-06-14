@@ -61,14 +61,14 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     {
         history_info.push_back(target);
     }
-    //若位置粒子滤波器已完成初始化且预测值大小恰当,则对目标位置做滤波
+    //FIXME:若位置粒子滤波器已完成初始化且预测值大小恰当,则对目标位置做滤波
     else
     {
-        target.xyz[0] = predict_pos[0];
-        target.xyz[1] = predict_pos[1];
+        // target.xyz[0] = predict_pos[0];
+        // target.xyz[1] = predict_pos[1];
         history_info.push_back(target);
     }
-    //FIXME:
+    FIXME:
     //-----------------进行滑窗滤波,备选方案,暂未使用-------------------------------------
     auto d_xyz = target.xyz - last_target.xyz;
     auto delta_t = timestamp - last_target.timestamp;
@@ -90,7 +90,7 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
 
     //---------------根据目前队列长度选用合适的滤波器------------------------------------
     //当队列长度小于3，仅更新队列
-    if (history_info.size() < 3)
+    if (history_info.size() < 4)
     {
         last_target = target;
         return xyz;
@@ -126,31 +126,57 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     PredictStatus is_pf_available;
     PredictStatus is_fitting_available;
     //需注意粒子滤波使用相对时间（自上一次检测时所经过ms数），拟合使用自首帧所经过时间
+    // if (fitting_disabled)
+    // {
+    //     auto is_pf_available = predict_pf_run(target, result_pf, delta_time_estimate);
+    // }
+    // else
+    // {
+    //     auto get_pf_available = std::async(std::launch::async, [=, &result_pf](){return predict_pf_run(target, result_pf, delta_time_estimate);});
+    //     auto get_fitting_available = std::async(std::launch::async, [=, &result_fitting](){return predict_fitting_run(result_fitting, time_estimate);});
+
+    //     is_pf_available = get_pf_available.get();
+    //     is_fitting_available = get_fitting_available.get();
+    // }
+    //FIXME:已暂时禁用粒子滤波
     if (fitting_disabled)
     {
-        auto is_pf_available = predict_pf_run(target, result_pf, delta_time_estimate);
+        return xyz;
+        // auto is_pf_available = predict_pf_run(target, result_pf, delta_time_estimate);
     }
     else
     {
-        auto get_pf_available = std::async(std::launch::async, [=, &result_pf](){return predict_pf_run(target, result_pf, delta_time_estimate);});
         auto get_fitting_available = std::async(std::launch::async, [=, &result_fitting](){return predict_fitting_run(result_fitting, time_estimate);});
 
-        is_pf_available = get_pf_available.get();
         is_fitting_available = get_fitting_available.get();
     }
-
     //进行融合
+    // if (is_fitting_available.xyz_status[0] && !fitting_disabled)
+    //     result[0] = result_fitting[0];
+    // else if (is_pf_available.xyz_status[0])
+    //     result[0] = result_pf[0];
+    // else
+    //     result[0] = xyz[0];
+
+    // if (is_fitting_available.xyz_status[1] && !fitting_disabled)
+    //     result[1] = result_fitting[1];
+    // else if (is_pf_available.xyz_status[1])
+    //     result[1] = result_pf[1];
+    // else
+    //     result[1] = xyz[1];
+
+    // if (is_fitting_available.xyz_status[2] && !fitting_disabled)
+    //     result[2] = result_fitting[2];
+    // else
+    //     result[2] = xyz[2];
+    //FIXME:已暂时禁用粒子滤波
     if (is_fitting_available.xyz_status[0] && !fitting_disabled)
         result[0] = result_fitting[0];
-    else if (is_pf_available.xyz_status[0])
-        result[0] = result_pf[0];
     else
         result[0] = xyz[0];
 
     if (is_fitting_available.xyz_status[1] && !fitting_disabled)
         result[1] = result_fitting[1];
-    else if (is_pf_available.xyz_status[1])
-        result[1] = result_pf[1];
     else
         result[1] = xyz[1];
 
@@ -161,26 +187,31 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     auto t2=std::chrono::steady_clock::now();
     double dr_ms=std::chrono::duration<double,std::milli>(t2-t1).count();
     // if(timestamp % 10 == 0)
+    delta_time_estimate = 0;
     // cout<<dr_ms<<endl;
-
+    // cout<<xyz<<endl;
+    // result_pf = target.xyz;
 #ifdef DRAW_PREDICT
+    double x_offset = 100;
+    double y_offset = 400;
+    double z_offset = 200;
     if (cnt < 2000)
     {
         auto x = cnt * 5;
-        cv::circle(pic_x,cv::Point2f((timestamp) / 10,xyz[0] * 100),1,cv::Scalar(0,0,255),1);
-        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[0] * 100),1,cv::Scalar(0,255,0),1);
-        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[0] * 100),1,cv::Scalar(255,255,0),1);
+        cv::circle(pic_x,cv::Point2f((timestamp) / 10,xyz[0] * 100 + x_offset),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[0] * 100 + x_offset),1,cv::Scalar(0,255,0),1);
+        cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[0] * 100 + x_offset),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_x,cv::Point2f((timestamp + delta_time_estimate) / 10,result[0]+ 200),1,cv::Scalar(255,255,255),1);
 
 
-        cv::circle(pic_y,cv::Point2f((timestamp) / 10,xyz[1] * 100 + 500),1,cv::Scalar(0,0,255),1);
-        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[1] * 100 + 500),1,cv::Scalar(0,255,0),1);
-        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[1] * 100 + 500),1,cv::Scalar(255,255,0),1);
+        cv::circle(pic_y,cv::Point2f((timestamp) / 10,xyz[1] * 100 + y_offset),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[1] * 100 + y_offset),1,cv::Scalar(0,255,0),1);
+        cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[1] * 100 + y_offset),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_y,cv::Point2f((timestamp + delta_time_estimate) / 10,result[1]+ 200),1,cv::Scalar(255,255,255),1);
 
-        cv::circle(pic_z,cv::Point2f((timestamp) / 10,xyz[2] * 100 + 200),1,cv::Scalar(0,0,255),1);
-        cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[2] * 100 + 200),1,cv::Scalar(0,255,0),1);
-        cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[2] * 100),1,cv::Scalar(255,255,0),1);
+        cv::circle(pic_z,cv::Point2f((timestamp) / 10,xyz[2] * 100 + z_offset),1,cv::Scalar(0,0,255),1);
+        cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result_pf[2] * 100  + z_offset),1,cv::Scalar(0,255,0),1);
+        cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result_fitting[2] * 100 + z_offset),1,cv::Scalar(255,255,0),1);
         // cv::circle(pic_z,cv::Point2f((timestamp + delta_time_estimate) / 10,result[2]),1,cv::Scalar(255,255,255),1);
         cnt++;
     }
@@ -190,6 +221,7 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     cv::waitKey(1);
 #endif //DRAW_PREDICT
     last_target = target;
+    // return target.xyz;
     return result;
 }
 
@@ -229,29 +261,74 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
 {
     PredictStatus is_available;
 
-    //采取中心差分法,使用 t, t-1, t-2时刻速度,计算t-1时刻的速度
-    auto target_prev = history_info.at(history_info.size() - 3);
-    auto target_next = target;
-    auto v_xyz = (target_next.xyz - target_prev.xyz) / (target_next.timestamp - target_prev.timestamp) * 1e3;
-    auto t = target_next.timestamp - history_info.at(history_info.size() - 2).timestamp;
-
+    // Eigen::Vector3d v_xyz_sum = {0,0,0};
+    // Eigen::Vector3d pos_sum = {0,0,0};
+    // for (int i = 0; i < 2; i++)
+    // {
+    //     auto target_prev = history_info.at(history_info.size() - 1 - 2 - i);
+    //     auto target_next = history_info.at(history_info.size() - 1 - i);
+    //     Eigen::Vector2d polar_target = {target.xyz.norm(), atan2(target.xyz[1], target.xyz[0])};    
+    //     Eigen::Vector2d polar_prev = {target_prev.xyz.norm(), atan2(target_prev.xyz[1], target_prev.xyz[0])};
+    //     v_xyz_sum += (target_next.xyz - target_prev.xyz) / (target_next.timestamp - target_prev.timestamp) * 1e3;
+    //     pos_sum += (target_next.xyz + target_prev.xyz);
+    // }
+    auto target_prev = history_info.at(history_info.size() - 2);
+    auto target_next = history_info.at(history_info.size() - 1);
+    
+    Eigen::Vector2d polar_target = {target.xyz.norm(), atan2(target.xyz[1], target.xyz[0])};
+    Eigen::Vector2d polar_prev = {target_prev.xyz.norm(), atan2(target_prev.xyz[1], target_prev.xyz[0])};
+    //From [-PI,PI] to [0,2PI]
+    if (polar_target[1] < 0)
+        polar_target[1]+=CV_2PI;
+    if (polar_prev[1] < 0)
+        polar_prev[1]+=CV_2PI;
+    
+    Eigen::Vector2d v_polar = {0, 0};
+    v_polar[0] = (polar_target[0] - polar_prev[0]) / (target.timestamp - target_prev.timestamp) * 1e3;
+    if (polar_target[1] > 1.5 * CV_PI && polar_prev[1] < 0.5 * CV_PI)
+    {
+        v_polar[1] = (polar_target[1] - polar_prev[1] + CV_2PI) / (target.timestamp - target_prev.timestamp) * 1e3;
+    }
+    else if (polar_target[1] <  0.5 * CV_PI && polar_prev[1] >  1.5 * CV_PI)
+    {
+        v_polar[1] = (polar_target[1] - polar_prev[1] - CV_2PI) / (target.timestamp - target_prev.timestamp) * 1e3;
+    }
+    else
+    {
+        v_polar[1] = (polar_target[1] - polar_prev[1]) / (target.timestamp - target_prev.timestamp) * 1e3;
+    }
+    
     is_available.xyz_status[0] = pf_v.is_ready;
     is_available.xyz_status[1] = pf_v.is_ready;
-    // cout<<v_xyz<<endl;
 
     //Update
     Eigen::VectorXd measure (2);
-    measure << v_xyz[0], v_xyz[1];
+    measure << v_polar[0], v_polar[1];
     pf_v.update(measure);
-
+    // Mat measure_cv_format = Mat(2,1,CV_32F);
+    // measure_cv_format.at<float>(0,0) = v_polar[0];
+    // measure_cv_format.at<float>(0,1) = v_polar[1];
+    // kf.correct(measure_cv_format);
+    // Mat pred = kf.predict();
+    // cout<<pred<<endl;
+    
     //Predict
     auto result_v = pf_v.predict();
-
+    // cout<<v_polar<<endl;
+    // cout<<"////////////////////"<<endl;
+    // cout<<result_v<<endl;
+    // cout<<"----------------------"<<endl;
     //TODO:恢复速度预测
-    // auto predict_x = target.xyz[0];
-    // auto predict_y = target.xyz[1];
-    auto predict_x = target.xyz[0] + result_v[0] * (time_estimated + t) / 1e3;
-    auto predict_y = target.xyz[1] + result_v[1] * (time_estimated + t) / 1e3;
+    auto predict_rho = polar_target[0];
+    auto predict_theta = polar_target[1];
+    // auto predict_rho = polar_target[0] + result_v[0] * time_estimated / 1e3;
+    // auto predict_theta = polar_target[1] + result_v[1] * time_estimated / 1e3;
+    // auto predict_rho = polar_target[0] + pred.at<float>(0,0) * time_estimated / 1e3;
+    // auto predict_theta = polar_target[1] + pred.at<float>(0,1) * time_estimated / 1e3;
+    auto predict_x = target.xyz[0];
+    auto predict_y = target.xyz[1];
+    // auto predict_x = predict_rho * cos(predict_theta);
+    // auto predict_y = predict_rho * sin(predict_theta);
 
     result << predict_x, predict_y, target.xyz[2];
     // cout<<result<<endl;
@@ -261,8 +338,9 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
 
 ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &result, int time_estimated)
 {
-    double params_x[4] = {1,1,1,0};            // 参数的估计值
-    double params_y[4] = {1,1,1,0};            // 参数的估计值
+    //0.1的位置使用0初始化会导致拟合结果出错
+    double params_x[4] = {0,0.01,0.1,0};            // 参数的估计值
+    double params_y[4] = {0,0.01,0.1,0};            // 参数的估计值
 
     ceres::Problem problem_x;
     ceres::Problem problem_y;
@@ -288,25 +366,41 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
     
     for (auto target_info : history_info)
     {
+        cout<<"T : "<<(target_info.timestamp - history_info.front().timestamp) / 1e3<<" X:"<<target_info.xyz[0]<<" Y:"<<target_info.xyz[1]<<endl;
         problem_x.AddResidualBlock (     // 向问题中添加误差项
         // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 3> ( 
-                new CURVE_FITTING_COST ( target_info.timestamp - history_info.front().timestamp, target_info.xyz[0] - params_x[0])
+            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 1> ( 
+                new CURVE_FITTING_COST ((target_info.timestamp - history_info.front().timestamp) / 1e3, target_info.xyz[0] - params_x[0])
             ),
-            nullptr,            // 核函数，这里不使用，为空
+            new ceres::CauchyLoss(0.5),            // 核函数，这里不使用，为空
             &params_x[1]                 // 待估计参数
         );
         problem_y.AddResidualBlock (     // 向问题中添加误差项
         // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 3> ( 
-                new CURVE_FITTING_COST ( target_info.timestamp - history_info.front().timestamp, target_info.xyz[1] - params_y[0])
+            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 1> ( 
+                new CURVE_FITTING_COST ((target_info.timestamp - history_info.front().timestamp) / 1e3, target_info.xyz[1] - params_y[0])
             ),
-            nullptr,            // 核函数，这里不使用，为空
+           new ceres::CauchyLoss(0.5),            // 核函数，这里不使用，为空
             &params_y[1]                 // 待估计参数
         );
     }
+    // cout<<endl;
+    // problem_x.SetParameterUpperBound(&params_x[1],0,20);
+    // problem_x.SetParameterLowerBound(&params_x[1],0,-20);
+    // problem_x.SetParameterUpperBound(&params_x[1],1,0.5);
+    // problem_x.SetParameterLowerBound(&params_x[1],1,-0.5);
+    // problem_x.SetParameterUpperBound(&params_x[1],2,CV_PI);
+    // problem_x.SetParameterLowerBound(&params_x[1],2,-CV_PI);
+
+    // problem_y.SetParameterUpperBound(&params_y[1],0,20);
+    // problem_y.SetParameterLowerBound(&params_y[1],0,-20);
+    // problem_y.SetParameterUpperBound(&params_y[1],1,0.5);
+    // problem_y.SetParameterLowerBound(&params_y[1],1,-0.5);
+    // problem_y.SetParameterUpperBound(&params_y[1],2,CV_PI);
+    // problem_y.SetParameterLowerBound(&params_y[1],2,-CV_PI);
 
     //异步计算
+
     auto status_solve_x = std::async(std::launch::deferred, [&](){ceres::Solve(options_x, &problem_x, &summary_x);});
     auto status_solve_y = std::async(std::launch::deferred, [&](){ceres::Solve(options_y, &problem_y, &summary_y);});
 
@@ -322,15 +416,27 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
     is_available.xyz_status[0] = (x_cost <= max_cost);
     is_available.xyz_status[1] = (y_cost <= max_cost);
     // cout<<z_cost<<endl;
+    
+    cout<<"X:"<<params_x[0]<<" "<<params_x[1]<<" "<<params_x[2]<<" "<<params_x[3]<<endl; 
+    cout<<"Y:"<<params_y[0]<<" "<<params_y[1]<<" "<<params_y[2]<<" "<<params_y[3]<<endl;
+    // cout<<summary_y.BriefReport()<<endl;
+    cout<<time_estimated<<endl;
+    cout<<bullet_speed<<endl;
+    auto x_pred = params_x[0] + params_x[1] * (time_estimated / 1e3) + params_x[2] * pow((time_estimated / 1e3), 2);
+    auto y_pred = params_y[0] + params_y[1] * (time_estimated / 1e3) + params_y[2] * pow((time_estimated / 1e3), 2);  
+    // auto x_pred = params_x[0] + params_x[1] * cos(params_x[2] * (time_estimated / 1e3) + params_x[3]);
+    // auto y_pred = params_y[0] + params_y[1] * cos(params_y[2] * (time_estimated / 1e3) + params_y[3]);
+    // auto x_pred = params_x[0] + params_x[1] * cos(params_x[3] * (time_estimated / 1e3)) + params_x[2] * sin(params_x[3] * (time_estimated / 1e3));
+    // auto y_pred = params_y[0] + params_y[1] * cos(params_y[3] * (time_estimated / 1e3)) + params_y[2] * sin(params_y[3] * (time_estimated / 1e3));
 
-    auto x_pred = params_x[0] + params_x[1] * cos(params_x[3] * time_estimated) + params_x[2] * sin(params_x[3] * time_estimated);
-    auto y_pred = params_y[0] + params_y[1] * cos(params_y[3] * time_estimated) + params_y[2] * sin(params_y[3] * time_estimated);
-
+    cout<<x_pred<<" : "<<y_pred<<endl;
+    cout<<"..........."<<endl;
     result = {x_pred, y_pred, dc[2]};
     return is_available;
 }
 
 bool ArmorPredictor::setBulletSpeed(double speed)
+
 {
     bullet_speed = speed;
     return true;

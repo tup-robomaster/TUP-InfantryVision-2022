@@ -85,6 +85,7 @@ bool ParticleFilter::initParam(YAML::Node &config,const string param_name)
     initMatrix(observe_noise_cov_tmp,read_vector);
     observe_noise_cov = observe_noise_cov_tmp;
     //初始化粒子矩阵及粒子权重
+    // matrix_particle = 3 * Eigen::MatrixXd::Random(num_particle, vector_len);
     matrix_particle = Eigen::MatrixXd::Zero(num_particle, vector_len);
     randomlizedGaussianColwise(matrix_particle, process_noise_cov);
     matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
@@ -107,6 +108,7 @@ bool ParticleFilter::initParam(ParticleFilter parent)
     //初始化粒子矩阵及粒子权重
     matrix_particle = Eigen::MatrixXd::Zero(num_particle, vector_len);
     randomlizedGaussianColwise(matrix_particle, process_noise_cov);
+    matrix_particle = 3 * Eigen::MatrixXd::Random(num_particle, vector_len);
     matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
     is_ready = false;
 
@@ -135,7 +137,7 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
 {
     Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
     Eigen::MatrixXd mat_measure = measure.replicate(1,num_particle).transpose();
-    // auto error = (mat_measure - matrix_particle).ROWW;
+    auto err = (mat_measure - matrix_particle).rowwise().squaredNorm();
     // cout<<error<<endl;
 
     if (is_ready)
@@ -153,8 +155,12 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
         matrix_weights /= matrix_weights.sum();
         double n_eff = 1.0 / (matrix_weights.transpose() * matrix_weights).value();
         //TODO:有效粒子数少于一定值时进行重采样,该值需在实际调试过程中修改
-        // if (error >= process_noise_cov(0,0) || n_eff < num_particle * 0.5)
-        resample();
+        // if (n_eff < 0.5 * num_particle)
+        // if (err(0,0) > process_noise_cov(0,0) || err(1,0) > process_noise_cov(1,1))
+        // {
+            // cout<<"res"<<num_particle<<endl;
+            resample();
+        // }
     }
     else
     {

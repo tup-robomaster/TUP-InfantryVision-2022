@@ -205,6 +205,8 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
         VisionData data;
         task_factory.consume(dst);
         mode = dst.mode;
+        // mode = 4;
+        // dst.mode = 4;
 
 #ifdef DEBUG_WITHOUT_COM
         mode = 1;

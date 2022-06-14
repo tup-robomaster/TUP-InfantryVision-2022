@@ -24,7 +24,7 @@
 
 using namespace std;
 using namespace cv;
-const string camera_name = "KE0200110073";
+const string camera_name = "KE0200110076";
 
 enum TargetType {SMALL, BIG, BUFF};
 /**

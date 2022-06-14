@@ -232,10 +232,10 @@ bool Buff::run(TaskData &src,VisionData &data)
                     delta_t = src.timestamp - (*iter).prev_timestamp;
                     //目前扇叶到上一次扇叶的旋转矩阵
                     auto relative_rmat = (*iter).prev_fan.rmat.transpose() * (*fan).rmat;
-                    // cout<<relative_rmat<<endl;
-                    // cout<<"..."<<endl;
                     angle_axisd = Eigen::AngleAxisd(relative_rmat);
-                    sign = ((*fan).centerR3d_world.dot(angle_axisd.axis()) > 0 ) ? 1 : -1;
+                    auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
+                    // auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
+                    sign = ((*fan).centerR3d_world.dot(rotate_axis_world) > 0 ) ? 1 : -1;
                 }
                 else
                 {
@@ -244,19 +244,22 @@ bool Buff::run(TaskData &src,VisionData &data)
                     auto relative_rmat = (*iter).last_fan.rmat.transpose() * (*fan).rmat;
                     //TODO:使用点乘判断旋转方向
                     angle_axisd = Eigen::AngleAxisd(relative_rmat);
-                    sign = ((*fan).centerR3d_world.dot(angle_axisd.axis()) > 0 ) ? 1 : -1;
+                    // auto rotate_axis_world = (*fan).rmat  * angle_axisd.axis();
+                    auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
+                    sign = ((*fan).centerR3d_world.dot(rotate_axis_world) > 0 ) ? 1 : -1;
                 }
                 // cout<<sign<<endl;
                 // cout<<delta_angle_axisd.angle()<< " : "<<delta_angle_axised<<endl;
                 // cout<<delta_t<<endl;
                 // cout<<"..."<<endl;
-                // cout<<angle_axisd.axis()<<endl;
+                // cout<<(*fan).centerR3d_world<<endl;
+                // cout<<rotate_axis_world.normalized()<<(*fan).centerR3d_world.normalized()<<endl;
                 // cout<<endl;
-                rotate_speed = (angle_axisd.angle()) / delta_t * 1e3;//计算角速度(rad/s)
+                rotate_speed = sign * (angle_axisd.angle()) / delta_t * 1e3;//计算角速度(rad/s)
                 // cout<<angle_axisd.axis()<<endl;
-                // cout<<endl;
+                // cout<<en1dl;
                 // cout<<rotate_speed<<endl;
-                if (rotate_speed <= max_v && rotate_speed <= min_v && (src.timestamp - (*iter).last_timestamp) <= min_last_delta_t)
+                if (abs(rotate_speed) <= max_v && abs(rotate_speed) <= min_v && (src.timestamp - (*iter).last_timestamp) <= min_last_delta_t)
                 {
                     min_last_delta_t = src.timestamp - (*iter).last_timestamp;
                     min_v = rotate_speed;
@@ -343,6 +346,7 @@ bool Buff::run(TaskData &src,VisionData &data)
     else if (src.mode == 4)
         //进入大能量机关识别模式
         predictor.mode = 1;
+    // cout<<src.mode<<":"<<predictor.mode<<endl;
     // cout<<mean_rotate_speed<<endl;
     if (!predictor.predict(mean_rotate_speed, int(mean_r_center.norm()), src.timestamp, theta_offset))
     {

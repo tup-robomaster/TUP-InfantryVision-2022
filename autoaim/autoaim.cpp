@@ -20,8 +20,7 @@ Autoaim::Autoaim()
     is_target_switched = true;
     last_target_area = 0;
     last_bullet_speed = 0;
-    input_size = {720,720};
-    auto predictor_tmp = predictor_param_loader.generate();
+    input_size = {416, 416};
     predictor.initParam(predictor_param_loader);
 
     fmt::print(fmt::fg(fmt::color::pale_violet_red), "[AUTOAIM] Autoaim init model success! Size: {} {}\n", input_size.height, input_size.width);
@@ -238,14 +237,14 @@ ArmorTracker* Autoaim::chooseTargetTracker(vector<ArmorTracker*> trackers, int t
             if (trackers[i]->last_selected_timestamp == prev_timestamp)
                 return trackers[i];
             //若该装甲板面积较大且与目前最大面积差距较大，列为候选并记录该装甲板数据
-            else if (trackers[i]->last_armor.area >= max_area && (trackers[i]->last_armor.area / max_area > 1.4 || trackers[i]->last_armor.area / max_area < 0.6))
+            else if (trackers[i]->last_armor.area >= max_area && (trackers[i]->last_armor.area / max_area > 1.2 || trackers[i]->last_armor.area / max_area < 0.8))
             {
                 max_area = trackers[i]->last_armor.area;
                 min_horizonal_dist = horizonal_dist_to_center;
                 target_idx = i;
             }
             //若该装甲板面积较大且与目前最大面积差距较小，判断该装甲板与图像中心点的二维水平距离
-            else if ((trackers[i]->last_armor.area / max_area < 1.4 || trackers[i]->last_armor.area / max_area > 0.6) && horizonal_dist_to_center < min_horizonal_dist)
+            else if ((trackers[i]->last_armor.area / max_area < 1.2 || trackers[i]->last_armor.area / max_area > 0.8) && horizonal_dist_to_center < min_horizonal_dist)
             {
                 min_horizonal_dist = horizonal_dist_to_center;
                 target_idx = i;
@@ -279,7 +278,7 @@ string Autoaim::chooseTargetID(vector<Armor> &armors, int timestamp)
             return armor.key;
         }
         //若存在上次击打目标,时间较短,且该目标运动较小则将其选为候选目标,若遍历结束未发现危险距离内的英雄则将其ID选为目标ID.
-        else if (armor.id == last_armor.id && abs(armor.center3d_world.norm() - last_armor.center3d_world.norm()) < 0.1 && abs(timestamp - prev_timestamp) < 30)
+        else if (armor.id == last_armor.id && abs(armor.area - last_armor.area) / (float)armor.area < 0.3 && abs(timestamp - prev_timestamp) < 30)
         {
             is_last_id_exists = true;
             target_key = armor.key;
@@ -320,8 +319,9 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 
 #ifdef USING_IMU
     Eigen::Matrix3d rmat_imu = src.quat.toRotationMatrix();
-    // auto vec = rotationMatrixToEulerAngles(rmat_imu);
+    auto vec = rotationMatrixToEulerAngles(rmat_imu);
     // cout<<"Euler : "<<vec[0] * 180.f / CV_PI<<" "<<vec[1] * 180.f / CV_PI<<" "<<vec[2] * 180.f / CV_PI<<endl;
+    LOG(INFO)<<"【AUTOAIM】Euler : "<<vec[0] * 180.f / CV_PI<<" "<<vec[1] * 180.f / CV_PI<<" "<<vec[2] * 180.f / CV_PI;
 #else
     Eigen::Matrix3d rmat_imu = Eigen::Matrix3d::Identity();
 #endif //USING_IMU
@@ -385,6 +385,10 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         if (object.color != 0)
             continue;
 #endif //DETECT_BLUE
+#ifdef IGNORE_ENGINEER
+        if (object.cls == 2)
+            continue;
+#endif //IGNORE_ENGINEER
         Armor armor;
         armor.id = object.cls;
         armor.color = object.color;
@@ -408,7 +412,11 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         armor.center2d = apex_sum / 4.f;
 
         // auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_ITERATIVE);
-
+        int pnp_method;
+        if (objects.size() <= 2)
+            pnp_method = SOLVEPNP_ITERATIVE;
+        else
+            pnp_method = SOLVEPNP_IPPE;
         std::vector<Point2f> points_pic(armor.apex2d, armor.apex2d + 4);
         // std::vector<Point2f> tmp;
         // for (auto rrect.)
@@ -423,7 +431,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         // for (auto pic : points_pic)
         //     cout<<pic<<endl;
         // cout<<target_type<<endl;
-        auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_IPPE);
+        auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, pnp_method);
         //防止装甲板类型出错导致解算问题，首先尝试切换装甲板类型，若仍无效则直接跳过该装甲板
         if (pnp_result.armor_cam.norm() > 10)
         {
@@ -431,7 +439,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                 target_type = BIG;
             else if (target_type == BIG)
                 target_type = SMALL;
-            pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_IPPE);
+            pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, pnp_method);
             if (pnp_result.armor_cam.norm() > 10)
                 continue;
         }
