@@ -105,23 +105,30 @@ bool Buff::run(TaskData &src,VisionData &data)
     vector<Fan> fans;
     auto input = src.img;
 
-#ifndef DEBUG_WITHOUT_COM
-    //设置弹速,若弹速大于10m/s值,且弹速变化大于0.5m/s则更新
-    if (src.bullet_speed > 10 && abs(src.bullet_speed - last_bullet_speed) > 0.5)
-    {
-        predictor.setBulletSpeed(src.bullet_speed);
-        coordsolver.setBulletSpeed(src.bullet_speed);
-        last_bullet_speed = src.bullet_speed;
-    }
-#endif
-
 #ifdef USING_IMU
     Eigen::Matrix3d rmat_imu = src.quat.toRotationMatrix();
+    auto vec = rotationMatrixToEulerAngles(rmat_imu);
+    // cout<<"Euler : "<<vec[0] * 180.f / CV_PI<<" "<<vec[1] * 180.f / CV_PI<<" "<<vec[2] * 180.f / CV_PI<<endl;
 #else
     Eigen::Matrix3d rmat_imu = Eigen::Matrix3d::Identity();
 #endif //USING_IMU
 
-//TODO:修复ROI
+#ifndef DEBUG_WITHOUT_COM
+    //设置弹速,若弹速大于10m/s值,且弹速变化大于0.5m/s则更新
+    if (src.bullet_speed > 10)
+    {
+        double bullet_speed;
+        if (abs(src.bullet_speed - last_bullet_speed) > 0.5)
+            bullet_speed = src.bullet_speed;
+        else
+            bullet_speed = (last_bullet_speed + src.bullet_speed) / 2;
+        
+        predictor.setBulletSpeed(bullet_speed);
+        coordsolver.setBulletSpeed(bullet_speed);
+        last_bullet_speed = bullet_speed;
+    }
+#endif //DEBUG_WITHOUT_COM
+
 #ifdef USING_ROI
     roi_offset = cropImageByROI(input);
 #endif  //USING_ROI
@@ -202,7 +209,6 @@ bool Buff::run(TaskData &src,VisionData &data)
             iter = next;
         }
     }
-    //TODO:增加防抖
     std::vector<FanTracker> trackers_tmp;
     //为扇叶分配或新建最佳FanTracker
     for (auto fan = fans.begin(); fan != fans.end(); ++fan)
@@ -242,36 +248,22 @@ bool Buff::run(TaskData &src,VisionData &data)
                     delta_t = src.timestamp - (*iter).last_timestamp;
                     //目前扇叶到上一次扇叶的旋转矩阵
                     auto relative_rmat = (*iter).last_fan.rmat.transpose() * (*fan).rmat;
-                    //TODO:使用点乘判断旋转方向
                     angle_axisd = Eigen::AngleAxisd(relative_rmat);
                     // auto rotate_axis_world = (*fan).rmat  * angle_axisd.axis();
                     auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
                     sign = ((*fan).centerR3d_world.dot(rotate_axis_world) > 0 ) ? 1 : -1;
                 }
-                // cout<<sign<<endl;
-                // cout<<delta_angle_axisd.angle()<< " : "<<delta_angle_axised<<endl;
-                // cout<<delta_t<<endl;
-                // cout<<"..."<<endl;
-                // cout<<(*fan).centerR3d_world<<endl;
-                // cout<<rotate_axis_world.normalized()<<(*fan).centerR3d_world.normalized()<<endl;
-                // cout<<endl;
                 rotate_speed = sign * (angle_axisd.angle()) / delta_t * 1e3;//计算角速度(rad/s)
-                // cout<<angle_axisd.axis()<<endl;
-                // cout<<en1dl;
-                // cout<<rotate_speed<<endl;
-                if (abs(rotate_speed) <= max_v && abs(rotate_speed) <= min_v && (src.timestamp - (*iter).last_timestamp) <= min_last_delta_t)
+
+                if (abs(rotate_speed) <= max_v && abs(rotate_speed) <= min_v 
+                    && (src.timestamp - (*iter).last_timestamp) <= min_last_delta_t 
+                    && (src.timestamp != (*iter).last_timestamp))
                 {
                     min_last_delta_t = src.timestamp - (*iter).last_timestamp;
                     min_v = rotate_speed;
                     best_candidate = iter;
                     is_best_candidate_exist = true;
                 }
-                // if (fabs(rotate_speed) <= max_v)
-                // {
-                //     (*iter).update((*fan), src.timestamp);
-                //     (*iter).rotate_speed = rotate_speed;
-                //     break;
-                // }
             }
             if (is_best_candidate_exist)
             {

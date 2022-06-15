@@ -12,7 +12,7 @@ static constexpr int NUM_CLASSES = 8;  // Number of classes
 static constexpr int NUM_COLORS = 4;   // Number of color
 static constexpr int TOPK = 128;       // TopK
 static constexpr float NMS_THRESH = 0.3;
-static constexpr float BBOX_CONF_THRESH = 0.7;
+static constexpr float BBOX_CONF_THRESH = 0.65;
 static constexpr float MERGE_CONF_ERROR = 0.15;
 static constexpr float MERGE_MIN_IOU = 0.9;
 
@@ -425,12 +425,10 @@ bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
             (*object).apex[1] = pts_final[1];
             (*object).apex[2] = pts_final[2];
             (*object).apex[3] = pts_final[3];
-
         }
         (*object).area = (int)(calcTetragonArea((*object).apex));
     }
     if (objects.size() != 0)
         return true;
     else return false;
-
 }

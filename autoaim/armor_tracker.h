@@ -19,6 +19,7 @@ struct Armor
     double conf;
     string key;
     Point2f apex2d[4];
+    Rect rect;
     Point2f center2d;
     Eigen::Vector3d center3d_cam;
     Eigen::Vector3d center3d_world;
@@ -38,6 +39,7 @@ public:
     int history_type_sum;                   //历史次数之和
     int selected_cnt;                       //该Tracker被选为目标tracker次数和
     const int max_history_len = 4;          //历史信息队列最大长度
+    double hit_score;                       //该tracker可能作为目标的分数,由装甲板旋转角度,距离,面积大小决定
     double velocity;
     double radius;
 
@@ -45,4 +47,5 @@ public:
 
     ArmorTracker(Armor src,int src_timestamp);
     bool update(Armor new_armor, int new_timestamp);
+    bool calcTargetScore();
 };

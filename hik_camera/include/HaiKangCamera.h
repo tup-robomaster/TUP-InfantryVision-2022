@@ -74,10 +74,6 @@ public:
     //读取相机时间戳
     int Get_TIMESTAMP();
 
-    static void* WorkThread(void* pUser);
-    static bool PrintDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo);
-    void open_HaiKang_camera(int exposure_time, float exposure_gain, float b_balance, float g_balance, float r_balance);
-
     ~HaiKangCamera();
 
 };

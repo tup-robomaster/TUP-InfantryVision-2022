@@ -24,7 +24,6 @@ include_directories(${InferenceEngine_INCLUDE_DIRS})
 # aux_source_directory(detector detector_src)
 # aux_source_directory(predictor predictor_src)
 
-#TODO: CMAKE as a submodule
 # add_library(autoaim_lib OBJECT autoaim.cpp ${detector_src} ${predictor_src})
 # add_library(autoaim_lib OBJECT ${detector_src} ${predictor_src})
 # target_link_libraries(autoaim ${OpenCV_LIBRARIES} ${InferenceEngine_LIBRARIES})

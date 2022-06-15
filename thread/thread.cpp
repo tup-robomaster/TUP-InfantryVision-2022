@@ -17,9 +17,9 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
-    DaHeng.SetExposureTime(6000);
+    DaHeng.SetExposureTime(3500);
     // 设置1
-    DaHeng.SetGAIN(3, 14);
+    DaHeng.SetGAIN(3, 16);
     // 是否启用自动白平衡7
     // DaHeng.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
@@ -221,13 +221,15 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
         last_mode = mode;
     }
 #endif //SAVE_TRANSMIT_LOG
-
-        if (mode == 1)
+        //1:自瞄模式
+        //2:前哨站顶部装甲板识别模式
+        //3:小能量机关模式
+        //4.大能量机关模式
+        if (mode == 1 || mode == 2)
         {
             autoaim.run(dst, data);
             transmit_factory.produce(data);
         }
-        //进入能量机关打击模式，3为小能量机关，4为大能量机关
         else if (mode == 3 || mode == 4)
         {
             buff.run(dst, data);

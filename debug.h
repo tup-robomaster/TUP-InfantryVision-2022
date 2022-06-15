@@ -34,7 +34,7 @@
 //                              图像DEBUG相关选项
 //---------------------------------------------------------------------------//
 
-#define SHOW_INPUT      //显示送入神经网络的图像
+// #define SHOW_INPUT      //显示送入神经网络的图像
 
 #define SHOW_IMG        //是否显示检测Armor后的图像
 //===========================================================================//
@@ -48,7 +48,7 @@
 
 // #define PRINT_LATENCY //输出运行时
 
-// #define PRINT_TARGET_INFO //是否输出目标信息
+#define PRINT_TARGET_INFO //是否输出目标信息
 
 // #define USING_PREDICT           //是否启用预测
 

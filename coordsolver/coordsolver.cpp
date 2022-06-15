@@ -175,6 +175,7 @@ Eigen::Vector2d CoordSolver::getAngle(Eigen::Vector3d &xyz_cam, Eigen::Matrix3d 
     // auto dist = xyz_offseted.norm();
     // auto pitch_offset = 6.457e04 * pow(dist,-2.199);
     auto pitch_offset = dynamicCalcPitchOffset(xyz_world);
+    //TODO: Add Log
     // cout<<pitch_offset<<endl;
     angle_cam[1] = angle_cam[1] + pitch_offset;
     auto angle_offseted = staticAngleOffset(angle_cam);
