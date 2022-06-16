@@ -237,6 +237,7 @@ static void nms_sorted_bboxes(std::vector<ArmorObject>& faceobjects, std::vector
         for (int j = 0; j < (int)picked.size(); j++)
         {
             ArmorObject& b = faceobjects[picked[j]];
+            b.probs.push_back(b.prob);
 
             // intersection over union
             float inter_area = intersection_area(a, b);
@@ -249,6 +250,7 @@ static void nms_sorted_bboxes(std::vector<ArmorObject>& faceobjects, std::vector
                 if (iou > MERGE_MIN_IOU && abs(a.prob - b.prob) < MERGE_CONF_ERROR 
                                         && a.cls == b.cls && a.color == b.color)
                 {
+                    b.probs.push_back(a.prob);
                     for (int i = 0; i < 4; i++)
                     {
                         b.pts.push_back(a.apex[i]);
@@ -404,15 +406,18 @@ bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
     decodeOutputs(net_pred, objects, transfrom_matrix, img_w, img_h);
     for (auto object = objects.begin(); object != objects.end(); ++object)
     {
-        //对候选框预测角点进行平均,降低误差
+        //对候选框预测角点与置信度进行平均,降低误差
         if ((*object).pts.size() >= 8)
         {
             auto N = (*object).pts.size();
             cv::Point2f pts_final[4];
+            float probs_sum = 0;
 
             for (int i = 0; i < N; i++)
             {
                 pts_final[i % 4]+=(*object).pts[i];
+                if (i % 4 == 0)
+                    probs_sum+=(*object).probs[i];
             }
 
             for (int i = 0; i < 4; i++)
@@ -425,6 +430,7 @@ bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
             (*object).apex[1] = pts_final[1];
             (*object).apex[2] = pts_final[2];
             (*object).apex[3] = pts_final[3];
+            (*object).prob = probs_sum / (*object).probs.size();
         }
         (*object).area = (int)(calcTetragonArea((*object).apex));
     }
