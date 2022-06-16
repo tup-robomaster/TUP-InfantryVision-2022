@@ -26,13 +26,10 @@ bool ArmorTracker::calcTargetScore()
 {
     vector<Point2f> points;
     float rotate_angle;
-    auto horizonal_dist_to_center = abs(last_armor.center2d.x - 640);
+    // auto horizonal_dist_to_center = abs(last_armor.center2d.x - 640);
 
-    for(int i = 0; i < 4; i++)
-    {
-        points.push_back(last_armor.apex2d[i]);
-    }
-    RotatedRect rotated_rect = minAreaRect(points);
+
+    RotatedRect rotated_rect = last_armor.rrect;
     //调整角度至0-90度(越水平角度越小)
     if (rotated_rect.size.width > rotated_rect.size.height)
         rotate_angle = rotated_rect.angle;
@@ -40,8 +37,9 @@ bool ArmorTracker::calcTargetScore()
         rotate_angle = 90 - rotated_rect.angle;
     
     //计算分数
-    hit_score = (1.0 / rotate_angle) * 1.5 + (20.0 / horizonal_dist_to_center) * 0.92 + (1 - 1.0 / last_armor.area) * 0.4;
-    // cout << "hit_socre: " << hit_score << endl;
+    //使用log函数压缩角度权值范围
+    hit_score = log(0.15 * (90 - rotate_angle) + 10) * (last_armor.area);
+    // cout << "hit_socre: " <<rotate_angle<<" "<<" : "<<last_armor.area<<" "<< hit_score << endl;
     return true;
 }
 

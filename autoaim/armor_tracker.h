@@ -20,6 +20,8 @@ struct Armor
     string key;
     Point2f apex2d[4];
     Rect rect;
+    RotatedRect rrect;
+    Rect roi;
     Point2f center2d;
     Eigen::Vector3d center3d_cam;
     Eigen::Vector3d center3d_world;
