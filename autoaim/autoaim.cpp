@@ -52,7 +52,6 @@ Point2i Autoaim::cropImageByROI(Mat &img)
         {
             return Point2i(0,0);
         }
-        return Point2i(0, 0);
     }
     //若目标大小大于阈值
     auto area_ratio = last_target_area / img.size().area();
@@ -78,48 +77,6 @@ Point2i Autoaim::cropImageByROI(Mat &img)
         last_roi_center.y = cropped_size.height / 2;
     else if (last_roi_center.y > (img.size().height - cropped_size.height / 2))
         last_roi_center.y = img.size().height - cropped_size.height / 2;
-
-    // float roi_width, roi_height;
-    // roi_width = last_armor.rect.width * 3.3;
-    // roi_height = last_armor.rect.height * 3.9;
-
-    // //根据丢失帧数逐渐扩大ROI大小
-    // if(lost_cnt == 2)
-    // { 
-    //     roi_width = last_armor.rect.width * 4.1;
-    //     roi_height = last_armor.rect.height * 5.3;
-    // }
-    // else if(lost_cnt == 3)
-    // {   
-    //     roi_width = last_armor.rect.width * 5.7;
-    //     roi_height = last_armor.rect.height * 6.2;
-    // }
-    // else if(lost_cnt == 4)
-    // { 
-    //     roi_width = last_armor.rect.width * 8.2;
-    //     roi_height = last_armor.rect.height * 8.7;
-    // }
-    // else if(lost_cnt == 5)
-    // {   //返回原图像
-    //     return Point2i(0,0);
-    // }
-
-    // if(roi_width > 1280) roi_width = 1280;
-    // if(roi_height > 1024) roi_height = 1024;
-
-    // //处理x轴越界
-    // if (last_roi_center.x <= roi_width / 2)
-    //     last_roi_center.x = roi_width / 2;
-    // else if (last_roi_center.x > (img.size().width - roi_width / 2))
-    //     last_roi_center.x = img.size().width - roi_width / 2;
-    // //处理Y越界
-    // if (last_roi_center.y <= roi_height / 2)
-    //     last_roi_center.y = roi_height / 2;
-    // else if (last_roi_center.y > (img.size().height - roi_height / 2))
-    //     last_roi_center.y = img.size().height - roi_height / 2;
-
-    // //TODO:ROI选取目标装甲周围区域
-    // input_size = {roi_width, roi_height};
     
     //左上角顶点
     auto offset = last_roi_center - Point2i(cropped_size.width / 2, cropped_size.height / 2);
@@ -351,7 +308,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     vector<ArmorObject> objects;
     vector<Armor> armors;
 
-    auto input = src.img;
+    auto input = src.img.clone();
     // cout<<input.size<<endl;
     //若为前哨站吊射模式,直接截取图像中间部分进行处理
 
@@ -498,14 +455,20 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         //     cout<<pic<<endl;
         auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, pnp_method);
         //防止装甲板类型出错导致解算问题，首先尝试切换装甲板类型，若仍无效则直接跳过该装甲板
-        if (pnp_result.armor_cam.norm() > 20)
+        if (pnp_result.armor_cam.norm() > 10 ||
+            isnan(pnp_result.armor_cam[0]) ||
+            isnan(pnp_result.armor_cam[1]) ||
+            isnan(pnp_result.armor_cam[2]))
         {
             if (target_type == SMALL)
                 target_type = BIG;
             else if (target_type == BIG)
                 target_type = SMALL;
             pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, pnp_method);
-            if (pnp_result.armor_cam.norm() > 20)
+            if (pnp_result.armor_cam.norm() > 10 ||
+            isnan(pnp_result.armor_cam[0]) ||
+            isnan(pnp_result.armor_cam[1]) ||
+            isnan(pnp_result.armor_cam[2]))
                 continue;
         }
         // cout<<target_type<<endl;
@@ -588,7 +551,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                 auto delta_t = src.timestamp - (*iter).second.last_timestamp;
                 auto delta_dist = ((*armor).center3d_world - (*iter).second.last_armor.center3d_world).norm();
                 auto velocity = (delta_dist / delta_t) * 1e3;
-                if (delta_dist <= max_delta_dist && delta_dist <= min_delta_dist && delta_t <= min_delta_t && delta_t > 0 && (*iter).second.last_armor.roi.contains((*armor).center2d))
+                if (delta_dist <= max_delta_dist && delta_dist <= min_delta_dist &&
+                     delta_t <= min_delta_t && delta_t > 0 && (*iter).second.last_armor.roi.contains((*armor).center2d))
                 {
                     min_delta_t = delta_t;
                     min_delta_dist = delta_dist;
@@ -810,7 +774,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         auto delta_t = src.timestamp - prev_timestamp;
         auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
         auto velocity = (delta_dist / delta_t) * 1e3;
-        if((target.key != last_armor.key || delta_dist >= max_delta_dist || !last_armor.roi.contains((target.center2d))) && is_last_target_exists)
+        if((target.key != last_armor.key || delta_dist >= max_delta_dist || !last_armor.roi.contains((target.center2d))) &&
+            is_last_target_exists)
             is_target_switched = true;
         else
             is_target_switched = false;
@@ -849,7 +814,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
         auto velocity = (delta_dist / delta_t) * 1e3;
         // cout<<(delta_dist >= max_delta_dist)<<" "<<!last_armor.roi.contains(target.center2d)<<endl;
-        if((target.key != last_armor.key || (delta_dist >= max_delta_dist) || !last_armor.roi.contains((target.center2d))) && is_last_target_exists)
+        if((target.key != last_armor.key || (delta_dist >= max_delta_dist) || !last_armor.roi.contains((target.center2d))) &&
+            is_last_target_exists)
             is_target_switched = true;
         else
             is_target_switched = false;
