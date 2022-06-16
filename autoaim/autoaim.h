@@ -51,9 +51,9 @@ private:
     // const int max_delta_t = 75;                //使用同一预测器的最大时间间隔(ms)
     const int max_delta_t = 50;                //使用同一预测器的最大时间间隔(ms)
 
-    int anti_spin_judge_high_thres = 4.5e4;//大于该阈值认为该车已开启陀螺
+    int anti_spin_judge_high_thres = 3e4;//大于该阈值认为该车已开启陀螺
     int anti_spin_judge_low_thres = 2e3;//小于该阈值认为该车已关闭陀螺
-    int anti_spin_max_r_multiple = 5;
+    int anti_spin_max_r_multiple = 4;
 
     const double no_crop_ratio = 5e-3;      //禁用ROI裁剪的装甲板占图像面积最大面积比值
     const double full_crop_ratio = 1e-4;     //最大ROI比例，大于此比例ROI大小为网络输入比例                   

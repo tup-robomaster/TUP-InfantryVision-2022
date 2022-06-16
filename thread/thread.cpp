@@ -54,7 +54,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // HaiKang.SetGAIN(0, 16);
     // HaiKang.SetGAIN(1, 8);
     // HaiKang.SetGAIN(2, 8);
-    HaiKang.SetGAIN(3, 16);
+    HaiKang.SetGAIN(3, 4);
     // 是否启用自动白平衡7
     // HaiKang.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
