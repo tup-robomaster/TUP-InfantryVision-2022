@@ -34,8 +34,6 @@ add_executable(Infantry_Vision main.cpp
             ${PROJECT_SOURCE_DIR}/autoaim/autoaim.h
             ${PROJECT_SOURCE_DIR}/autoaim/detector/inference.cpp
             ${PROJECT_SOURCE_DIR}/autoaim/detector/inference.h
-            ${PROJECT_SOURCE_DIR}/autoaim/predictor/particle_filter.cpp
-            ${PROJECT_SOURCE_DIR}/autoaim/predictor/particle_filter.h
             ${PROJECT_SOURCE_DIR}/autoaim/predictor/predictor.cpp
             ${PROJECT_SOURCE_DIR}/autoaim/predictor/predictor.h
             ${PROJECT_SOURCE_DIR}/buff/fan_tracker.cpp
@@ -51,6 +49,8 @@ add_executable(Infantry_Vision main.cpp
             ${PROJECT_SOURCE_DIR}/general/general.h
             ${PROJECT_SOURCE_DIR}/coordsolver/coordsolver.cpp
             ${PROJECT_SOURCE_DIR}/coordsolver/coordsolver.h
+            ${PROJECT_SOURCE_DIR}/filter/particle_filter.cpp
+            ${PROJECT_SOURCE_DIR}/filter/particle_filter.h
             ${PROJECT_SOURCE_DIR}/thread/thread.cpp
             ${PROJECT_SOURCE_DIR}/thread/thread.h
             ${PROJECT_SOURCE_DIR}/camera/DaHengCamera.h

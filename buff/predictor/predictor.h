@@ -14,6 +14,7 @@
 
 
 #include "../../debug.h"
+#include "../../filter/particle_filter.h"
 #include "../../general/general.h"
 
 namespace plt = matplotlibcpp;

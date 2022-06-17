@@ -390,18 +390,22 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         if (object.color != 1)
             continue;
 #endif //DETECT_RED
+
 #ifdef DETECT_BLUE
         if (object.color != 0)
             continue;
 #endif //DETECT_BLUE
+
 #ifdef IGNORE_ENGINEER
         if (object.cls == 2)
             continue;
 #endif //IGNORE_ENGINEER
+
         Armor armor;
         armor.id = object.cls;
         armor.color = object.color;
         armor.conf = object.prob;
+        //生成Key
         if (object.color == 0)
             armor.key = "B" + to_string(object.cls);
         if (object.color == 1)
@@ -410,6 +414,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             armor.key = "N" + to_string(object.cls);
         if (object.color == 3)
             armor.key = "P" + to_string(object.cls);
+        //生成顶点与装甲板二维中心点
         memcpy(armor.apex2d, object.apex, 4 * sizeof(cv::Point2f));
         for(int i = 0; i < 4; i++)
         {
@@ -419,19 +424,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         for(auto apex : armor.apex2d)
             apex_sum +=apex;
         armor.center2d = apex_sum / 4.f;
-
-        // auto pnp_result = coordsolver.pnp(armor.apex2d, rmat_imu, SOLVEPNP_ITERATIVE);
-        int pnp_method;
-        if (objects.size() <= 2)
-            pnp_method = SOLVEPNP_ITERATIVE;
-        else
-            pnp_method = SOLVEPNP_IPPE;
-        std::vector<Point2f> points_pic(armor.apex2d, armor.apex2d + 4);
-        TargetType target_type = SMALL;
-        //计算长宽比,确定装甲板类型
-        RotatedRect points_pic_rrect = minAreaRect(points_pic);
-        
-        //TODO：得到旋转矩形的直立矩形，对目标装甲进行ROI裁剪
+        //生成装甲板旋转矩形和ROI
+        RotatedRect points_pic_rrect = minAreaRect(points_pic);        
         armor.rrect = points_pic_rrect;
         auto bbox = points_pic_rrect.boundingRect();
         auto x = bbox.x - 0.5 * bbox.width * (armor_roi_expand_ratio_width - 1);
@@ -441,13 +435,44 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                         bbox.width * armor_roi_expand_ratio_width,
                         bbox.height * armor_roi_expand_ratio_height
                         );
-
+        //若装甲板置信度小于高阈值，需要相同位置存在过装甲板才放行
+        if (armor.conf < armor_conf_high_thres)
+        {
+            if (last_armors.empty())
+            {
+                continue;
+            }
+            else
+            {
+                bool is_this_armor_available = false;
+                for (auto last_armor : last_armors)
+                {
+                    if (last_armor.roi.contains(armor.center2d))
+                    {
+                        is_this_armor_available = true;
+                        break;
+                    }
+                }
+                if (!is_this_armor_available)
+                    continue;
+            }
+        }
+        //进行PnP，目标较少时采取迭代法，较多时采用IPPE
+        int pnp_method;
+        if (objects.size() <= 2)
+            pnp_method = SOLVEPNP_ITERATIVE;
+        else
+            pnp_method = SOLVEPNP_IPPE;
+        std::vector<Point2f> points_pic(armor.apex2d, armor.apex2d + 4);
+        TargetType target_type = SMALL;
+        //计算长宽比,确定装甲板类型
         auto apex_wh_ratio = max(points_pic_rrect.size.height, points_pic_rrect.size.width) /
                                  min(points_pic_rrect.size.height, points_pic_rrect.size.width);
         //若大于长宽阈值或为哨兵、英雄装甲板
         if (object.cls == 1 || object.cls == 0)
             target_type = BIG;
-        else if (object.cls == 6)
+        //FIXME：若存在平衡步兵需要对此处步兵装甲板类型进行修改
+        else if (object.cls == 2 || object.cls == 3 || object.cls == 4 || object.cls == 5 || object.cls == 6)
             target_type = SMALL;
         else if(apex_wh_ratio > armor_type_wh_thres)
             target_type = BIG;
