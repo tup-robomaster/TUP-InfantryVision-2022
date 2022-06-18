@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 
 #include <random>
@@ -8,7 +9,7 @@
 #include <Eigen/Core>
 #include <opencv2/opencv.hpp>
 
-#include "../../general/general.h"
+#include "../general/general.h"
 
 using namespace std;
 using namespace Eigen;

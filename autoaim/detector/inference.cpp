@@ -12,7 +12,7 @@ static constexpr int NUM_CLASSES = 8;  // Number of classes
 static constexpr int NUM_COLORS = 4;   // Number of color
 static constexpr int TOPK = 128;       // TopK
 static constexpr float NMS_THRESH = 0.3;
-static constexpr float BBOX_CONF_THRESH = 0.7;
+static constexpr float BBOX_CONF_THRESH = 0.75;
 static constexpr float MERGE_CONF_ERROR = 0.15;
 static constexpr float MERGE_MIN_IOU = 0.9;
 
@@ -150,7 +150,7 @@ static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, cons
             obj.cls = box_class;
             obj.color = box_color;
             obj.prob = box_prob;
-
+            obj.probs.push_back(obj.prob);
             objects.push_back(obj);
         }
 
@@ -237,7 +237,6 @@ static void nms_sorted_bboxes(std::vector<ArmorObject>& faceobjects, std::vector
         for (int j = 0; j < (int)picked.size(); j++)
         {
             ArmorObject& b = faceobjects[picked[j]];
-            b.probs.push_back(b.prob);
 
             // intersection over union
             float inter_area = intersection_area(a, b);
@@ -310,7 +309,7 @@ bool ArmorDetector::initModel(string path)
 {
     ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "../.cache"}});
     // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
-    // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
+    ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
     // Step 1. Read a model in OpenVINO Intermediate Representation (.xml and
     // .bin files) or ONNX (.onnx file) format
     network = ie.ReadNetwork(path);
@@ -335,8 +334,8 @@ bool ArmorDetector::initModel(string path)
     // output_info->setPrecision(Precision::FP16);
     // Step 3. Loading a model to the device
     // executable_network = ie.LoadNetwork(network, "MULTI:GPU");
-    // executable_network = ie.LoadNetwork(network, "GPU");
-    executable_network = ie.LoadNetwork(network, "CPU");
+    executable_network = ie.LoadNetwork(network, "GPU");
+    // executable_network = ie.LoadNetwork(network, "CPU");
 
     // Step 4. Create an infer request
     infer_request = executable_network.CreateInferRequest();
@@ -410,6 +409,8 @@ bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
         if ((*object).pts.size() >= 8)
         {
             auto N = (*object).pts.size();
+            // cout<<N<<endl;
+            // cout<<(*object).probs.size()<<endl;
             cv::Point2f pts_final[4];
             float probs_sum = 0;
 
@@ -417,7 +418,7 @@ bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
             {
                 pts_final[i % 4]+=(*object).pts[i];
                 if (i % 4 == 0)
-                    probs_sum+=(*object).probs[i];
+                    probs_sum+=(*object).probs[i / 4];
             }
 
             for (int i = 0; i < 4; i++)

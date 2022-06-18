@@ -49,12 +49,12 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     HaiKang.SetStreamOn();
     // 设置曝光事件
-    HaiKang.SetExposureTime(6000);
+    HaiKang.SetExposureTime(7000);
     // 设置1
-    // HaiKang.SetGAIN(0, 16);
+    HaiKang.SetGAIN(0, 16);
     // HaiKang.SetGAIN(1, 8);
     // HaiKang.SetGAIN(2, 8);
-    HaiKang.SetGAIN(3, 4);
+    HaiKang.SetGAIN(3, 16);
     // 是否启用自动白平衡7
     // HaiKang.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
@@ -352,7 +352,7 @@ bool serialWatcher(SerialPort &serial)
             if (now - last > 10)
             {
                 last = now;
-                fmt::print(fmt::fg(fmt::color::green), "[SERIAL] Warning: You are not using Serial port\n");
+                fmt::print(fmt::fg(fmt::color::orange), "[SERIAL] Warning: You are not using Serial port\n");
             }
             serial.withoutSerialPort();
 #else

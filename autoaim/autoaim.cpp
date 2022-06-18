@@ -425,6 +425,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             apex_sum +=apex;
         armor.center2d = apex_sum / 4.f;
         //生成装甲板旋转矩形和ROI
+        std::vector<Point2f> points_pic(armor.apex2d, armor.apex2d + 4);
         RotatedRect points_pic_rrect = minAreaRect(points_pic);        
         armor.rrect = points_pic_rrect;
         auto bbox = points_pic_rrect.boundingRect();
@@ -454,7 +455,10 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                     }
                 }
                 if (!is_this_armor_available)
+                {
                     continue;
+                    cout<<"IGN"<<endl;
+                }
             }
         }
         //进行PnP，目标较少时采取迭代法，较多时采用IPPE
@@ -463,7 +467,6 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             pnp_method = SOLVEPNP_ITERATIVE;
         else
             pnp_method = SOLVEPNP_IPPE;
-        std::vector<Point2f> points_pic(armor.apex2d, armor.apex2d + 4);
         TargetType target_type = SMALL;
         //计算长宽比,确定装甲板类型
         auto apex_wh_ratio = max(points_pic_rrect.size.height, points_pic_rrect.size.width) /
@@ -526,6 +529,10 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
         LOG(WARNING) <<"[AUTOAIM] No available armor exists!";
         return false;
+    }
+    else
+    {
+        last_armors = armors;
     }
     ///------------------------生成/分配ArmorTracker----------------------------
     new_armors_cnt_map.clear();
@@ -657,7 +664,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                     last_armor_center = last_tracker->last_armor.center3d_cam[0];
                     last_armor_timestamp = last_tracker->last_timestamp;
                     auto spin_movement = new_armor_center - last_armor_center;
-                    LOG(INFO)<<"[SpinDetection] Candidate Spin Movement Detected : "<<cnt.first<<" : "<<spin_movement;
+                    // auto delta_t = 
+                    // LOG(INFO)<<"[SpinDetection] Candidate Spin Movement Detected : "<<cnt.first<<" : "<<spin_movement;/
                     if (abs(spin_movement) > 0.05 && (new_armor_timestamp == last_armor_timestamp))
                     {
                         //若无该元素则插入新元素
