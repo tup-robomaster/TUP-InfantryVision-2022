@@ -88,13 +88,21 @@ public:
     Device device;
     int fd;      //串口号
     int last_fd; //上一次串口号
+    int speed;
     int baud;
     int mode;
-    int speed, databits, stopbits, parity;
+    int databits, stopbits, parity;
     unsigned char rdata[255];                 // raw_data
+<<<<<<< HEAD
     float quat[4];  //四元数
     float acc[3];   //加速度
     float gyro[3];  //角速度
+=======
+    float quat[4]; //四元数
+    float acc[3]; //加速度
+    float gyro[3]; //角速度
+    float bullet_speed;
+>>>>>>> main
     SerialPort(const string ID, const int BUAD);
     SerialPort(char *);
     bool initSerialPort();
@@ -120,6 +128,11 @@ private:
     bool getQuat(unsigned char *data);
     bool getGyro(unsigned char *data);
     bool getAcc(unsigned char *data);
+<<<<<<< HEAD
+=======
+    bool getSpeed(unsigned char *data);
+
+>>>>>>> main
 };
 
 #endif // SERIALPORT_H

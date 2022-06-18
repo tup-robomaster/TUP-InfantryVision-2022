@@ -15,7 +15,7 @@ bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix, Eigen::MatrixXd &cov)
     std::vector<normal_distribution<double>> normal_distribution_list;
 
     //假设各个变量不相关
-    for (int i = 0; i<cov.cols(); i++)
+    for (int i = 0; i < cov.cols(); i++)
     {
         normal_distribution<double> n(0,cov(i,i));
         normal_distribution_list.push_back(n);
@@ -25,10 +25,10 @@ bool randomlizedGaussianColwise(Eigen::MatrixXd &matrix, Eigen::MatrixXd &cov)
     for (int col = 0; col < matrix.cols(); col++)
     {
         // cout<<normal_distribution_list[col](e)<<endl;
-        for(int row = 0;row < matrix.rows();row++)
+        for(int row = 0; row < matrix.rows(); row++)
         {
             auto tmp = normal_distribution_list[col](e);
-            matrix(row,col) = tmp;
+            matrix(row, col) = tmp;
             // matrix(row,col) = 1;
         }
     }
@@ -85,6 +85,7 @@ bool ParticleFilter::initParam(YAML::Node &config,const string param_name)
     initMatrix(observe_noise_cov_tmp,read_vector);
     observe_noise_cov = observe_noise_cov_tmp;
     //初始化粒子矩阵及粒子权重
+    // matrix_particle = 3 * Eigen::MatrixXd::Random(num_particle, vector_len);
     matrix_particle = Eigen::MatrixXd::Zero(num_particle, vector_len);
     randomlizedGaussianColwise(matrix_particle, process_noise_cov);
     matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
@@ -107,6 +108,7 @@ bool ParticleFilter::initParam(ParticleFilter parent)
     //初始化粒子矩阵及粒子权重
     matrix_particle = Eigen::MatrixXd::Zero(num_particle, vector_len);
     randomlizedGaussianColwise(matrix_particle, process_noise_cov);
+    matrix_particle = 3 * Eigen::MatrixXd::Random(num_particle, vector_len);
     matrix_weights = Eigen::MatrixXd::Ones(num_particle, 1) / float(num_particle);
     is_ready = false;
 
@@ -135,7 +137,7 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
 {
     Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
     Eigen::MatrixXd mat_measure = measure.replicate(1,num_particle).transpose();
-    // auto error = (mat_measure - matrix_particle).ROWW;
+    auto err = (mat_measure - matrix_particle).rowwise().squaredNorm();
     // cout<<error<<endl;
 
     if (is_ready)
@@ -153,8 +155,12 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
         matrix_weights /= matrix_weights.sum();
         double n_eff = 1.0 / (matrix_weights.transpose() * matrix_weights).value();
         //TODO:有效粒子数少于一定值时进行重采样,该值需在实际调试过程中修改
-        // if (error >= process_noise_cov(0,0) || n_eff < num_particle * 0.5)
+        // if (n_eff < 0.5 * num_particle)
+        // if (err(0,0) > process_noise_cov(0,0) || err(1,0) > process_noise_cov(1,1))
+        // {
+            // cout<<"res"<<num_particle<<endl;
             resample();
+        // }
     }
     else
     {
@@ -171,23 +177,23 @@ bool ParticleFilter::resample()
     //重采样采用低方差采样,复杂度为O(N),较轮盘法的O(NlogN)更小,实现可参考<Probablistic Robotics>
     std::random_device rd;
     default_random_engine e(rd());
-    std::uniform_real_distribution<> random {0.0, 1.f / num_particle};
+    std::uniform_real_distribution<> random {0.0, 1.d / num_particle};
 
     int i = 0;
     double c = matrix_weights(0,0);
     auto r = random(e);
     Eigen::MatrixXd matrix_particle_tmp = matrix_particle;
 
-    for (int m = 1; m <= num_particle; m++)
+    for (int m = 0; m < num_particle; m++)
     {
-        auto u = r + (m - 1) * (1.f / num_particle);
+        auto u = r + m * (1.d / num_particle);
         // 当 u > c 不进行采样
         while (u > c)
         {
             i++;
             c = c + matrix_weights(i,0);
         }
-        matrix_particle_tmp.row(m - 1) = matrix_particle.row(i);
+        matrix_particle_tmp.row(m) = matrix_particle.row(i);
     }
     Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
     randomlizedGaussianColwise(gaussian, process_noise_cov);

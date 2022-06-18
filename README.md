@@ -5,6 +5,8 @@
 ## Env
 http://www.fftw.org/download.html
 
+https://github.com/fmtlib/fmt
+
 https://github.com/google/glog/releases/tag/v0.5.0
 
 https://github.com/ceres-solver/ceres-solver/releases/tag/2.1.0

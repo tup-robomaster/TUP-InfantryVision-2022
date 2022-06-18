@@ -255,11 +255,11 @@ static void nms_sorted_bboxes(std::vector<BuffObject>& faceobjects, std::vector<
             float inter_area = intersectConvexConvex(apex_a,apex_b,apex_inter);
             float union_area = areas[i] + areas[picked[j]] - inter_area;
             float iou = inter_area / union_area;
-            
-            if (iou > nms_threshold || inter_area == 0 && a.cls == b.cls)
+
+            if (iou > nms_threshold || isnan(iou))
             {
                 keep = 0;
-                //Stored for FFT
+                //Stored for Merge
                 if (iou > MERGE_MIN_IOU && abs(a.prob - b.prob) < MERGE_CONF_ERROR 
                                         && a.cls == b.cls && a.color == b.color)
                 {
@@ -320,7 +320,7 @@ BuffDetector::~BuffDetector()
 //TODO:change to your dir
 bool BuffDetector::initModel(string path)
 {
-    ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "../TUP-InfantryVision-2022-main/.cache"}});
+    ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "../.cache"}});
     // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
     // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
     // Step 1. Read a model in OpenVINO Intermediate Representation (.xml and
@@ -435,6 +435,7 @@ bool BuffDetector::detect(Mat &src,std::vector<BuffObject>& objects, int &dw, in
     }
     if (objects.size() != 0)
         return true;
-    else return false;
+    else 
+        return false;
 
 }

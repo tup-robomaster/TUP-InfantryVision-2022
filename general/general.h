@@ -25,6 +25,7 @@
 using namespace std;
 using namespace cv;
 
+<<<<<<< HEAD
 #ifdef CAMERA_ID_73
     const string camera_name = "KE0200110073";
 #else
@@ -34,6 +35,14 @@ using namespace cv;
         const string camera_name = "KE0200110076";
     #endif
 #endif
+=======
+const string camera_name = "KE0200110076";  // 哨兵下云台
+// const string camera_name = "KE0200110075";  // 步兵（4号)
+// const string camera_name = "KE0200110074";  // 步兵（5号）
+// const string camera_name = "KE0200110073";  // 英雄
+// const string camera_name = "MV_Sentry";     // 哨兵上云台
+
+>>>>>>> main
 
 enum TargetType {SMALL, BIG, BUFF};
 /**
@@ -43,6 +52,7 @@ enum TargetType {SMALL, BIG, BUFF};
 struct TaskData
 {
     int mode;
+    double bullet_speed;
     Mat img;
     Eigen::Quaterniond quat;
     int timestamp;//单位：ms
@@ -74,6 +84,7 @@ float calcDistance(Point2f&, Point2f&);
 float calcTriangleArea(cv::Point2f pts[3]);
 float calcTetragonArea(cv::Point2f pts[4]);
 double rangedAngleRad(double &angle);
+float calcDis(Point2f, Point2f);
 
 std::string symbolicToReal(string path);
 std::string relativeToFull(string relative,string src);

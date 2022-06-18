@@ -25,6 +25,7 @@ struct ArmorObject
     int area;
     float prob;
     std::vector<cv::Point2f> pts;
+    std::vector<cv::float> probs;
 };
 
 

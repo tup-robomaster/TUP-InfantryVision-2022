@@ -91,7 +91,6 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
 {
 
     std::vector<Point3d> points_world;
-    std::vector<Point2f> vecotr_apex = {points_pic[0], points_pic[1], points_pic[2], points_pic[3]};
 
     //长度为4进入装甲板模式
 
@@ -121,6 +120,12 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
         {0,-0.565,-0.05},
         {0.1125,-0.027,0},
         {0.1125,0.027,0}};
+        // points_world = {
+        // {-0.1125,0.027,0},
+        // {-0.1125,-0.027,0},
+        // {0,-0.565,-0.05},
+        // {0.1125,-0.027,0},
+        // {0.1125,0.027,0}};
     }
     Mat rvec;
     Mat rmat;
@@ -137,7 +142,7 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
     Rodrigues(rvec,rmat);
     cv2eigen(rmat, rmat_eigen);
     cv2eigen(tvec, tvec_eigen);
-    if (points_pic.size() == 4)
+    if (type == BIG || type == SMALL)
     {
         result.armor_cam = tvec_eigen;
         result.armor_world = camToWorld(result.armor_cam, rmat_imu);
@@ -150,9 +155,10 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
         result.R_cam = (rmat_eigen * R_center_world) + tvec_eigen;
         result.R_world = camToWorld(result.R_cam, rmat_imu);
         // result.euler = rotationMatrixToEulerAngles(transform_ci.block(0,0,2,2) * rmat_imu * rmat_eigen);
-        Eigen::Matrix3d rmat_eigen_world = rmat_imu * transform_ic.block(0, 0, 3, 3) * rmat_eigen;
+        Eigen::Matrix3d rmat_eigen_world = rmat_imu * (transform_ic.block(0, 0, 3, 3) * rmat_eigen);
         // result.euler = rotationMatrixToEulerAngles(rmat_eigen_world);
         result.euler = rotationMatrixToEulerAngles(rmat_eigen_world);
+        result.rmat = rmat_eigen_world;
     }
     
     return result;
@@ -175,6 +181,7 @@ Eigen::Vector2d CoordSolver::getAngle(Eigen::Vector3d &xyz_cam, Eigen::Matrix3d 
     // auto dist = xyz_offseted.norm();
     // auto pitch_offset = 6.457e04 * pow(dist,-2.199);
     auto pitch_offset = dynamicCalcPitchOffset(xyz_world);
+    //TODO: Add Log
     // cout<<pitch_offset<<endl;
     angle_cam[1] = angle_cam[1] + pitch_offset;
     auto angle_offseted = staticAngleOffset(angle_cam);
@@ -364,3 +371,8 @@ Eigen::Vector3d CoordSolver::worldToCam(const Eigen::Vector3d &point_world, cons
     return point_camera;
 }
 
+bool CoordSolver::setBulletSpeed(double speed)
+{
+    bullet_speed = speed;
+    return true;
+}

@@ -1,6 +1,10 @@
 
 #include "../camera/DaHengCamera.h"
+<<<<<<< HEAD
 #include "../HaiKang_SDK/include/HaiKangCamera.h"
+=======
+#include "../hik_camera/include/HaiKangCamera.h"
+>>>>>>> main
 #include "../autoaim/autoaim.h"
 #include "../buff/buff.h"
 #include "../serial/serialport.h"
@@ -28,6 +32,7 @@ struct MCUData
     Eigen::Vector3d acc;
     Eigen::Vector3d gyro;
     Eigen::Quaterniond quat;
+    double bullet_speed;
     int timestamp;
 };
 

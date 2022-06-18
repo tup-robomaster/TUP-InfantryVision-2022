@@ -25,7 +25,6 @@ include_directories(${InferenceEngine_INCLUDE_DIRS})
 # aux_source_directory(detector detector_src)
 # aux_source_directory(predictor predictor_src)
 
-#TODO: CMAKE as a submodule
 # add_library(autoaim_lib OBJECT autoaim.cpp ${detector_src} ${predictor_src})
 # add_library(autoaim_lib OBJECT ${detector_src} ${predictor_src})
 # target_link_libraries(autoaim ${OpenCV_LIBRARIES} ${InferenceEngine_LIBRARIES})
@@ -36,10 +35,9 @@ add_executable(Infantry_Vision main.cpp
             ${PROJECT_SOURCE_DIR}/autoaim/autoaim.h
             ${PROJECT_SOURCE_DIR}/autoaim/detector/inference.cpp
             ${PROJECT_SOURCE_DIR}/autoaim/detector/inference.h
-            ${PROJECT_SOURCE_DIR}/autoaim/predictor/particle_filter.cpp
-            ${PROJECT_SOURCE_DIR}/autoaim/predictor/particle_filter.h
             ${PROJECT_SOURCE_DIR}/autoaim/predictor/predictor.cpp
             ${PROJECT_SOURCE_DIR}/autoaim/predictor/predictor.h
+            ${PROJECT_SOURCE_DIR}/buff/fan_tracker.cpp
             ${PROJECT_SOURCE_DIR}/buff/fan_tracker.h            
             ${PROJECT_SOURCE_DIR}/buff/buff.cpp
             ${PROJECT_SOURCE_DIR}/buff/buff.h
@@ -52,6 +50,8 @@ add_executable(Infantry_Vision main.cpp
             ${PROJECT_SOURCE_DIR}/general/general.h
             ${PROJECT_SOURCE_DIR}/coordsolver/coordsolver.cpp
             ${PROJECT_SOURCE_DIR}/coordsolver/coordsolver.h
+            ${PROJECT_SOURCE_DIR}/filter/particle_filter.cpp
+            ${PROJECT_SOURCE_DIR}/filter/particle_filter.h
             ${PROJECT_SOURCE_DIR}/thread/thread.cpp
             ${PROJECT_SOURCE_DIR}/thread/thread.h
             ${PROJECT_SOURCE_DIR}/camera/DaHengCamera.h
@@ -65,7 +65,11 @@ add_executable(Infantry_Vision main.cpp
             ${PROJECT_SOURCE_DIR}/serial/wt61pc.h
             ${PROJECT_SOURCE_DIR}/serial/CRC_Check.cpp
             ${PROJECT_SOURCE_DIR}/serial/CRC_Check.h
+<<<<<<< HEAD
             ${PROJECT_SOURCE_DIR}/HaiKang_SDK/HaiKangCamera.cpp
+=======
+            ${PROJECT_SOURCE_DIR}/hik_camera/HaiKangCamera.cpp
+>>>>>>> main
 )
 
 # add_executable(autoaim autoaim.cpp
@@ -81,7 +85,11 @@ add_executable(Infantry_Vision main.cpp
 target_link_libraries(Infantry_Vision ${OpenCV_LIBRARIES} ${InferenceEngine_LIBRARIES} ${Eigen3_LIBRARIES}
                          yaml-cpp gxiapi Ceres::ceres fftw3 fmt::fmt glog matplotlib_cpp::matplotlib_cpp)
 
+<<<<<<< HEAD
 # 链接海康相机动态库
+=======
+# 包含海康相机动态链接库
+>>>>>>> main
 find_library(MVS_LIB libMvCameraControl.so /opt/MVS/lib/64/)
 target_link_libraries(Infantry_Vision ${MVS_LIB})
 

@@ -12,7 +12,7 @@ static constexpr int NUM_CLASSES = 8;  // Number of classes
 static constexpr int NUM_COLORS = 4;   // Number of color
 static constexpr int TOPK = 128;       // TopK
 static constexpr float NMS_THRESH = 0.3;
-static constexpr float BBOX_CONF_THRESH = 0.75;
+static constexpr float BBOX_CONF_THRESH = 0.7;
 static constexpr float MERGE_CONF_ERROR = 0.15;
 static constexpr float MERGE_MIN_IOU = 0.9;
 
@@ -237,18 +237,20 @@ static void nms_sorted_bboxes(std::vector<ArmorObject>& faceobjects, std::vector
         for (int j = 0; j < (int)picked.size(); j++)
         {
             ArmorObject& b = faceobjects[picked[j]];
+            b.probs.push_back(b.prob);
 
             // intersection over union
             float inter_area = intersection_area(a, b);
             float union_area = areas[i] + areas[picked[j]] - inter_area;
             float iou = inter_area / union_area;
-            if (iou > nms_threshold)
+            if (iou > nms_threshold || isnan(iou))
             {
                 keep = 0;
-                //Stored for FFT
+                //Stored for Merge
                 if (iou > MERGE_MIN_IOU && abs(a.prob - b.prob) < MERGE_CONF_ERROR 
                                         && a.cls == b.cls && a.color == b.color)
                 {
+                    b.probs.push_back(a.prob);
                     for (int i = 0; i < 4; i++)
                     {
                         b.pts.push_back(a.apex[i]);
@@ -277,9 +279,9 @@ static void decodeOutputs(const float* prob, std::vector<ArmorObject>& objects,
         std::vector<int> strides = {8, 16, 32};
         std::vector<GridAndStride> grid_strides;
 
-        generate_grids_and_stride(INPUT_W, INPUT_H, strides, grid_strides);
         generateYoloxProposals(grid_strides, prob, transform_matrix, BBOX_CONF_THRESH, proposals);
         qsort_descent_inplace(proposals);
+
 
         if (proposals.size() >= TOPK) 
             proposals.resize(TOPK);
@@ -404,15 +406,18 @@ bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
     decodeOutputs(net_pred, objects, transfrom_matrix, img_w, img_h);
     for (auto object = objects.begin(); object != objects.end(); ++object)
     {
-        //对候选框预测角点进行平均,降低误差
+        //对候选框预测角点与置信度进行平均,降低误差
         if ((*object).pts.size() >= 8)
         {
             auto N = (*object).pts.size();
             cv::Point2f pts_final[4];
+            float probs_sum = 0;
 
             for (int i = 0; i < N; i++)
             {
                 pts_final[i % 4]+=(*object).pts[i];
+                if (i % 4 == 0)
+                    probs_sum+=(*objec点与置信度进行平均,降低误差t).probs[i];
             }
 
             for (int i = 0; i < 4; i++)
@@ -425,12 +430,11 @@ bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
             (*object).apex[1] = pts_final[1];
             (*object).apex[2] = pts_final[2];
             (*object).apex[3] = pts_final[3];
-
+            (*object).prob = probs_sum / (*object).probs.size();
         }
         (*object).area = (int)(calcTetragonArea((*object).apex));
     }
     if (objects.size() != 0)
         return true;
     else return false;
-
 }

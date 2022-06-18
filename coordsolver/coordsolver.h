@@ -26,6 +26,7 @@ struct PnPInfo
     Eigen::Vector3d R_cam;
     Eigen::Vector3d R_world;
     Eigen::Vector3d euler;
+    Eigen::Matrix3d rmat;
 };
 
 class CoordSolver
@@ -50,7 +51,7 @@ public:
     inline double calcYaw(Eigen::Vector3d &xyz);
     inline double calcPitch(Eigen::Vector3d &xyz);
     Eigen::Vector2d calcYawPitch(Eigen::Vector3d &xyz);
-
+    bool setBulletSpeed(double speed);
     cv::Point2f reproject(Eigen::Vector3d &xyz);
 private:
     int max_iter;
@@ -66,9 +67,17 @@ private:
 
     YAML::Node param_node;
 
+<<<<<<< HEAD
     const int bullet_speed = 28;            //TODO:弹速可变
     // const int bullet_speed = 16;         //TODO:弹速可变
     const double k;                         //25°C,1atm,小弹丸
     // const double k = 0.0111;             //25°C,1atm,大弹丸
     const double g;
+=======
+    // double bullet_speed = 28;            
+    double bullet_speed = 16;            //TODO:弹速可变
+    // const double k = 0.0389;                //25°C,1atm,小弹丸
+    const double k = 0.0111;                //25°C,1atm,大弹丸
+    const double g = 9.781;
+>>>>>>> main
 };

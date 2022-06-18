@@ -20,8 +20,8 @@ Buff::Buff()
     lost_cnt = 0;
     is_last_target_exists = false;
     // input_size = {640,384};
-    input_size = {416,416};
-
+    input_size = {640, 640};
+    last_bullet_speed = 0;
     fmt::print(fmt::fg(fmt::color::pale_violet_red), "[BUFF] Buff init model success! Size: {} {}\n", input_size.height, input_size.width);
 
 #ifdef SAVE_BUFF_LOG
@@ -117,11 +117,28 @@ bool Buff::run(TaskData &src,VisionData &data)
 
 #ifdef USING_IMU
     Eigen::Matrix3d rmat_imu = src.quat.toRotationMatrix();
+    auto vec = rotationMatrixToEulerAngles(rmat_imu);
+    // cout<<"Euler : "<<vec[0] * 180.f / CV_PI<<" "<<vec[1] * 180.f / CV_PI<<" "<<vec[2] * 180.f / CV_PI<<endl;
 #else
     Eigen::Matrix3d rmat_imu = Eigen::Matrix3d::Identity();
 #endif //USING_IMU
 
-//TODO:修复ROI
+#ifndef DEBUG_WITHOUT_COM
+    //设置弹速,若弹速大于10m/s值,且弹速变化大于0.5m/s则更新
+    if (src.bullet_speed > 10)
+    {
+        double bullet_speed;
+        if (abs(src.bullet_speed - last_bullet_speed) > 0.5)
+            bullet_speed = src.bullet_speed;
+        else
+            bullet_speed = (last_bullet_speed + src.bullet_speed) / 2;
+        
+        predictor.setBulletSpeed(bullet_speed);
+        coordsolver.setBulletSpeed(bullet_speed);
+        last_bullet_speed = bullet_speed;
+    }
+#endif //DEBUG_WITHOUT_COM
+
 #ifdef USING_ROI
     roi_offset = cropImageByROI(input);
 #endif  //USING_ROI
@@ -139,19 +156,11 @@ bool Buff::run(TaskData &src,VisionData &data)
         imshow("dst",src.img);
         waitKey(1);
 #endif //SHOW_IMG
-    // if (src.timestamp % 10 == 0)
-    // {
-    //     auto time_infer = std::chrono::steady_clock::now();
-    //     double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
-    //     double dr_infer_ms = std::chrono::duration<double,std::milli>(time_infer - time_crop).count();
-    //     fmt::print(fmt::fg(fmt::color::gray), "-----------TIME------------\n");
-    //     fmt::print(fmt::fg(fmt::color::blue_violet), "Crop: {} ms\n"   ,dr_crop_ms);
-    //     fmt::print(fmt::fg(fmt::color::golden_rod), "Infer: {} ms\n",dr_infer_ms);
-    // }
         lost_cnt++;
         is_last_target_exists = false;
         last_target_area = 0;
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
+        LOG(WARNING) <<"[BUFF] No target detected!";
         return false;
     }
     auto time_infer = std::chrono::steady_clock::now();
@@ -169,6 +178,7 @@ bool Buff::run(TaskData &src,VisionData &data)
         Fan fan;
         fan.id = object.cls;
         fan.color = object.color;
+        fan.conf = object.prob;
         if (object.color == 0)
             fan.key = "B" + string(object.cls == 0 ? "Activated" : "Target");
         if (object.color == 1)
@@ -181,98 +191,126 @@ bool Buff::run(TaskData &src,VisionData &data)
 
         std::vector<Point2f> points_pic(fan.apex2d, fan.apex2d + 5);
         TargetType target_type = BUFF;
-        auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_EPNP);
-        fan.centerR2d = fan.apex2d[2];
+        auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, SOLVEPNP_ITERATIVE);
 
         fan.armor3d_cam = pnp_result.armor_cam;
         fan.armor3d_world = pnp_result.armor_world;
         fan.centerR3d_cam = pnp_result.R_cam;
         fan.centerR3d_world = pnp_result.R_world;
+
         fan.euler = pnp_result.euler;
+        fan.rmat = pnp_result.rmat;
 
         fans.push_back(fan);
     }
     ///------------------------生成/分配FanTracker----------------------------
-    //TODO:增加防抖
+    if (trackers.size() != 0)
+    {
+        //维护Tracker队列，删除过旧的Tracker
+        for (auto iter = trackers.begin(); iter != trackers.end();)
+        {
+            //删除元素后迭代器会失效，需先行获取下一元素
+            auto next = iter;
+            // cout<<(*iter).second.last_timestamp<<"  "<<src.timestamp<<endl;
+            if ((src.timestamp - (*iter).last_timestamp) > max_delta_t)
+                next = trackers.erase(iter);
+            else
+                ++next;
+            iter = next;
+        }
+    }
     std::vector<FanTracker> trackers_tmp;
     //为扇叶分配或新建最佳FanTracker
     for (auto fan = fans.begin(); fan != fans.end(); ++fan)
     {
         if (trackers.size() == 0)
         {
-            FanTracker fan_tracker;
-            fan_tracker.last_fan = (*fan);
-            fan_tracker.last_timestamp = src.timestamp;
-            fan_tracker.is_last_fan_exists = false;//初始化
-            fan_tracker.rotate_speed = 0;
+            FanTracker fan_tracker((*fan), src.timestamp);
             trackers_tmp.push_back(fan_tracker);
         }
         else
         {
+            //1e9无实际意义，仅用于以非零初始化
+            double min_v = 1e9;
+            int min_last_delta_t = 1e9;
+            bool is_best_candidate_exist = false;
+            std::vector<FanTracker>::iterator best_candidate;
             for (auto iter = trackers.begin(); iter != trackers.end(); iter++)
             {
-                double delta_t = src.timestamp - (*iter).last_timestamp;
-                double delta_theta;
-                auto current_roll = (*fan).euler[0];
-                auto last_roll = (*iter).last_fan.euler[0];
-                
-                //TODO:使用轴角所测得的旋转角度存在一定问题，噪声较大，未排查
-                auto delta_angle_axised = eulerToAngleAxisd((*fan).euler - (*iter).last_fan.euler);
-                double rotate_speed = delta_angle_axised.angle() / delta_t * 1e3;//计算角速度(rad/s)
-                // cout<<delta_angle_axised.angle<<endl;
-                //将Roll表示范围由[-180,180]转换至[0，360]
-                // if (current_roll <= 0)
-                //     current_roll += CV_2PI;
-                // if (last_roll <= 0)
-                //     last_roll += CV_2PI;
-                // //计算delta_theta使用
-                // if ((*fan).euler[0] > 0 && (*fan).euler[0] < (0.5 * CV_PI) && (*iter).last_fan.euler[0] > (1.5 * CV_PI))
-                //     delta_theta = CV_2PI + (*fan).euler[0] - (*iter).last_fan.euler[0];
-                // else if ((*fan).euler[0] > (1.5 * CV_PI) && (*iter).last_fan.euler[0] > 0 && (*iter).last_fan.euler[0] < (0.5 * CV_PI))
-                //     delta_theta = -CV_2PI + (*fan).euler[0] - (*iter).last_fan.euler[0];
-                // else
-                //     delta_theta = (*fan).euler[0] - (*iter).last_fan.euler[0];
-                // double rotate_speed = delta_theta / delta_t * 1e3;//计算角速度(rad/s)
-                if (fabs(rotate_speed) <= max_v)
+                double delta_t;
+                Eigen::AngleAxisd angle_axisd;
+                double rotate_speed;
+                double sign;
+                //----------------------------计算角度,求解转速----------------------------
+                //若该扇叶完成初始化,且隔一帧时间较短
+                if ((*iter).is_initialized && (src.timestamp - (*iter).prev_timestamp) < max_delta_t)
                 {
-                    FanTracker fan_tracker = (*iter);
-                    fan_tracker.last_fan = (*fan);
-                    fan_tracker.last_timestamp = src.timestamp;
-                    fan_tracker.is_last_fan_exists = true;
-                    fan_tracker.rotate_speed = rotate_speed;
-                    trackers_tmp.push_back(fan_tracker);
-                    break;
+                    delta_t = src.timestamp - (*iter).prev_timestamp;
+                    //目前扇叶到上一次扇叶的旋转矩阵
+                    auto relative_rmat = (*iter).prev_fan.rmat.transpose() * (*fan).rmat;
+                    angle_axisd = Eigen::AngleAxisd(relative_rmat);
+                    auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
+                    // auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
+                    sign = ((*fan).centerR3d_world.dot(rotate_axis_world) > 0 ) ? 1 : -1;
                 }
-                else if (trackers.size() < fans.size())
+                else
                 {
-                    FanTracker fan_tracker;
-                    fan_tracker.last_fan = (*fan);
-                    fan_tracker.last_timestamp = src.timestamp;
-                    fan_tracker.is_last_fan_exists = false;//初始化
-                    fan_tracker.rotate_speed = 0;
-                    trackers_tmp.push_back(fan_tracker);
-                    break;
+                    delta_t = src.timestamp - (*iter).last_timestamp;
+                    //目前扇叶到上一次扇叶的旋转矩阵
+                    auto relative_rmat = (*iter).last_fan.rmat.transpose() * (*fan).rmat;
+                    angle_axisd = Eigen::AngleAxisd(relative_rmat);
+                    // auto rotate_axis_world = (*fan).rmat  * angle_axisd.axis();
+                    auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
+                    sign = ((*fan).centerR3d_world.dot(rotate_axis_world) > 0 ) ? 1 : -1;
                 }
+                rotate_speed = sign * (angle_axisd.angle()) / delta_t * 1e3;//计算角速度(rad/s)
+
+                if (abs(rotate_speed) <= max_v && abs(rotate_speed) <= min_v 
+                    && (src.timestamp - (*iter).last_timestamp) <= min_last_delta_t 
+                    && (src.timestamp != (*iter).last_timestamp))
+                {
+                    min_last_delta_t = src.timestamp - (*iter).last_timestamp;
+                    min_v = rotate_speed;
+                    best_candidate = iter;
+                    is_best_candidate_exist = true;
+                }
+            }
+            if (is_best_candidate_exist)
+            {
+                (*best_candidate).update((*fan), src.timestamp);
+                (*best_candidate).rotate_speed = min_v;
+            }
+            else
+            {
+                FanTracker fan_tracker((*fan), src.timestamp);
+                trackers_tmp.push_back(fan_tracker);
             }
         }
     }
-    trackers = trackers_tmp;
-
+    for (auto new_tracker : trackers_tmp)
+    {
+        trackers.push_back(new_tracker);
+    }
     ///------------------------检测待激活扇叶是否存在----------------------------
     Fan target;
     bool is_target_exists = chooseTarget(fans, target);
 
+    //若不存在待击打扇叶则返回false
     if (!is_target_exists)
+<<<<<<< HEAD
     {   //若目标不存在
 
+=======
+    {
+>>>>>>> main
 #ifdef SHOW_IMG
         imshow("dst",src.img);
         waitKey(1);
 #endif //SHOW_IMG
-
         lost_cnt++;
         is_last_target_exists = false;
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
+        LOG(WARNING) <<"[BUFF] No available target fan or Multiple target fan detected!";
         return false;
     }
 
@@ -285,37 +323,42 @@ bool Buff::run(TaskData &src,VisionData &data)
     //计算平均转速与平均R字中心坐标
     for(auto tracker: trackers)
     {
-        if (tracker.is_last_fan_exists)
+        if (tracker.is_last_fan_exists && tracker.last_timestamp == src.timestamp)
         {
             rotate_speed_sum += tracker.rotate_speed;
             r_center_sum += tracker.last_fan.centerR3d_world;
             avail_tracker_cnt++;
         }
     }
+    //若不存在可用的扇叶则返回false
     if (avail_tracker_cnt == 0)
     {
 #ifdef SHOW_IMG
         imshow("dst",src.img);
         waitKey(1);
+        LOG(WARNING) <<"[BUFF] No available fan tracker exist!";
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
+        lost_cnt++;
 #endif //SHOW_IMG
         return false;
     }
     mean_rotate_speed = rotate_speed_sum / avail_tracker_cnt;
     mean_r_center = r_center_sum / avail_tracker_cnt;
-    double theta_offset;
+    double theta_offset = 0;
     ///------------------------进行预测----------------------------
     // predictor.mode = 1;
     if (src.mode == 3)      //进入小能量机关识别模式
         predictor.mode = 0;
     else if (src.mode == 4) //进入大能量机关识别模式
         predictor.mode = 1;
-
+    // cout<<src.mode<<":"<<predictor.mode<<endl;
+    // cout<<mean_rotate_speed<<endl;
     if (!predictor.predict(mean_rotate_speed, int(mean_r_center.norm()), src.timestamp, theta_offset))
     {
 #ifdef SHOW_IMG
         imshow("dst",src.img);
         waitKey(1);
+        LOG(WARNING) <<"[BUFF] Predictor is still progressing!";
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
 #endif //SHOW_IMG
         return false;
@@ -323,6 +366,7 @@ bool Buff::run(TaskData &src,VisionData &data)
 
     ///------------------------计算击打点----------------------------
     //将角度转化至[-PI,PI范围内]
+    // cout<<theta_offset<<endl;
     theta_offset = rangedAngleRad(theta_offset);
     // cout<<theta_offset<<endl;
     //由offset生成欧拉角和旋转矩阵
@@ -330,24 +374,67 @@ bool Buff::run(TaskData &src,VisionData &data)
     // cout<<hit_point_world<<endl;
     Eigen::Vector3d hit_point_cam = {0,0,0};
     // Eigen::Vector3d euler_rad = target.euler;
+<<<<<<< HEAD
     Eigen::Vector3d euler_rad = target.euler;
     auto rotMat = eulerToRotationMatrix(euler_rad);
     
+=======
+    // Eigen::Vector3d euler_rad = target.euler;
+>>>>>>> main
     //Pc = R * Pw + T
-    hit_point_world = (rotMat * hit_point_world) + target.armor3d_world;
+    hit_point_world = (target.rmat * hit_point_world) + target.armor3d_world;
     hit_point_cam = coordsolver.worldToCam(hit_point_world, rmat_imu);
+<<<<<<< HEAD
     auto r_center_cam = coordsolver.worldToCam(target.centerR3d_cam, rmat_imu);
     
+=======
+    auto r_center_cam = coordsolver.worldToCam(target.centerR3d_world, rmat_imu);
+>>>>>>> main
     // auto r_center_cam = coordsolver.worldToCam(mean_r_center, rmat_imu);
     auto center2d_src = coordsolver.reproject(r_center_cam);
     auto target2d = coordsolver.reproject(hit_point_cam);
+
+    auto angle = coordsolver.getAngle(hit_point_cam,rmat_imu);
+
+    //-----------------判断扇叶是否发生切换-------------------------
+    bool is_switched = false;
+    auto delta_t = src.timestamp - last_timestamp;
+    auto relative_rmat = last_fan.rmat.transpose() * target.rmat;
+    //TODO:使用点乘判断旋转方向
+    auto angle_axisd = Eigen::AngleAxisd(relative_rmat);
+    // sign = ((*fan).centerR3d_world.dot(angle_axisd.axis()) > 0 ) ? 1 : -1;
+    auto rotate_speed = (angle_axisd.angle()) / delta_t * 1e3;//计算角速度(rad/s)
+    if (abs(rotate_speed) > max_v)
+        is_switched = true;
+
     lost_cnt = 0;
     last_roi_center = center2d_src;
+    last_timestamp = src.timestamp;
+    last_fan = target;
     is_last_target_exists = true;
+
+    //若预测出错取消本次数据发送
+    if (isnan(angle[0]) || isnan(angle[1]))
+    {
+#ifdef SHOW_IMG
+        imshow("dst",src.img);
+        waitKey(1);
+        LOG(WARNING) <<"[BUFF] NAN Detected!";
+        data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
+#endif //SHOW_IMG
+        return false;
+    }
+    
+    auto time_predict = std::chrono::steady_clock::now();
+    double dr_full_ms = std::chrono::duration<double,std::milli>(time_predict - time_start).count();
+    double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
+    double dr_infer_ms = std::chrono::duration<double,std::milli>(time_infer - time_crop).count();
+    double dr_predict_ms = std::chrono::duration<double,std::milli>(time_predict - time_infer).count();
 
 #ifdef SHOW_ALL_FANS
     for (auto fan : fans)
     {
+        putText(src.img, fmt::format("{:.2f}", fan.conf),fan.apex2d[4],FONT_HERSHEY_SIMPLEX, 1, {0, 255, 0}, 2);
         if (fan.color == 0)
             putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
         if (fan.color == 1)
@@ -366,15 +453,9 @@ bool Buff::run(TaskData &src,VisionData &data)
 
 #ifdef SHOW_PREDICT
     circle(src.img, center2d_src, 5, Scalar(0, 0, 255), 2);
-    circle(src.img, target2d, 5, Scalar(0, 255, 0), 2);
+    circle(src.img, target2d, 5, Scalar(255, 255, 255), 2);
 #endif //SHOW_PREDICT
 
-    auto angle = coordsolver.getAngle(hit_point_cam,rmat_imu);
-    auto time_predict = std::chrono::steady_clock::now();
-    double dr_full_ms = std::chrono::duration<double,std::milli>(time_predict - time_start).count();
-    double dr_crop_ms = std::chrono::duration<double,std::milli>(time_crop - time_start).count();
-    double dr_infer_ms = std::chrono::duration<double,std::milli>(time_infer - time_crop).count();
-    double dr_predict_ms = std::chrono::duration<double,std::milli>(time_predict - time_infer).count();
 
 #ifdef SHOW_FPS
     putText(src.img, fmt::format("FPS: {}",int(1000 / dr_full_ms)), {10, 25}, FONT_HERSHEY_SIMPLEX, 1, {0,255,0});
@@ -402,13 +483,13 @@ bool Buff::run(TaskData &src,VisionData &data)
     fmt::print(fmt::fg(fmt::color::blue_violet), "Yaw: {} \n",angle[0]);
     fmt::print(fmt::fg(fmt::color::golden_rod), "Pitch: {} \n",angle[1]);
     fmt::print(fmt::fg(fmt::color::green_yellow), "Dist: {} m\n",(float)hit_point_cam.norm());
+    fmt::print(fmt::fg(fmt::color::orange_red), "Is Switched: {} \n",is_switched);
 #endif //PRINT_TARGET_INFO
 
 #ifdef SAVE_BUFF_LOG
     LOG(INFO) <<"[BUFF] LATENCY: "<< "Crop: " << dr_crop_ms << " ms" << " Infer: " << dr_infer_ms << " ms" << " Predict: " << dr_predict_ms << " ms" << " Total: " << dr_full_ms << " ms";
-    LOG(INFO) <<"[BUFF] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)hit_point_cam.norm();
+    LOG(INFO) <<"[BUFF] TARGET_INFO: "<< "Yaw: " << angle[0] << " Pitch: " << angle[1] << " Dist: " << (float)hit_point_cam.norm()<<"Is Switched:"<<is_switched;
 #endif //SAVE_BUFF_LOG
-
-    data = {(float)angle[1], (float)angle[0], (float)hit_point_cam.norm(), 0, 1, 1, 1};
+    data = {(float)angle[1], (float)angle[0], (float)hit_point_cam.norm(), is_switched, 1, 1, 1};
     return true;
 }

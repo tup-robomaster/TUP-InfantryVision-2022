@@ -270,7 +270,14 @@ double rangedAngleRad(double &angle)
     return angle;
 }
 
+<<<<<<< HEAD
 float calcDistance(Point2f& p1, Point2f& p2)
 {
     return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2));
 }
+=======
+float calcDis(Point2f p1, Point2f p2)
+{
+    return sqrt(pow(p1.x - p2.x, 2) + pow(p2.y - p2.y, 2));
+}
+>>>>>>> main

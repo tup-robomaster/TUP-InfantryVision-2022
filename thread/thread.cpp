@@ -29,6 +29,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     DaHeng.SetStreamOn();
     // 设置曝光事件
+<<<<<<< HEAD
 
     DaHeng.SetExposureTime(config[param_name]["Exposure_time"].as<int>()); 
     // 设置
@@ -38,6 +39,11 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 设置1
     DaHeng.SetGAIN(3, 14);
 
+=======
+    DaHeng.SetExposureTime(3500);
+    // 设置1
+    DaHeng.SetGAIN(3, 16);
+>>>>>>> main
     // 是否启用自动白平衡7
     // DaHeng.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012
@@ -54,19 +60,28 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // DaHeng.Set_Saturation(0,0);
 #endif //USING_DAHENG
 
+<<<<<<< HEAD
 #ifdef USING_HAIKANG
+=======
+#ifdef USING_HIK
+>>>>>>> main
     start_get_img:
 
     HaiKangCamera HaiKang;
 
     HaiKang.StartDevice(0);
     // 设置分辨率
+<<<<<<< HEAD
     HaiKang.SetResolution(1,1);
+=======
+    HaiKang.SetResolution(1280,1024);
+>>>>>>> main
     //更新时间戳，设置时间戳偏移量
     HaiKang.UpdateTimestampOffset(time_start);
     // 开始采集帧
     HaiKang.SetStreamOn();
     // 设置曝光事件
+<<<<<<< HEAD
     HaiKang.SetExposureTime(8000);
     // 设置1
     HaiKang.SetGAIN(3, 5);
@@ -77,6 +92,21 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     HaiKang.Set_BALANCE(1, 1000);
     HaiKang.Set_BALANCE(2, 2022);
 #endif
+=======
+    HaiKang.SetExposureTime(6000);
+    // 设置1
+    // HaiKang.SetGAIN(0, 16);
+    // HaiKang.SetGAIN(1, 8);
+    // HaiKang.SetGAIN(2, 8);
+    HaiKang.SetGAIN(3, 4);
+    // 是否启用自动白平衡7
+    // HaiKang.Set_BALANCE_AUTO(0);
+    // manual白平衡 BGR->012
+    HaiKang.Set_BALANCE(0, 1690);
+    HaiKang.Set_BALANCE(1, 1024);
+    HaiKang.Set_BALANCE(2, 2022);
+#endif //USING_HIK
+>>>>>>> main
 
 #ifdef USING_USB_CAMERA
     VideoCapture cap(0);
@@ -89,10 +119,11 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 #endif //USING_USB_CAMERA
 
 
+
 #ifdef USING_VIDEO
     sleep(6);//防止网络加载完成前视频开始播放
-    VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
-    // VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/sample.mp4");
+    // VideoCapture cap("/home/tup/Desktop/TUP-InfantryVision-2022-buff/RH.avi");
+    VideoCapture cap("/home/tup/sample.avi");
 #endif //USING_VIDEO
 
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
@@ -153,9 +184,23 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
 #endif
 
+#ifdef USING_HIK
+        auto HaiKang_stauts = HaiKang.GetMat(src.img);
+        if (!HaiKang_stauts)
+        {
+            fmt::print(fmt::fg(fmt::color::red), "[CAMERA] GetMat false return\n");
+
+            #ifdef SAVE_LOG_ALL
+                LOG(ERROR) << "[CAMERA] GetMat false return";
+            #endif //SAVE_LOG_ALL
+
+            goto start_get_img;
+        }
+        src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
+#endif
+
 #ifdef USING_VIDEO
         cap >> src.img;
-        auto time_cap = std::chrono::steady_clock::now();
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // sleep(0.02);
         waitKey(33.3);
@@ -176,7 +221,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
 #ifdef SAVE_VIDEO
         frame_cnt++;
-        if(frame_cnt % 5 == 0)
+        if(frame_cnt % 10 == 0)
         {
             frame_cnt = 0;
             //异步读写加速,避免阻塞生产者
@@ -188,15 +233,16 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
         }
 #endif //SAVE_VIDEO
 
-#ifdef USING_IMU
+#ifndef DEBUG_WITHOUT_COM
         //获取下位机数据
         MCUData mcu_status;
         if (!receive_factory.consume(mcu_status, src.timestamp))
             continue;
         src.quat = mcu_status.quat;
         src.mode = mcu_status.mode;
-        // cout<<delta_t<<endl;
-#endif //USING_IMU
+        src.bullet_speed = mcu_status.bullet_speed;
+#endif
+
 
         //用于辅助标注
         // DaHeng.SetExposureTime(1000 + src.timestamp % 100 * 30);
@@ -221,6 +267,8 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
         VisionData data;
         task_factory.consume(dst);
         mode = dst.mode;
+        // mode = 4;
+        // dst.mode = 4;
 
 #ifdef DEBUG_WITHOUT_COM
         mode = 1;
@@ -235,13 +283,15 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
         last_mode = mode;
     }
 #endif //SAVE_TRANSMIT_LOG
-
-        if (mode == 1)
+        //1:自瞄模式
+        //2:前哨站顶部装甲板识别模式
+        //3:小能量机关模式
+        //4.大能量机关模式
+        if (mode == 1 || mode == 2)
         {
             autoaim.run(dst, data);
             transmit_factory.produce(data);
         }
-        //进入能量机关打击模式，3为小能量机关，4为大能量机关
         else if (mode == 3 || mode == 4)
         {
             buff.run(dst, data);
@@ -329,11 +379,13 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
         // Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         //FIXME:注意此处mode设置
         int mode = serial.mode;
-        // int mode = 1;
+        float bullet_speed = serial.bullet_speed;
+        
+        // int mode = 4;
         Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         Eigen::Vector3d acc = {serial.acc[0],serial.acc[1],serial.acc[2]};;
         Eigen::Vector3d gyro = {serial.gyro[0],serial.gyro[1],serial.gyro[2]};;
-        MCUData mcu_status = {mode, acc, gyro, quat, timestamp};
+        MCUData mcu_status = {mode, acc, gyro, quat, bullet_speed, timestamp};
         receive_factory.produce(mcu_status, timestamp);
         // Eigen::Vector3d vec = quat.toRotationMatrix().eulerAngles(2,1,0);
         // cout<<"Euler : "<<vec[0] * 180.f / CV_PI<<" "<<vec[1] * 180.f / CV_PI<<" "<<vec[2] * 180.f / CV_PI<<endl;

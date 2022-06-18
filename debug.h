@@ -2,12 +2,20 @@
 //                          FIXME:临场调试选项
 //---------------------------------------------------------------------------//
 
-// #define DETECT_RED  //红色检测，不启用默认为蓝色检测
+#define DETECT_RED  //红色检测，不启用默认为蓝色检测
 
-#define SAVE_VIDEO               // save video
+#define IGNORE_ENGINEER             //是否忽略工程
 
+<<<<<<< HEAD
 // #define SAVE_LOG_ALL                // save log
 
+=======
+// #define SAVE_VIDEO               // Save video
+
+#define SAVE_LOG_ALL                // Save log
+
+// #TODO: 开启此选项请关闭无串口调试模式
+>>>>>>> main
 // #define USING_IMU                //是否使用陀螺仪数据
 //===========================================================================//
 
@@ -17,6 +25,7 @@
 //                              硬件设备选项
 //---------------------------------------------------------------------------//
 
+<<<<<<< HEAD
 #define USING_DAHENG      //是否使用大恒摄像头，不启用默认为USB摄像头
 // #define USING_HAIKANG     //是否使用海康相机
 
@@ -25,6 +34,15 @@
 #ifndef CAMERA_ID_73
     // #define CAMERA_ID_75 //默认相机型号为76
 #endif
+=======
+// #define USING_DAHENG                //是否使用大恒摄像头，不启用默认为USB摄像头
+#define USING_HIK                   //是否使用海康摄像头
+// #define USING_VIDEO              // Using video
+// #define USING_USB_CAMERA
+
+#define DEBUG_WITHOUT_COM           //无串口调试
+//===========================================================================//
+>>>>>>> main
 
 #define DEBUG_WITHOUT_COM           //无串口调试
 //===========================================================================//
@@ -33,7 +51,11 @@
 //                              图像DEBUG相关选项
 //---------------------------------------------------------------------------//
 
+<<<<<<< HEAD
 // #define SHOW_INPUT       //显示送入神经网络的图像
+=======
+#define SHOW_INPUT      //显示送入神经网络的图像
+>>>>>>> main
 
 // #define SHOW_IMG         //是否显示检测Armor后的图像
 //===========================================================================//
@@ -48,9 +70,17 @@
 #define PRINT_LATENCY       //输出运行时间
 #define PRINT_TARGET_INFO   //是否输出目标信息
 
+<<<<<<< HEAD
 // #define USING_PREDICT     //是否启用预测
 // #define USING_SPIN_DETECT //是否检测陀螺
 // #define DISABLE_FITTING   //是否禁用曲线拟合
+=======
+// #define USING_PREDICT           //是否启用预测
+
+#define USING_SPIN_DETECT //是否检测陀螺
+
+// #define DISABLE_FITTING //是否禁用曲线拟合
+>>>>>>> main
 //===========================================================================//
 
 
@@ -89,12 +119,15 @@
     #define SHOW_AIM_CROSS//是否绘制十字瞄准线
 #endif // SHOW_IMG
 
+<<<<<<< HEAD
 #ifndef USING_DAHENG
     #ifndef USING_HAIKANG
         #define USING_USB_CAMERA
     #endif // USING_HAIKANG
 #endif // USING_DAHENG
 
+=======
+>>>>>>> main
 #ifndef DETECT_RED
     #define DETECT_BLUE
 #endif  //DETECT_RED
@@ -103,9 +136,13 @@
 #else
     #define DETECT_BUFF_RED
 #endif
+<<<<<<< HEAD
 
 /*****************异常机制*****************/
 #define PATH_EXCEPTION              // 检测串口路径异常
 #define SERIAL_SENDING_EXCEPTION    // 检测串口数据发送异常
 
 //===========================================================================//
+=======
+//===========================================================================//
+>>>>>>> main

@@ -30,16 +30,19 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
     {
         history_info.clear();
         history_info.push_back(target);
+        params[0] = 0;
+        params[1] = 0; 
+        params[2] = 0; 
+        params[3] = 0; 
         last_target = target;
         is_params_confirmed = false;
         return false;
     }
-
     //输入数据前进行滤波
     auto delta_speed = target.speed - last_target.speed;
     auto delta_t = timestamp - last_target.timestamp;
     auto accel = 1e3 * delta_speed / delta_t;//计算加速度,单位rad/s^2
-    if (fabs(accel) > max_a || fabs(speed) > max_v)
+    if (abs(speed) > max_v || accel > max_a)
     {
         history_info.push_back(target);
         auto filtered_speed = shiftWindowFilter(history_info.size() - window_size - 1);
@@ -65,86 +68,130 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
     for (auto target_info : history_info)
         rotate_speed_sum += target_info.speed;
     params[3] = rotate_speed_sum / history_info.size();
+    // cout<<rotate_speed_sum<<endl;
 
     //TODO:小符模式不需要额外计算,也可增加判断，小符模式给定恒定转速进行击打
     //若为大符模式且函数未确定
-    if (mode == 1 && !is_params_confirmed)
+    if (mode == 1)
     {
-        ceres::Problem problem;
-        ceres::Solver::Options options;
-        ceres::Solver::Summary summary;       // 优化信息
-        double params_fitting[3] = {1, 1, 1};
+        //拟合函数: f(x) = a * sin(ω * t + θ)
+        if (!is_params_confirmed)
+        {
+            ceres::Problem problem;
+            ceres::Solver::Options options;
+            ceres::Solver::Summary summary;       // 优化信息
+            double params_fitting[3] = {1, 1, 1};
+            
 
-        //旋转方向，逆时针为正
-        if (rotate_speed_sum / fabs(rotate_speed_sum) >= 0)
-            rotate_sign = 1;
+            //旋转方向，逆时针为正
+            if (rotate_speed_sum / fabs(rotate_speed_sum) >= 0)
+                rotate_sign = 1;
+            else
+                rotate_sign = -1;
+
+            for (auto target_info : history_info)
+            {
+                problem.AddResidualBlock (     // 向问题中添加误差项
+                // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
+                    new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 3> ( 
+                        new CURVE_FITTING_COST ((float)(target_info.timestamp) / 1e3,
+                                                                    (target_info.speed - params[3]) * rotate_sign)
+                    ),
+                    new ceres::CauchyLoss(0.1),
+                    params_fitting                 // 待估计参数
+                );
+            }
+
+            //设置上下限
+            problem.SetParameterLowerBound(params_fitting,0,0.5);
+            problem.SetParameterUpperBound(params_fitting,0,2);
+            problem.SetParameterLowerBound(params_fitting,1,0.5);
+            problem.SetParameterUpperBound(params_fitting,1,3);
+            problem.SetParameterLowerBound(params_fitting,2,-CV_PI);
+            problem.SetParameterUpperBound(params_fitting,2,CV_PI);
+
+            ceres::Solve(options, &problem, &summary);
+            if (summary.final_cost < max_cost)
+            {
+                // cout<<"cost:"<<summary.BriefReport()<<endl;
+                params[0] = params_fitting[0] * rotate_sign;
+                params[1] = params_fitting[1];
+                params[2] = params_fitting[2];
+                is_params_confirmed = true;
+                cout<<"Confirmed!"<<endl;
+                // waitKey(0);
+            }
+            else
+            {
+                return false;
+            }
+        }
         else
-            rotate_sign = -1;
+        {            
+            ceres::Problem problem;
+            ceres::Solver::Options options;
+            ceres::Solver::Summary summary;       // 优化信息
+            double phase;
 
-        for (auto target_info : history_info)
-        {
-            problem.AddResidualBlock (     // 向问题中添加误差项
-            // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-                new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 4> ( 
-                    new CURVE_FITTING_COST ((float)(target_info.timestamp) / 1e3,
-                                                                (target_info.speed - params[3]) * rotate_sign)
-                ),
-                new ceres::CauchyLoss(0.7),
-                params_fitting                 // 待估计参数
-            );
-        }
+            for (auto target_info : history_info)
+            {
+                problem.AddResidualBlock(     // 向问题中添加误差项
+                // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
+                    new ceres::AutoDiffCostFunction<CURVE_FITTING_COST_PHASE, 1, 1> ( 
+                        new CURVE_FITTING_COST_PHASE ((float)(target_info.timestamp) / 1e3,
+                                                                    (target_info.speed - params[3]) * rotate_sign, params[0], params[1])
+                    ),
+                    new ceres::CauchyLoss(0.1),
+                    &phase                 // 待估计参数
+                );
+            }
 
-        //设置上下限
-        problem.SetParameterLowerBound(params_fitting,0,0.5);
-        problem.SetParameterUpperBound(params_fitting,0,2);
-        problem.SetParameterLowerBound(params_fitting,1,1);
-        problem.SetParameterUpperBound(params_fitting,1,3);
-        problem.SetParameterLowerBound(params_fitting,2,-CV_PI);
-        problem.SetParameterUpperBound(params_fitting,2,CV_PI);
+            //设置上下限
+            problem.SetParameterLowerBound(&phase,0,-CV_PI);
+            problem.SetParameterUpperBound(&phase,0,CV_PI);
 
-        ceres::Solve(options, &problem, &summary);
-        cout<<"cost:"<<summary.final_cost<<endl;
-        if (summary.final_cost < max_cost)
-        {
-            params[0] = params_fitting[0] * rotate_sign;
-            params[1] = params_fitting[1];
-            params[2] = params_fitting[2];
-            is_params_confirmed = true;
-            cout<<"Confirmed!"<<endl;
+            ceres::Solve(options, &problem, &summary);
+            // cout<<"cost:"<<summary.final_cost<<endl;
+            double params_new[4] = {params[0], params[1], phase, params[3]};
+            auto old_rmse = evaluate(params);
+            auto new_rmse = evaluate(params_new);
+            if (new_rmse < old_rmse)
+            {
+                params[2] = phase;
+            }
         }
-        else
-        {
-            return false;
-        }
-        // cout<<summary.BriefReport()<<endl;
+    //     // cout<<summary.BriefReport()<<endl;
     }
 
-    // for (auto param : params)
-    //     cout<<param<<" ";
-    // cout<<"\n"<<"--------------------"<<endl;
+    for (auto param : params)
+        cout<<param<<" ";
+    cout<<"\n"<<"--------------------"<<endl;
     float delta_time_estimate = ((double)dist / bullet_speed) * 1e3 + delay;
     float timespan = history_info.back().timestamp - history_info.front().timestamp;
     float time_estimate = delta_time_estimate + timespan;
-    result = calcAimingAngleOffset(params, timespan / 1e3, time_estimate / 1e3);
-
+    result = calcAimingAngleOffset(params, timespan / 1e3, time_estimate / 1e3, mode);
     last_target = target;
 
 #ifdef DRAW_PREDICT
-    std::vector<double> plt_time;
-    std::vector<double> plt_speed;
-    std::vector<double> plt_fitted;
-    for (auto target_info : history_info)
+    if (target.timestamp % 10 == 0)
     {
-        auto t = (float)(target_info.timestamp) / 1e3;
-        plt_time.push_back(t);
-        plt_speed.push_back(target_info.speed);
-        plt_fitted.push_back(params[0] * sin (params[1] * t + params[2]) + params[3]);
+        std::vector<double> plt_time;
+        std::vector<double> plt_speed;
+        std::vector<double> plt_fitted;
+        for (auto target_info : history_info)
+        {
+            auto t = (float)(target_info.timestamp) / 1e3;
+            plt_time.push_back(t);
+            plt_speed.push_back(target_info.speed);
+            plt_fitted.push_back(params[0] * sin (params[1] * t + params[2]) + params[3]);
+        }
+        plt::clf();
+        plt::plot(plt_time, plt_speed,"bx");
+        plt::plot(plt_time, plt_fitted,"r-");
+        plt::pause(0.001);
+
     }
-    plt::clf();
-    plt::plot(plt_time, plt_speed,"bx");
-    plt::plot(plt_time, plt_fitted,"r-");
     // plt::show();
-    plt::pause(0.001);
 #endif //DRAW_PREDICT
     return true;
 }
@@ -154,9 +201,10 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
  * @param params 拟合方程参数
  * @param t0 积分下限
  * @param t1 积分上限
+ * @param mode 模式
  * @return 角度提前量(rad)
 */
-double BuffPredictor::calcAimingAngleOffset(double params[4], double t0, double t1)
+double BuffPredictor::calcAimingAngleOffset(double params[4], double t0, double t1 , int mode)
 {
     auto a = params[0];
     auto omega = params[1];
@@ -167,7 +215,7 @@ double BuffPredictor::calcAimingAngleOffset(double params[4], double t0, double 
 
     //f(x) = a * sin(ω * t + θ) + b
     //对目标函数进行积分
-    if (a == 0 && omega == 0 && theta == 0)//适用于小符模式
+    if (mode == 0)//适用于小符模式
     {
         theta0 = b * t0;
         theta1 = b * t1;
@@ -213,4 +261,32 @@ inline double BuffPredictor::shiftWindowFilter(int start_idx=0)
         // cout<<total_sum<<endl;
     }
     return total_sum / max_iter;
+}
+
+/**
+ * @brief 设置弹速
+ * 
+ * @param speed 传入弹速
+ * @return true 
+ * @return false 
+ */
+bool BuffPredictor::setBulletSpeed(double speed)
+{
+    bullet_speed = speed;
+    return true;
+}
+
+double BuffPredictor::evaluate(double params[4])
+{
+    double rmse_sum = 0;
+    double rmse = 0;
+    for (auto target_info : history_info)
+    {
+        auto t = (float)(target_info.timestamp) / 1e3;
+        auto pred = params[0] * sin (params[1] * t + params[2]) + params[3];
+        auto measure = target_info.speed;
+        rmse_sum+=pow((pred - measure),2);
+    }
+    rmse = sqrt(rmse_sum / history_info.size());
+    return rmse;
 }
