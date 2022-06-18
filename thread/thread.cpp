@@ -49,12 +49,12 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     HaiKang.SetStreamOn();
     // 设置曝光事件
-    HaiKang.SetExposureTime(7000);
+    HaiKang.SetExposureTime(6000);
     // 设置1
-    HaiKang.SetGAIN(0, 16);
+    // HaiKang.SetGAIN(0, 17);
     // HaiKang.SetGAIN(1, 8);
     // HaiKang.SetGAIN(2, 8);
-    HaiKang.SetGAIN(3, 16);
+    HaiKang.SetGAIN(3, 17);
     // 是否启用自动白平衡7
     // HaiKang.Set_BALANCE_AUTO(0);
     // manual白平衡 BGR->012

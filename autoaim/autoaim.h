@@ -49,13 +49,13 @@ private:
     const int max_lost_cnt = 5;                 //最大丢失目标帧数
     const int max_armors = 8;                   //视野中最多装甲板数
     const double max_delta_dist = 0.2;                  //两次预测间最大速度(m/s)
-    const double armor_conf_high_thres = 0.82;            //置信度大于该值的装甲板直接采用
+    const double armor_conf_high_thres = 0.85;            //置信度大于该值的装甲板直接采用
     // const int max_delta_t = 75;                //使用同一预测器的最大时间间隔(ms)
     const int max_delta_t = 100;                //使用同一预测器的最大时间间隔(ms)
 
     int anti_spin_judge_high_thres = 2e4;//大于该阈值认为该车已开启陀螺
     int anti_spin_judge_low_thres = 5e3;//小于该阈值认为该车已关闭陀螺
-    int anti_spin_max_r_multiple = 4;
+    int anti_spin_max_r_multiple = 2.7;
 
     const double no_crop_ratio = 2e-3;      //禁用ROI裁剪的装甲板占图像面积最大面积比值
     const double full_crop_ratio = 1e-4;     //最大ROI比例，大于此比例ROI大小为网络输入比例                   

@@ -28,7 +28,6 @@ struct ArmorObject
     std::vector<float> probs;
 };
 
-
 class ArmorDetector
 {
 public:

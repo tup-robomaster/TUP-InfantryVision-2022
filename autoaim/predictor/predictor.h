@@ -56,7 +56,7 @@ private:
             const T* const params,     // 模型参数，有3维
             T* residual ) const     // 残差
         {
-            residual[0] = T (_y) - params[0] * T(_x); // f(x) = a0 + a1 * x + a2 * x^2 
+            residual[0] = T (_y) - params[0] * T(_x) - params[1] * T(_x) * T(_x); // f(x) = a0 + a1 * x + a2 * x^2 
             // residual[0] = T (_y) - params[0] * ceres::cos(params[1] * T (_x) + params[2]); // f(x) = a0 + a1 * cos(wx + THETA)
             // residual[0] = T (_y) - params[0] * ceres::cos(params[2] * T (_x)) - params[1] * ceres::sin(params[2] * T (_x)); // f(x) = a0 + a1 * cos(wx) + b1 * sin(wx) 
             return true;

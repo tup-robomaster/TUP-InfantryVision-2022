@@ -6,12 +6,12 @@
 
 #define IGNORE_ENGINEER             //是否忽略工程
 
-#define SAVE_VIDEO               // Save video
+// #define SAVE_VIDEO               // Save video
 
 #define SAVE_LOG_ALL                // Save log
 
 // #TODO: 开启此选项请关闭无串口调试模式
-#define USING_IMU                //是否使用陀螺仪数据
+// #define USING_IMU                //是否使用陀螺仪数据
 //===========================================================================//
 
 
@@ -26,7 +26,7 @@
 // #define USING_VIDEO              // Using video
 // #define USING_USB_CAMERA
 
-// #define DEBUG_WITHOUT_COM           //无串口调试
+#define DEBUG_WITHOUT_COM           //无串口调试
 //===========================================================================//
 
 
@@ -34,7 +34,7 @@
 //                              图像DEBUG相关选项
 //---------------------------------------------------------------------------//
 
-#define SHOW_INPUT      //显示送入神经网络的图像
+// #define SHOW_INPUT      //显示送入神经网络的图像
 
 #define SHOW_IMG        //是否显示检测Armor后的图像
 //===========================================================================//

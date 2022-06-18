@@ -64,8 +64,8 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     //FIXME:若位置粒子滤波器已完成初始化且预测值大小恰当,则对目标位置做滤波
     else
     {
-        // target.xyz[0] = predict_pos[0];
-        // target.xyz[1] = predict_pos[1];
+        target.xyz[0] = predict_pos[0];
+        target.xyz[1] = predict_pos[1];
         history_info.push_back(target);
     }
     FIXME:
@@ -339,8 +339,8 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
 ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &result, int time_estimated)
 {
     //0.1的位置使用0初始化会导致拟合结果出错
-    double params_x[4] = {0,0.01,0.1,0};            // 参数的估计值
-    double params_y[4] = {0,0.01,0.1,0};            // 参数的估计值
+    double params_x[4] = {0,0.01,0,0};            // 参数的估计值
+    double params_y[4] = {0,0.01,0,0};            // 参数的估计值
 
     ceres::Problem problem_x;
     ceres::Problem problem_y;
@@ -369,18 +369,18 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
         cout<<"T : "<<(target_info.timestamp - history_info.front().timestamp) / 1e3<<" X:"<<target_info.xyz[0]<<" Y:"<<target_info.xyz[1]<<endl;
         problem_x.AddResidualBlock (     // 向问题中添加误差项
         // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 1> ( 
+            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 2> ( 
                 new CURVE_FITTING_COST ((target_info.timestamp - history_info.front().timestamp) / 1e3, target_info.xyz[0] - params_x[0])
             ),
-            new ceres::CauchyLoss(0.5),            // 核函数，这里不使用，为空
+            new ceres::CauchyLoss(0),            // 核函数，这里不使用，为空
             &params_x[1]                 // 待估计参数
         );
         problem_y.AddResidualBlock (     // 向问题中添加误差项
         // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 1> ( 
+            new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 2> ( 
                 new CURVE_FITTING_COST ((target_info.timestamp - history_info.front().timestamp) / 1e3, target_info.xyz[1] - params_y[0])
             ),
-           new ceres::CauchyLoss(0.5),            // 核函数，这里不使用，为空
+           new ceres::CauchyLoss(0),            // 核函数，这里不使用，为空
             &params_y[1]                 // 待估计参数
         );
     }

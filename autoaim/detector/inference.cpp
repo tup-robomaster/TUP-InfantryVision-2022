@@ -309,7 +309,7 @@ bool ArmorDetector::initModel(string path)
 {
     ie.SetConfig({{CONFIG_KEY(CACHE_DIR), "../.cache"}});
     // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"GPU_THROUGHPUT_AUTO"}});
-    ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
+    // ie.SetConfig({{CONFIG_KEY(GPU_THROUGHPUT_STREAMS),"1"}});
     // Step 1. Read a model in OpenVINO Intermediate Representation (.xml and
     // .bin files) or ONNX (.onnx file) format
     network = ie.ReadNetwork(path);
@@ -334,8 +334,8 @@ bool ArmorDetector::initModel(string path)
     // output_info->setPrecision(Precision::FP16);
     // Step 3. Loading a model to the device
     // executable_network = ie.LoadNetwork(network, "MULTI:GPU");
-    executable_network = ie.LoadNetwork(network, "GPU");
-    // executable_network = ie.LoadNetwork(network, "CPU");
+    // executable_network = ie.LoadNetwork(network, "GPU");
+    executable_network = ie.LoadNetwork(network, "CPU");
 
     // Step 4. Create an infer request
     infer_request = executable_network.CreateInferRequest();
