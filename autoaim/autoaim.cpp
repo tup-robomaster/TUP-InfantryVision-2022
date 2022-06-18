@@ -18,6 +18,12 @@ Autoaim::Autoaim()
     lost_cnt = 0;
     is_last_target_exists = false;
     is_target_switched = false;
+    
+    low_threshold_conf = 0.6;
+    high_threshold_conf = 0.8;
+    jump_threshold_conf = 0.1;
+    dis_threshhold = 7.2;
+    
     last_target_area = 0;
     last_bullet_speed = 0;
     input_size = {416, 416};
@@ -380,9 +386,13 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     ///------------------------将对象排序，保留面积较大的对象---------------------------------
     sort(objects.begin(),objects.end(),[](ArmorObject& prev, ArmorObject& next)
                                     {return prev.area > next.area;});
+    
+
     //若对象较多保留前按面积排序后的前max_armors个
     if (objects.size() > max_armors)
         objects.resize(max_armors);
+    
+    
     ///------------------------生成装甲板对象----------------------------------------------
     for (auto object : objects)
     {
@@ -471,15 +481,16 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             isnan(pnp_result.armor_cam[2]))
                 continue;
         }
+    
         // cout<<target_type<<endl;
         // cout<<target_type<<endl;
-
         armor.center3d_world = pnp_result.armor_world;
         armor.center3d_cam = pnp_result.armor_cam;
         armor.euler = pnp_result.euler;
         armor.area = object.area;
         armors.push_back(armor);
     }
+    
     //若无合适装甲板
     if (armors.empty())
     {
@@ -502,6 +513,53 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         LOG(WARNING) <<"[AUTOAIM] No available armor exists!";
         return false;
     }
+
+//////////// sort_armors ////////////////
+    //根据装甲板置信度进行排序
+    sort(armors.begin(), armors.end(), [](const Armor& a, const Armor& b)
+    {
+        return a.conf > b.conf;
+    });
+
+    //保留大于低阈值的装甲板
+    curr_middle_armors.clear();  //清空上次保留的装甲板
+    for(auto it = armors.begin(); it != armors.end();)
+    {
+        if (it->conf > low_threshold_conf)
+            curr_middle_armors.push_back(*it);
+        else
+            it++;
+    }
+
+    int conf_index = -1;
+    for(auto it = armors.begin(); it != armors.end();)
+    {
+        if(it->conf < high_threshold_conf)
+        {
+            conf_index = it - armors.begin() - 1;
+            break;
+        }
+    }
+
+    amrors.resize(conf_index);
+/////////// sort_armors ////////////////
+    
+    //将在高阈值之间阶跃的装甲放入待处理装甲容器
+    if(!last_middle_armors.empty() && !curr_middle_armors.empty())
+    {
+        //挑选装甲板置信度在低阈值和高阈值之间跳跃的装甲板
+        for(int i = 0; i < curr_middle_armors.size(); i++)
+        {
+            for(int j = 0; j < last_middle_armors.size(); j++)
+            {
+                if(abs(curr_middle_armors[i].conf - last_middle_armors[j].conf) < jump_threshold_conf && curr_middle_armors[i].id == last_middle_armors[j].id && calcDis(curr_middle_armors[i].apex2d[0] - last_middle_armors[j].apex2d[0]) < dis_threshhold)
+                {
+                    amrors.push_back(curr_middle_armors[i]);
+                }
+            }
+        }
+    }
+
     ///------------------------生成/分配ArmorTracker----------------------------
     new_armors_cnt_map.clear();
     //为装甲板分配或新建最佳ArmorTracker
@@ -591,6 +649,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         }
     }
     // cout<<"::"<<predictors_map.size()<<endl;
+
 #ifdef USING_SPIN_DETECT
     ///------------------------检测装甲板变化情况,计算各车陀螺分数----------------------------
     for (auto cnt : new_armors_cnt_map)
@@ -663,6 +722,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     //     cout<<status.first<<" : "<<status.second<<endl;
     // }
 #endif //USING_SPIN_DETECT
+
     ///-----------------------------判断击打车辆------------------------------------------
     auto target_id = chooseTargetID(armors, src.timestamp);
     auto ID_candiadates = trackers_map.equal_range(target_id);
@@ -876,6 +936,10 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     last_target_area = target.area;
     last_aiming_point = aiming_point;
     is_last_target_exists = true;
+
+    //保留本次置信度在低阈值之上的装甲板
+    last_middle_armors.clear();
+    last_middle_armors.assign(curr_middle_armors.begin(), curr_middle_armors.end());
 
 #ifdef SHOW_AIM_CROSS
     line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), {0,255,0}, 1);

@@ -39,6 +39,13 @@ private:
     std::map<string,int> new_armors_cnt_map;    //装甲板计数map，记录新增装甲板数
     std::map<string,SpinHeading> spin_status_map;    //反小陀螺，记录该车小陀螺状态
     std::map<string,double> spin_score_map;     //反小陀螺，记录各装甲板小陀螺可能性分数，大于0为逆时针旋转，小于0为顺时针旋转
+    
+    float high_threshold_conf;          //高置信度阈值
+    float low_threshold_conf;           //低置信度阈值
+    vector<Armor> last_middle_armors;   //上次介于上下置信度阈值之间的装甲板
+    vector<Armor> curr_middle_armors;   //本次介于上下置信度阈值之间的装甲板
+    float jump_threshold_conf;          //跳变置信度阈值 
+    float dis_threshhold;               //两帧之间同一块装甲板的距离差阈值
 
     const int armor_type_wh_thres = 3;      //大小装甲板长宽比阈值
 

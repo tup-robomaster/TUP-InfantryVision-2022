@@ -279,9 +279,9 @@ static void decodeOutputs(const float* prob, std::vector<ArmorObject>& objects,
         std::vector<int> strides = {8, 16, 32};
         std::vector<GridAndStride> grid_strides;
 
-        generate_grids_and_stride(INPUT_W, INPUT_H, strides, grid_strides);
         generateYoloxProposals(grid_strides, prob, transform_matrix, BBOX_CONF_THRESH, proposals);
         qsort_descent_inplace(proposals);
+
 
         if (proposals.size() >= TOPK) 
             proposals.resize(TOPK);
@@ -417,7 +417,7 @@ bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
             {
                 pts_final[i % 4]+=(*object).pts[i];
                 if (i % 4 == 0)
-                    probs_sum+=(*object).probs[i];
+                    probs_sum+=(*objec点与置信度进行平均,降低误差t).probs[i];
             }
 
             for (int i = 0; i < 4; i++)

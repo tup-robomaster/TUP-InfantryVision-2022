@@ -71,6 +71,7 @@ bool initMatrix(Eigen::MatrixXd &matrix,std::vector<T> &vector)
 float calcTriangleArea(cv::Point2f pts[3]);
 float calcTetragonArea(cv::Point2f pts[4]);
 double rangedAngleRad(double &angle);
+float calcDis(Point2f, Point2f);
 
 std::string symbolicToReal(string path);
 std::string relativeToFull(string relative,string src);
