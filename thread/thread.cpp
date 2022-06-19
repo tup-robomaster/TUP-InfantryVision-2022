@@ -49,9 +49,9 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     HaiKang.SetStreamOn();
     // 设置曝光事件
-    HaiKang.SetExposureTime(7000);
+    HaiKang.SetExposureTime(5000);
     // 设置1
-    HaiKang.SetGAIN(0, 16);
+    // HaiKang.SetGAIN(0, 16);
     // HaiKang.SetGAIN(1, 8);
     // HaiKang.SetGAIN(2, 8);
     HaiKang.SetGAIN(3, 16);

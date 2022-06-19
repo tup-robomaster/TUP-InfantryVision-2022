@@ -47,44 +47,124 @@ Point2i Autoaim::cropImageByROI(Mat &img)
     //若上次不存在目标
     if (!is_last_target_exists)
     {
+        // cout<<lost_cnt<<endl;
         //当丢失目标帧数过多或lost_cnt为初值
         if (lost_cnt > max_lost_cnt || lost_cnt == 0)
         {
             return Point2i(0,0);
         }
+        return Point2i(0, 0);
     }
     //若目标大小大于阈值
     auto area_ratio = last_target_area / img.size().area();
-    int max_expand = (img.size().height - input_size.width) / 32;
-    double cropped_ratio = (no_crop_ratio / full_crop_ratio) / max_expand;
-    int expand_value = ((int)(area_ratio / full_crop_ratio / cropped_ratio)) * 32;
+    // //丢失目标帧数较小则放大ROI区域
+    // if (lost_cnt <= max_lost_cnt)
+    //     area_ratio*=(1 + lost_cnt);
 
-    Size2i cropped_size = input_size + Size2i(expand_value, expand_value);
-    // cout<<cropped_size<<endl;
-    // Size2i crooped_size = (input_size + (no_crop_thres / max))
     if (area_ratio > no_crop_ratio)
     {
         return Point2i(0,0);
     }
-
-    //处理X越界
-    if (last_roi_center.x <= cropped_size.width / 2)
-        last_roi_center.x = cropped_size.width / 2;
-    else if (last_roi_center.x > (img.size().width - cropped_size.width / 2))
-        last_roi_center.x = img.size().width - cropped_size.width / 2;
-    //处理Y越界
-    if (last_roi_center.y <= cropped_size.height / 2)
-        last_roi_center.y = cropped_size.height / 2;
-    else if (last_roi_center.y > (img.size().height - cropped_size.height / 2))
-        last_roi_center.y = img.size().height - cropped_size.height / 2;
+    // int max_expand = (img.size().height - input_size.width) / 32;
+    // double cropped_ratio = (no_crop_ratio / full_crop_ratio) / max_expand;
+    // int expand_value = ((int)(area_ratio / full_crop_ratio / cropped_ratio)) * 32;
+    // int value = ((int)(area_ratio / no_crop_ratio * max_expand)) * 32;
+    // cout << "expand_value:" << expand_value << endl;
+    // cout << "value:" << value << endl;
     
-    //左上角顶点
-    auto offset = last_roi_center - Point2i(cropped_size.width / 2, cropped_size.height / 2);
-    // auto offset = last_roi_center - Point2i(roi_width / 2, roi_height / 2);
-    Rect roi_rect = Rect(offset, cropped_size);
-    img(roi_rect).copyTo(img);
+    
+    // // Size2i cropped_size = input_size;
+    // Size2i cropped_size = input_size + Size2i(expand_value,expand_value);
+    // if (cropped_size.width >= img.size().width)
+    //     cropped_size.width = img.size().width;
+    // if (cropped_size.height >= img.size().height)
+    //     cropped_size.height = img.size().height;
+    // // cout<<cropped_size<<" "<<area_ratio<<endl;
 
-    return offset;
+    // //处理X越界
+    // if (last_roi_center.x <= cropped_size.width / 2)
+    //     last_roi_center.x = cropped_size.width / 2;
+    // else if (last_roi_center.x > (img.size().width - cropped_size.width / 2))
+    //     last_roi_center.x = img.size().width - cropped_size.width / 2;
+    // //处理Y越界
+    // if (last_roi_center.y <= cropped_size.height / 2)
+    //     last_roi_center.y = cropped_size.height / 2;
+    // else if (last_roi_center.y > (img.size().height - cropped_size.height / 2))
+    //     last_roi_center.y = img.size().height - cropped_size.height / 2;
+    vector<Point2i> points;
+    for(int i = 0; i < 4; i++)
+    {
+        points.push_back(last_armor.apex2d[i]);
+    }
+    last_armor.rect = boundingRect(points);
+
+    if(last_armor.rect.width != 0 && last_armor.rect.height != 0)
+    {
+        float roi_width, roi_height;
+        roi_width = last_armor.rect.width * 3.3;
+        roi_height = last_armor.rect.height * 3.9;
+        cout << last_armor.rect.height << " " << last_armor.rect.width << endl;
+        //根据丢失帧数逐渐扩大ROI大小
+        if(lost_cnt == 2)
+        { 
+            roi_width = last_armor.rect.width * 4.1;
+            roi_height = last_armor.rect.height * 5.3;
+        }
+        else if(lost_cnt == 3)
+        {   
+            roi_width = last_armor.rect.width * 5.7;
+            roi_height = last_armor.rect.height * 6.2;
+        }
+        else if(lost_cnt == 4)
+        { 
+            roi_width = last_armor.rect.width * 8.2;
+            roi_height = last_armor.rect.height * 8.7;
+        }
+        else if(lost_cnt == 5)
+        {   //返回原图像
+            return Point2i(0,0);
+        }
+
+        if(roi_width >= img.size().width) roi_width = img.size().width;
+        if(roi_height > img.size().height) roi_height = img.size().height;
+        cout << roi_height << " "<< roi_width << endl;
+        //处理x轴越界
+        if (last_roi_center.x <= roi_width / 2)
+            last_roi_center.x = roi_width / 2;
+        else if (last_roi_center.x >= (img.size().width - roi_width / 2))
+            last_roi_center.x = img.size().width - roi_width / 2;
+        //处理Y越界
+        if (last_roi_center.y <= roi_height / 2)
+            last_roi_center.y = roi_height / 2;
+        else if (last_roi_center.y >= (img.size().height - roi_height / 2))
+            last_roi_center.y = img.size().height - roi_height / 2;
+
+        //TODO:ROI选取目标装甲周围区域
+        Size2f size = {roi_width - 1, roi_height - 1};
+        
+        //左上角顶点
+        // auto offset = last_roi_center - Point2i(cropped_size.width / 2, cropped_size.height / 2);
+        // // auto offset = last_roi_center - Point2i(roi_width / 2, roi_height / 2);
+        // Rect roi_rect = Rect(offset, cropped_size);
+        // img(roi_rect).copyTo(img);
+
+        //左上角顶点
+        // auto offset = last_roi_center - Point2i(input_size.width / 2, input_size.height / 2);
+        auto offset = last_roi_center - Point2i((roi_width - 1) / 2, (roi_height - 1) / 2);
+        cout << "offset:" << offset << endl;
+        cout << "size:" << roi_width << " "<< roi_height << endl;
+        Rect roi_rect = Rect(offset, size);
+        img(roi_rect).copyTo(img);
+
+        namedWindow("crop_img", WINDOW_AUTOSIZE);
+        imshow("crop_img", img);
+
+        return offset;
+    }
+    else
+    {
+        return Point2i(0, 0);
+    }
 }
 #endif //USING_ROI
 
@@ -367,7 +447,6 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 #endif //USING_SPIN_DETECT
         lost_cnt++;
         is_last_target_exists = false;
-        last_target_area = 0;
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
         LOG(WARNING) <<"[AUTOAIM] No target detected!";
         return false;
@@ -437,30 +516,31 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                         bbox.height * armor_roi_expand_ratio_height
                         );
         //若装甲板置信度小于高阈值，需要相同位置存在过装甲板才放行
-        if (armor.conf < armor_conf_high_thres)
-        {
-            if (last_armors.empty())
-            {
-                continue;
-            }
-            else
-            {
-                bool is_this_armor_available = false;
-                for (auto last_armor : last_armors)
-                {
-                    if (last_armor.roi.contains(armor.center2d))
-                    {
-                        is_this_armor_available = true;
-                        break;
-                    }
-                }
-                if (!is_this_armor_available)
-                {
-                    continue;
-                    cout<<"IGN"<<endl;
-                }
-            }
-        }
+        // if (armor.conf < armor_conf_high_thres)
+        // {
+        //     if (last_armors.empty())
+        //     {
+        //         continue;
+        //     }
+        //     else
+        //     {
+        //         bool is_this_armor_available = false;
+        //         for (auto last_armor : last_armors)
+        //         {
+        //             if (last_armor.roi.contains(armor.center2d))
+        //             {
+        //                 is_this_armor_available = true;
+        //                 break;
+        //             }
+        //         }
+        //         if (!is_this_armor_available)
+        //         {
+        //             cout<<"IGN"<<endl;
+        //             continue;
+        //         }
+        //     }
+        // }
+        // cout<<"..."<<endl;
         //进行PnP，目标较少时采取迭代法，较多时采用IPPE
         int pnp_method;
         if (objects.size() <= 2)
@@ -483,7 +563,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         //     cout<<pic<<endl;
         auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, pnp_method);
         //防止装甲板类型出错导致解算问题，首先尝试切换装甲板类型，若仍无效则直接跳过该装甲板
-        if (pnp_result.armor_cam.norm() > 10 ||
+        if (pnp_result.armor_cam.norm() > 13 ||
             isnan(pnp_result.armor_cam[0]) ||
             isnan(pnp_result.armor_cam[1]) ||
             isnan(pnp_result.armor_cam[2]))
@@ -493,7 +573,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             else if (target_type == BIG)
                 target_type = SMALL;
             pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, pnp_method);
-            if (pnp_result.armor_cam.norm() > 10 ||
+            if (pnp_result.armor_cam.norm() > 13 ||
             isnan(pnp_result.armor_cam[0]) ||
             isnan(pnp_result.armor_cam[1]) ||
             isnan(pnp_result.armor_cam[2]))
@@ -525,13 +605,13 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 #endif //USING_SPIN_DETECT
         lost_cnt++;
         is_last_target_exists = false;
-        last_target_area = 0;
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
         LOG(WARNING) <<"[AUTOAIM] No available armor exists!";
         return false;
     }
     else
     {
+        last_armors.clear();
         last_armors = armors;
     }
     ///------------------------生成/分配ArmorTracker----------------------------
@@ -665,8 +745,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                     last_armor_timestamp = last_tracker->last_timestamp;
                     auto spin_movement = new_armor_center - last_armor_center;
                     // auto delta_t = 
-                    // LOG(INFO)<<"[SpinDetection] Candidate Spin Movement Detected : "<<cnt.first<<" : "<<spin_movement;/
-                    if (abs(spin_movement) > 0.05 && (new_armor_timestamp == last_armor_timestamp))
+                    LOG(INFO)<<"[SpinDetection] Candidate Spin Movement Detected : "<<cnt.first<<" : "<<spin_movement;
+                    if (abs(spin_movement) > 0.05 && new_armor_timestamp == src.timestamp && last_armor_timestamp == src.timestamp)
                     {
                         //若无该元素则插入新元素
                         if (spin_score_map.count(cnt.first) == 0)
@@ -807,7 +887,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         auto delta_t = src.timestamp - prev_timestamp;
         auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
         auto velocity = (delta_dist / delta_t) * 1e3;
-        if((target.key != last_armor.key || delta_dist >= max_delta_dist || !last_armor.roi.contains((target.center2d))) &&
+        if((target.key != last_armor.key || !last_armor.roi.contains((target.center2d))) &&
             is_last_target_exists)
             is_target_switched = true;
         else
@@ -847,7 +927,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         auto delta_dist = (target.center3d_world - last_armor.center3d_world).norm();
         auto velocity = (delta_dist / delta_t) * 1e3;
         // cout<<(delta_dist >= max_delta_dist)<<" "<<!last_armor.roi.contains(target.center2d)<<endl;
-        if((target.key != last_armor.key || (delta_dist >= max_delta_dist) || !last_armor.roi.contains((target.center2d))) &&
+        if((target.key != last_armor.key || !last_armor.roi.contains((target.center2d))) &&
             is_last_target_exists)
             is_target_switched = true;
         else

@@ -51,6 +51,7 @@ public:
     Eigen::Vector2d calcYawPitch(Eigen::Vector3d &xyz);
     bool setBulletSpeed(double speed);
     cv::Point2f reproject(Eigen::Vector3d &xyz);
+    cv::Point2f getHeading(Eigen::Vector3d &xyz_cam);
 private:
     int max_iter;
     float stop_error;

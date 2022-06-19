@@ -198,6 +198,12 @@ cv::Point2f CoordSolver::reproject(Eigen::Vector3d &xyz)
     return cv::Point2f(result[0], result[1]);
 }
 
+cv::Point2f CoordSolver::getHeading(Eigen::Vector3d &xyz_cam)
+{
+    auto xyz_offseted = staticCoordOffset(xyz_cam);
+    auto xyz_normed = xyz_offset.normalized();
+}
+
 /**
  * @brief 静态坐标补偿
  * 
