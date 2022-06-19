@@ -43,13 +43,13 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
     HaiKang.StartDevice(0);
     // 设置分辨率
-    HaiKang.SetResolution(1280,1024);
+    HaiKang.SetResolution(1440, 1080);
     //更新时间戳，设置时间戳偏移量
     HaiKang.UpdateTimestampOffset(time_start);
     // 开始采集帧
     HaiKang.SetStreamOn();
     // 设置曝光事件
-    HaiKang.SetExposureTime(5000);
+    HaiKang.SetExposureTime(6000);
     // 设置1
     // HaiKang.SetGAIN(0, 16);
     // HaiKang.SetGAIN(1, 8);
@@ -73,8 +73,6 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
     // auto time_start = std::chrono::steady_clock::now();
 #endif //USING_USB_CAMERA
-
-
 
 #ifdef USING_VIDEO
     sleep(6);//防止网络加载完成前视频开始播放

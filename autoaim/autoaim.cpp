@@ -45,126 +45,54 @@ Point2i Autoaim::cropImageByROI(Mat &img)
 {
     // cout<<"lost:"<<lost_cnt<<endl;
     //若上次不存在目标
+    auto area_ratio = last_target_area / img.size().area();
     if (!is_last_target_exists)
     {
         // cout<<lost_cnt<<endl;
         //当丢失目标帧数过多或lost_cnt为初值
-        if (lost_cnt > max_lost_cnt || lost_cnt == 0)
+        if (lost_cnt > max_lost_cnt || lost_cnt == 0 || area_ratio == 0)
         {
             return Point2i(0,0);
         }
-        return Point2i(0, 0);
     }
     //若目标大小大于阈值
-    auto area_ratio = last_target_area / img.size().area();
-    // //丢失目标帧数较小则放大ROI区域
-    // if (lost_cnt <= max_lost_cnt)
-    //     area_ratio*=(1 + lost_cnt);
+    //丢失目标帧数较小则放大ROI区域
+    if (lost_cnt <= max_lost_cnt)
+        area_ratio*=(1 + lost_cnt);
 
     if (area_ratio > no_crop_ratio)
     {
         return Point2i(0,0);
     }
-    // int max_expand = (img.size().height - input_size.width) / 32;
-    // double cropped_ratio = (no_crop_ratio / full_crop_ratio) / max_expand;
-    // int expand_value = ((int)(area_ratio / full_crop_ratio / cropped_ratio)) * 32;
-    // int value = ((int)(area_ratio / no_crop_ratio * max_expand)) * 32;
-    // cout << "expand_value:" << expand_value << endl;
-    // cout << "value:" << value << endl;
+    int max_expand = img.size().height - input_size.height;
+    int expand_value = (int)((area_ratio / no_crop_ratio) * max_expand) / 32 * 32;
+
+    // Size2i cropped_size = input_size;
+    Size2i cropped_size = input_size;
+    if (cropped_size.width >= img.size().width)
+        cropped_size.width = img.size().width;
+    if (cropped_size.height >= img.size().height)
+        cropped_size.height = img.size().height;
+    // cout<<cropped_size<<" "<<area_ratio<<endl;
+
+    //处理X越界
+    if (last_roi_center.x <= cropped_size.width / 2)
+        last_roi_center.x = cropped_size.width / 2;
+    else if (last_roi_center.x > (img.size().width - cropped_size.width / 2))
+        last_roi_center.x = img.size().width - cropped_size.width / 2;
+    //处理Y越界
+    if (last_roi_center.y <= cropped_size.height / 2)
+        last_roi_center.y = cropped_size.height / 2;
+    else if (last_roi_center.y > (img.size().height - cropped_size.height / 2))
+        last_roi_center.y = img.size().height - cropped_size.height / 2;
     
-    
-    // // Size2i cropped_size = input_size;
-    // Size2i cropped_size = input_size + Size2i(expand_value,expand_value);
-    // if (cropped_size.width >= img.size().width)
-    //     cropped_size.width = img.size().width;
-    // if (cropped_size.height >= img.size().height)
-    //     cropped_size.height = img.size().height;
-    // // cout<<cropped_size<<" "<<area_ratio<<endl;
+    //左上角顶点
+    auto offset = last_roi_center - Point2i(cropped_size.width / 2, cropped_size.height / 2);
+    // auto offset = last_roi_center - Point2i(roi_width / 2, roi_height / 2);
+    Rect roi_rect = Rect(offset, cropped_size);
+    img(roi_rect).copyTo(img);
 
-    // //处理X越界
-    // if (last_roi_center.x <= cropped_size.width / 2)
-    //     last_roi_center.x = cropped_size.width / 2;
-    // else if (last_roi_center.x > (img.size().width - cropped_size.width / 2))
-    //     last_roi_center.x = img.size().width - cropped_size.width / 2;
-    // //处理Y越界
-    // if (last_roi_center.y <= cropped_size.height / 2)
-    //     last_roi_center.y = cropped_size.height / 2;
-    // else if (last_roi_center.y > (img.size().height - cropped_size.height / 2))
-    //     last_roi_center.y = img.size().height - cropped_size.height / 2;
-    vector<Point2i> points;
-    for(int i = 0; i < 4; i++)
-    {
-        points.push_back(last_armor.apex2d[i]);
-    }
-    last_armor.rect = boundingRect(points);
-
-    if(last_armor.rect.width != 0 && last_armor.rect.height != 0)
-    {
-        float roi_width, roi_height;
-        roi_width = last_armor.rect.width * 3.3;
-        roi_height = last_armor.rect.height * 3.9;
-        cout << last_armor.rect.height << " " << last_armor.rect.width << endl;
-        //根据丢失帧数逐渐扩大ROI大小
-        if(lost_cnt == 2)
-        { 
-            roi_width = last_armor.rect.width * 4.1;
-            roi_height = last_armor.rect.height * 5.3;
-        }
-        else if(lost_cnt == 3)
-        {   
-            roi_width = last_armor.rect.width * 5.7;
-            roi_height = last_armor.rect.height * 6.2;
-        }
-        else if(lost_cnt == 4)
-        { 
-            roi_width = last_armor.rect.width * 8.2;
-            roi_height = last_armor.rect.height * 8.7;
-        }
-        else if(lost_cnt == 5)
-        {   //返回原图像
-            return Point2i(0,0);
-        }
-
-        if(roi_width >= img.size().width) roi_width = img.size().width;
-        if(roi_height > img.size().height) roi_height = img.size().height;
-        cout << roi_height << " "<< roi_width << endl;
-        //处理x轴越界
-        if (last_roi_center.x <= roi_width / 2)
-            last_roi_center.x = roi_width / 2;
-        else if (last_roi_center.x >= (img.size().width - roi_width / 2))
-            last_roi_center.x = img.size().width - roi_width / 2;
-        //处理Y越界
-        if (last_roi_center.y <= roi_height / 2)
-            last_roi_center.y = roi_height / 2;
-        else if (last_roi_center.y >= (img.size().height - roi_height / 2))
-            last_roi_center.y = img.size().height - roi_height / 2;
-
-        //TODO:ROI选取目标装甲周围区域
-        Size2f size = {roi_width - 1, roi_height - 1};
-        
-        //左上角顶点
-        // auto offset = last_roi_center - Point2i(cropped_size.width / 2, cropped_size.height / 2);
-        // // auto offset = last_roi_center - Point2i(roi_width / 2, roi_height / 2);
-        // Rect roi_rect = Rect(offset, cropped_size);
-        // img(roi_rect).copyTo(img);
-
-        //左上角顶点
-        // auto offset = last_roi_center - Point2i(input_size.width / 2, input_size.height / 2);
-        auto offset = last_roi_center - Point2i((roi_width - 1) / 2, (roi_height - 1) / 2);
-        cout << "offset:" << offset << endl;
-        cout << "size:" << roi_width << " "<< roi_height << endl;
-        Rect roi_rect = Rect(offset, size);
-        img(roi_rect).copyTo(img);
-
-        namedWindow("crop_img", WINDOW_AUTOSIZE);
-        imshow("crop_img", img);
-
-        return offset;
-    }
-    else
-    {
-        return Point2i(0, 0);
-    }
+    return offset;
 }
 #endif //USING_ROI
 
@@ -388,7 +316,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     vector<ArmorObject> objects;
     vector<Armor> armors;
 
-    auto input = src.img.clone();
+    auto input = src.img;
     // cout<<input.size<<endl;
     //若为前哨站吊射模式,直接截取图像中间部分进行处理
 
@@ -402,11 +330,10 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 
 #ifndef DEBUG_WITHOUT_COM
     //设置弹速,若弹速大于10m/s值,且弹速变化大于0.5m/s则更新
-    LOG(INFO)<<"SPD:"<<src.bullet_speed<<" : "<<last_bullet_speed;
     if (src.bullet_speed > 10)
     {
         double bullet_speed;
-        if (abs(src.bullet_speed - last_bullet_speed) > 0.5)
+        if (abs(src.bullet_speed - last_bullet_speed) < 0.5)
             bullet_speed = src.bullet_speed;
         else
             bullet_speed = (last_bullet_speed + src.bullet_speed) / 2;
@@ -415,6 +342,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         coordsolver.setBulletSpeed(bullet_speed);
         last_bullet_speed = bullet_speed;
     }
+    LOG(INFO)<<"SPD:"<<src.bullet_speed<<" : "<<last_bullet_speed;
 #endif //DEBUG_WITHOUT_COM
 
 #ifdef USING_ROI
@@ -516,35 +444,35 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                         bbox.height * armor_roi_expand_ratio_height
                         );
         //若装甲板置信度小于高阈值，需要相同位置存在过装甲板才放行
-        // if (armor.conf < armor_conf_high_thres)
-        // {
-        //     if (last_armors.empty())
-        //     {
-        //         continue;
-        //     }
-        //     else
-        //     {
-        //         bool is_this_armor_available = false;
-        //         for (auto last_armor : last_armors)
-        //         {
-        //             if (last_armor.roi.contains(armor.center2d))
-        //             {
-        //                 is_this_armor_available = true;
-        //                 break;
-        //             }
-        //         }
-        //         if (!is_this_armor_available)
-        //         {
-        //             cout<<"IGN"<<endl;
-        //             continue;
-        //         }
-        //     }
-        // }
+        if (armor.conf < armor_conf_high_thres)
+        {
+            if (last_armors.empty())
+            {
+                continue;
+            }
+            else
+            {
+                bool is_this_armor_available = false;
+                for (auto last_armor : last_armors)
+                {
+                    if (last_armor.roi.contains(armor.center2d))
+                    {
+                        is_this_armor_available = true;
+                        break;
+                    }
+                }
+                if (!is_this_armor_available)
+                {
+                    cout<<"IGN"<<endl;
+                    continue;
+                }
+            }
+        }
         // cout<<"..."<<endl;
         //进行PnP，目标较少时采取迭代法，较多时采用IPPE
         int pnp_method;
         if (objects.size() <= 2)
-            pnp_method = SOLVEPNP_ITERATIVE;
+            pnp_method = SOLVEPNP_IPPE;
         else
             pnp_method = SOLVEPNP_IPPE;
         TargetType target_type = SMALL;

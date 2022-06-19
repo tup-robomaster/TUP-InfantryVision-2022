@@ -12,8 +12,8 @@ static constexpr int NUM_CLASSES = 8;  // Number of classes
 static constexpr int NUM_COLORS = 4;   // Number of color
 static constexpr int TOPK = 128;       // TopK
 static constexpr float NMS_THRESH = 0.3;
-static constexpr float BBOX_CONF_THRESH = 0.6;
-static constexpr float MERGE_CONF_ERROR = 0.1;
+static constexpr float BBOX_CONF_THRESH = 0.75;
+static constexpr float MERGE_CONF_ERROR = 0.15;
 static constexpr float MERGE_MIN_IOU = 0.9;
 
 static inline int argmax(const float *ptr, int len) 
@@ -150,7 +150,7 @@ static void generateYoloxProposals(std::vector<GridAndStride> grid_strides, cons
             obj.cls = box_class;
             obj.color = box_color;
             obj.prob = box_prob;
-            obj.probs.push_back(obj.prob);
+
             objects.push_back(obj);
         }
 
@@ -249,7 +249,6 @@ static void nms_sorted_bboxes(std::vector<ArmorObject>& faceobjects, std::vector
                 if (iou > MERGE_MIN_IOU && abs(a.prob - b.prob) < MERGE_CONF_ERROR 
                                         && a.cls == b.cls && a.color == b.color)
                 {
-                    b.probs.push_back(a.prob);
                     for (int i = 0; i < 4; i++)
                     {
                         b.pts.push_back(a.apex[i]);
@@ -403,46 +402,33 @@ bool ArmorDetector::detect(Mat &src,std::vector<ArmorObject>& objects)
     int img_h = src.rows;
 
     decodeOutputs(net_pred, objects, transfrom_matrix, img_w, img_h);
-    if (objects.size() == 0)
+    for (auto object = objects.begin(); object != objects.end(); ++object)
     {
-        return false;
-    }
-    else
-    {
-        for (auto object = objects.begin(); object != objects.end(); ++object)
+        //对候选框预测角点进行平均,降低误差
+        if ((*object).pts.size() >= 8)
         {
+            auto N = (*object).pts.size();
+            cv::Point2f pts_final[4];
 
-            //对候选框预测角点与置信度进行平均,降低误差
-            if ((*object).pts.size() >= 8)
+            for (int i = 0; i < N; i++)
             {
-                auto N = (*object).pts.size();
-                // cout<<N<<endl;
-                // cout<<(*object).probs.size()<<endl;
-                cv::Point2f pts_final[4];
-                float probs_sum = 0;
-
-                for (int i = 0; i < N; i++)
-                {
-                    pts_final[i % 4]+=(*object).pts[i];
-                    if (i % 4 == 0)
-                        probs_sum+=(*object).probs[i / 4];
-                }
-
-                for (int i = 0; i < 4; i++)
-                {
-                    pts_final[i].x = pts_final[i].x / (N / 4);
-                    pts_final[i].y = pts_final[i].y / (N / 4);
-                }
-
-                (*object).apex[0] = pts_final[0];
-                (*object).apex[1] = pts_final[1];
-                (*object).apex[2] = pts_final[2];
-                (*object).apex[3] = pts_final[3];
-                (*object).prob = probs_sum / (*object).probs.size();
+                pts_final[i % 4]+=(*object).pts[i];
             }
-            (*object).area = (int)(calcTetragonArea((*object).apex));
-        }
-        return true;
-    }
 
+            for (int i = 0; i < 4; i++)
+            {
+                pts_final[i].x = pts_final[i].x / (N / 4);
+                pts_final[i].y = pts_final[i].y / (N / 4);
+            }
+
+            (*object).apex[0] = pts_final[0];
+            (*object).apex[1] = pts_final[1];
+            (*object).apex[2] = pts_final[2];
+            (*object).apex[3] = pts_final[3];
+        }
+        (*object).area = (int)(calcTetragonArea((*object).apex));
+    }
+    if (objects.size() != 0)
+        return true;
+    else return false;
 }
