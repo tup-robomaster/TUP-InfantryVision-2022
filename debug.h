@@ -6,12 +6,15 @@
 
 #define IGNORE_ENGINEER             //是否忽略工程
 
+//FIXME: 
 // #define SAVE_VIDEO               // Save video
+// #define RECORD_DATA                 // Record data.
 
 #define SAVE_LOG_ALL                // Save log
 
+
 // #TODO: 开启此选项请关闭无串口调试模式
-#define USING_IMU                //是否使用陀螺仪数据
+// #define USING_IMU                //是否使用陀螺仪数据
 //===========================================================================//
 
 
@@ -25,8 +28,9 @@
 #define USING_HIK                   //是否使用海康摄像头
 // #define USING_VIDEO              // Using video
 // #define USING_USB_CAMERA
+#define USE_SAVED_DATA
 
-// #define DEBUG_WITHOUT_COM           //无串口调试
+#define DEBUG_WITHOUT_COM           //无串口调试
 //===========================================================================//v 3     
 
 
@@ -64,7 +68,7 @@
 
 // #define ASSIST_LABEL //辅助数据集标注
 
-// #define DRAW_PREDICT //是否显示预测图像(使用时需使视野内仅存在一块装甲板)
+#define DRAW_PREDICT //是否显示预测图像(使用时需使视野内仅存在一块装甲板)
 // ===========================================================================//
 
 

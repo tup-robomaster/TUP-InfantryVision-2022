@@ -49,8 +49,8 @@ private:
     const int max_lost_cnt = 5;                 //最大丢失目标帧数
     const int max_armors = 8;                   //视野中最多装甲板数
     const double max_delta_dist = 0.3;          //两次预测间最大速度(m/s)
-    const double armor_conf_high_thres = 0.82;  //置信度大于该值的装甲板直接采用
-    const int max_delta_t = 75;              //使用同一预测器的最大时间间隔(ms)
+    const double armor_conf_high_thres = 0.8;  //置信度大于该值的装甲板直接采用
+    const int max_delta_t = 50;              //使用同一预测器的最大时间间隔(ms)
     // const int max_delta_t = 100;                //使用同一预测器的最大时间间隔(ms)
 
     int anti_spin_judge_high_thres = 2e4;//大于该阈值认为该车已开启陀螺
@@ -59,11 +59,13 @@ private:
 
     const double no_crop_ratio = 4e-3;      //禁用ROI裁剪的装甲板占图像面积最大面积比值
     const double full_crop_ratio = 4e-4;     //最大ROI比例，大于此比例ROI大小为网络输入比例                   
+    //FIXME:
+    const int hero_danger_zone = 99;       //英雄危险距离阈值，检测到有小于该距离的英雄直接开始攻击
 
-    const int hero_danger_zone = 4;       //英雄危险距离阈值，检测到有小于该距离的英雄直接开始攻击
+    Point2f zoom_offset = {500, 400};
 
     Armor last_armor;
-    CoordSolver coordsolver;
+    CoordSolver coordsolver;                
     ArmorDetector detector;
     ArmorPredictor predictor_param_loader;
     ArmorPredictor predictor;   

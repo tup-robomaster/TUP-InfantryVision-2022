@@ -3,6 +3,11 @@
 using namespace cv;
 using namespace std;
 
+#ifdef ASSIST_LABEL
+const string path_prefix = "../dataset/";
+#endif //ASSIST_LABEL
+
+
 Buff::Buff()
 {
     detector.initModel(network_path);
@@ -83,7 +88,6 @@ bool Buff::chooseTarget(vector<Fan> &fans, Fan &target)
             target_fan_cnt++;
         }
     }
-
     if (target_fan_cnt == 1)
         return true;
     else
@@ -105,34 +109,36 @@ bool Buff::run(TaskData &src,VisionData &data)
     vector<Fan> fans;
     auto input = src.img;
 
+#ifndef DEBUG_WITHOUT_COM
+    if (src.bullet_speed > 10)
+    {
+        double bullet_speed;
+        if (abs(src.bullet_speed - last_bullet_speed) < 0.5 || abs(src.bullet_speed - last_bullet_speed) > 1.5)
+        {
+            bullet_speed = src.bullet_speed;
+            predictor.setBulletSpeed(bullet_speed);
+            coordsolver.setBulletSpeed(bullet_speed);
+            last_bullet_speed = bullet_speed;
+        }
+        
+    }
+    LOG(INFO)<<"SPD:"<<src.bullet_speed<<" : "<<last_bullet_speed;
+#endif
+
 #ifdef USING_IMU
     Eigen::Matrix3d rmat_imu = src.quat.toRotationMatrix();
-    auto vec = rotationMatrixToEulerAngles(rmat_imu);
-    // cout<<"Euler : "<<vec[0] * 180.f / CV_PI<<" "<<vec[1] * 180.f / CV_PI<<" "<<vec[2] * 180.f / CV_PI<<endl;
 #else
     Eigen::Matrix3d rmat_imu = Eigen::Matrix3d::Identity();
 #endif //USING_IMU
 
-#ifndef DEBUG_WITHOUT_COM
-    //设置弹速,若弹速大于10m/s值,且弹速变化大于0.5m/s则更新
-    if (src.bullet_speed > 10)
-    {
-        double bullet_speed;
-        if (abs(src.bullet_speed - last_bullet_speed) > 0.5)
-            bullet_speed = src.bullet_speed;
-        else
-            bullet_speed = (last_bullet_speed + src.bullet_speed) / 2;
-        
-        predictor.setBulletSpeed(bullet_speed);
-        coordsolver.setBulletSpeed(bullet_speed);
-        last_bullet_speed = bullet_speed;
-    }
-#endif //DEBUG_WITHOUT_COM
-
+//TODO:修复ROI
 #ifdef USING_ROI
     roi_offset = cropImageByROI(input);
 #endif  //USING_ROI
-
+#ifdef ASSIST_LABEL
+    auto img_name = path_prefix + to_string(src.timestamp) + ".jpg";
+    imwrite(img_name,input);
+#endif //ASSIST_LABEL
     auto time_crop=std::chrono::steady_clock::now();
     //若未检测到目标
     if (!detector.detect(input, objects))
@@ -209,6 +215,7 @@ bool Buff::run(TaskData &src,VisionData &data)
             iter = next;
         }
     }
+    //TODO:增加防抖
     std::vector<FanTracker> trackers_tmp;
     //为扇叶分配或新建最佳FanTracker
     for (auto fan = fans.begin(); fan != fans.end(); ++fan)
@@ -248,22 +255,36 @@ bool Buff::run(TaskData &src,VisionData &data)
                     delta_t = src.timestamp - (*iter).last_timestamp;
                     //目前扇叶到上一次扇叶的旋转矩阵
                     auto relative_rmat = (*iter).last_fan.rmat.transpose() * (*fan).rmat;
+                    //TODO:使用点乘判断旋转方向
                     angle_axisd = Eigen::AngleAxisd(relative_rmat);
                     // auto rotate_axis_world = (*fan).rmat  * angle_axisd.axis();
                     auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
                     sign = ((*fan).centerR3d_world.dot(rotate_axis_world) > 0 ) ? 1 : -1;
                 }
+                // cout<<sign<<endl;
+                // cout<<delta_angle_axisd.angle()<< " : "<<delta_angle_axised<<endl;
+                // cout<<delta_t<<endl;
+                // cout<<"..."<<endl;
+                // cout<<(*fan).centerR3d_world<<endl;
+                // cout<<rotate_axis_world.normalized()<<(*fan).centerR3d_world.normalized()<<endl;
+                // cout<<endl;
                 rotate_speed = sign * (angle_axisd.angle()) / delta_t * 1e3;//计算角速度(rad/s)
-
-                if (abs(rotate_speed) <= max_v && abs(rotate_speed) <= min_v 
-                    && (src.timestamp - (*iter).last_timestamp) <= min_last_delta_t 
-                    && (src.timestamp != (*iter).last_timestamp))
+                // cout<<angle_axisd.axis()<<endl;
+                // cout<<en1dl;
+                // cout<<rotate_speed<<endl;
+                if (abs(rotate_speed) <= max_v && abs(rotate_speed) <= min_v && (src.timestamp - (*iter).last_timestamp) <= min_last_delta_t)
                 {
                     min_last_delta_t = src.timestamp - (*iter).last_timestamp;
                     min_v = rotate_speed;
                     best_candidate = iter;
                     is_best_candidate_exist = true;
                 }
+                // if (fabs(rotate_speed) <= max_v)
+                // {
+                //     (*iter).update((*fan), src.timestamp);
+                //     (*iter).rotate_speed = rotate_speed;
+                //     break;
+                // }
             }
             if (is_best_candidate_exist)
             {
@@ -288,9 +309,29 @@ bool Buff::run(TaskData &src,VisionData &data)
     //若不存在待击打扇叶则返回false
     if (!is_target_exists)
     {
+#ifdef SHOW_ALL_FANS
+    for (auto fan : fans)
+    {
+        putText(src.img, fmt::format("{:.2f}", fan.conf),fan.apex2d[4],FONT_HERSHEY_SIMPLEX, 1, {0, 255, 0}, 2);
+        if (fan.color == 0)
+            putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+        if (fan.color == 1)
+            putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+        for(int i = 0; i < 5; i++)
+            line(src.img, fan.apex2d[i % 5], fan.apex2d[(i + 1) % 5], Scalar(0,255,0), 1);
+        auto fan_armor_center = coordsolver.reproject(fan.armor3d_cam);
+        circle(src.img, fan_armor_center, 4, {0, 0, 255}, 2);
+    }
+#endif //SHOW_ALL_FANS
+
+#ifdef SHOW_AIM_CROSS
+        line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), Scalar(0,255,0), 1);
+        line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), Scalar(0,255,0), 1);
+#endif //SHOW_FPS
+
 #ifdef SHOW_IMG
-        imshow("dst",src.img);
-        waitKey(1);
+    imshow("dst",src.img);
+    waitKey(1);
 #endif //SHOW_IMG
         lost_cnt++;
         is_last_target_exists = false;
@@ -340,14 +381,34 @@ bool Buff::run(TaskData &src,VisionData &data)
         predictor.mode = 1;
     // cout<<src.mode<<":"<<predictor.mode<<endl;
     // cout<<mean_rotate_speed<<endl;
-    if (!predictor.predict(mean_rotate_speed, int(mean_r_center.norm()), src.timestamp, theta_offset))
+    if (!predictor.predict(mean_rotate_speed, mean_r_center.norm(), src.timestamp, theta_offset))
     {
+#ifdef SHOW_ALL_FANS
+        for (auto fan : fans)
+        {
+            putText(src.img, fmt::format("{:.2f}", fan.conf),fan.apex2d[4],FONT_HERSHEY_SIMPLEX, 1, {0, 255, 0}, 2);
+            if (fan.color == 0)
+                putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+            if (fan.color == 1)
+                putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+            for(int i = 0; i < 5; i++)
+                line(src.img, fan.apex2d[i % 5], fan.apex2d[(i + 1) % 5], Scalar(0,255,0), 1);
+            auto fan_armor_center = coordsolver.reproject(fan.armor3d_cam);
+            circle(src.img, fan_armor_center, 4, {0, 0, 255}, 2);
+        }
+#endif //SHOW_ALL_FANS
+
+#ifdef SHOW_AIM_CROSS
+            line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), Scalar(0,255,0), 1);
+            line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), Scalar(0,255,0), 1);
+#endif //SHOW_FPS
+
 #ifdef SHOW_IMG
         imshow("dst",src.img);
         waitKey(1);
+#endif //SHOW_IMG
         LOG(WARNING) <<"[BUFF] Predictor is still progressing!";
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
-#endif //SHOW_IMG
         return false;
     }
 

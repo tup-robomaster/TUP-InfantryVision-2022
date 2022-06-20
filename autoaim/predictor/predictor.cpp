@@ -61,14 +61,13 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     {
         history_info.push_back(target);
     }
-    //FIXME:若位置粒子滤波器已完成初始化且预测值大小恰当,则对目标位置做滤波
+    //若位置粒子滤波器已完成初始化且预测值大小恰当,则对目标位置做滤波
     else
     {
         target.xyz[0] = predict_pos[0];
         target.xyz[1] = predict_pos[1];
         history_info.push_back(target);
     }
-    FIXME:
     //-----------------进行滑窗滤波,备选方案,暂未使用-------------------------------------
     auto d_xyz = target.xyz - last_target.xyz;
     auto delta_t = timestamp - last_target.timestamp;
@@ -126,57 +125,41 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     PredictStatus is_pf_available;
     PredictStatus is_fitting_available;
     //需注意粒子滤波使用相对时间（自上一次检测时所经过ms数），拟合使用自首帧所经过时间
-    // if (fitting_disabled)
-    // {
-    //     auto is_pf_available = predict_pf_run(target, result_pf, delta_time_estimate);
-    // }
-    // else
-    // {
-    //     auto get_pf_available = std::async(std::launch::async, [=, &result_pf](){return predict_pf_run(target, result_pf, delta_time_estimate);});
-    //     auto get_fitting_available = std::async(std::launch::async, [=, &result_fitting](){return predict_fitting_run(result_fitting, time_estimate);});
-
-    //     is_pf_available = get_pf_available.get();
-    //     is_fitting_available = get_fitting_available.get();
-    // }
-    //FIXME:已暂时禁用粒子滤波
     if (fitting_disabled)
     {
-        return xyz;
-        // auto is_pf_available = predict_pf_run(target, result_pf, delta_time_estimate);
+        auto is_pf_available = predict_pf_run(target, result_pf, delta_time_estimate);
     }
     else
     {
+        auto get_pf_available = std::async(std::launch::async, [=, &result_pf](){return predict_pf_run(target, result_pf, delta_time_estimate);});
         auto get_fitting_available = std::async(std::launch::async, [=, &result_fitting](){return predict_fitting_run(result_fitting, time_estimate);});
 
+        is_pf_available = get_pf_available.get();
         is_fitting_available = get_fitting_available.get();
     }
-    //进行融合
-    // if (is_fitting_available.xyz_status[0] && !fitting_disabled)
-    //     result[0] = result_fitting[0];
-    // else if (is_pf_available.xyz_status[0])
-    //     result[0] = result_pf[0];
+    // if (fitting_disabled)
+    // {
+    //     return xyz;
+    //     // auto is_pf_available = predict_pf_run(target, result_pf, delta_time_estimate);
+    // }
     // else
-    //     result[0] = xyz[0];
+    // {
+    //     auto get_fitting_available = std::async(std::launch::async, [=, &result_fitting](){return predict_fitting_run(result_fitting, time_estimate);});
 
-    // if (is_fitting_available.xyz_status[1] && !fitting_disabled)
-    //     result[1] = result_fitting[1];
-    // else if (is_pf_available.xyz_status[1])
-    //     result[1] = result_pf[1];
-    // else
-    //     result[1] = xyz[1];
-
-    // if (is_fitting_available.xyz_status[2] && !fitting_disabled)
-    //     result[2] = result_fitting[2];
-    // else
-    //     result[2] = xyz[2];
-    //FIXME:已暂时禁用粒子滤波
+    //     is_fitting_available = get_fitting_available.get();
+    // }
+    // 进行融合
     if (is_fitting_available.xyz_status[0] && !fitting_disabled)
         result[0] = result_fitting[0];
+    else if (is_pf_available.xyz_status[0])
+        result[0] = result_pf[0];
     else
         result[0] = xyz[0];
 
     if (is_fitting_available.xyz_status[1] && !fitting_disabled)
         result[1] = result_fitting[1];
+    else if (is_pf_available.xyz_status[1])
+        result[1] = result_pf[1];
     else
         result[1] = xyz[1];
 
@@ -184,6 +167,7 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
         result[2] = result_fitting[2];
     else
         result[2] = xyz[2];
+
     auto t2=std::chrono::steady_clock::now();
     double dr_ms=std::chrono::duration<double,std::milli>(t2-t1).count();
     // if(timestamp % 10 == 0)
@@ -261,42 +245,39 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
 {
     PredictStatus is_available;
 
-    // Eigen::Vector3d v_xyz_sum = {0,0,0};
-    // Eigen::Vector3d pos_sum = {0,0,0};
-    // for (int i = 0; i < 2; i++)
-    // {
-    //     auto target_prev = history_info.at(history_info.size() - 1 - 2 - i);
-    //     auto target_next = history_info.at(history_info.size() - 1 - i);
-    //     Eigen::Vector2d polar_target = {target.xyz.norm(), atan2(target.xyz[1], target.xyz[0])};    
-    //     Eigen::Vector2d polar_prev = {target_prev.xyz.norm(), atan2(target_prev.xyz[1], target_prev.xyz[0])};
-    //     v_xyz_sum += (target_next.xyz - target_prev.xyz) / (target_next.timestamp - target_prev.timestamp) * 1e3;
-    //     pos_sum += (target_next.xyz + target_prev.xyz);
-    // }
-    auto target_prev = history_info.at(history_info.size() - 2);
-    auto target_next = history_info.at(history_info.size() - 1);
-    
+    Eigen::Vector2d v_polar_sum = {0,0};
     Eigen::Vector2d polar_target = {target.xyz.norm(), atan2(target.xyz[1], target.xyz[0])};
-    Eigen::Vector2d polar_prev = {target_prev.xyz.norm(), atan2(target_prev.xyz[1], target_prev.xyz[0])};
-    //From [-PI,PI] to [0,2PI]
-    if (polar_target[1] < 0)
-        polar_target[1]+=CV_2PI;
-    if (polar_prev[1] < 0)
-        polar_prev[1]+=CV_2PI;
+    // Eigen::Vector3d pos_sum = {0,0,0};
+    for (int i = 0; i < 3; i++)
+    {
+        auto target_prev = history_info.at(history_info.size() - 2 - i);
+        auto target_next = history_info.at(history_info.size() - 1 - i);
+        
+        Eigen::Vector2d polar_next = {target_next.xyz.norm(), atan2(target_next.xyz[1], target_next.xyz[0])};
+        Eigen::Vector2d polar_prev = {target_prev.xyz.norm(), atan2(target_prev.xyz[1], target_prev.xyz[0])};
+        //From [-PI,PI] to [0,2PI]
+        if (polar_next[1] < 0)
+            polar_next[1]+=CV_2PI;
+        if (polar_prev[1] < 0)
+            polar_prev[1]+=CV_2PI;
     
-    Eigen::Vector2d v_polar = {0, 0};
-    v_polar[0] = (polar_target[0] - polar_prev[0]) / (target.timestamp - target_prev.timestamp) * 1e3;
-    if (polar_target[1] > 1.5 * CV_PI && polar_prev[1] < 0.5 * CV_PI)
-    {
-        v_polar[1] = (polar_target[1] - polar_prev[1] + CV_2PI) / (target.timestamp - target_prev.timestamp) * 1e3;
+        Eigen::Vector2d v_polar = {0, 0};
+        v_polar[0] = (polar_next[0] - polar_prev[0]) / (target.timestamp - target_prev.timestamp) * 1e3;
+        if (polar_next[1] > 1.5 * CV_PI && polar_prev[1] < 0.5 * CV_PI)
+        {
+            v_polar[1] = (polar_next[1] - polar_prev[1] + CV_2PI) / (target.timestamp - target_prev.timestamp) * 1e3;
+        }
+        else if (polar_next[1] <  0.5 * CV_PI && polar_prev[1] >  1.5 * CV_PI)
+        {
+            v_polar[1] = (polar_next[1] - polar_prev[1] - CV_2PI) / (target.timestamp - target_prev.timestamp) * 1e3;
+        }
+        else
+        {
+            v_polar[1] = (polar_next[1] - polar_prev[1]) / (target.timestamp - target_prev.timestamp) * 1e3;
+        }
+        v_polar_sum+=v_polar;
     }
-    else if (polar_target[1] <  0.5 * CV_PI && polar_prev[1] >  1.5 * CV_PI)
-    {
-        v_polar[1] = (polar_target[1] - polar_prev[1] - CV_2PI) / (target.timestamp - target_prev.timestamp) * 1e3;
-    }
-    else
-    {
-        v_polar[1] = (polar_target[1] - polar_prev[1]) / (target.timestamp - target_prev.timestamp) * 1e3;
-    }
+    auto v_polar = v_polar_sum / 3;
     
     is_available.xyz_status[0] = pf_v.is_ready;
     is_available.xyz_status[1] = pf_v.is_ready;
@@ -305,30 +286,20 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
     Eigen::VectorXd measure (2);
     measure << v_polar[0], v_polar[1];
     pf_v.update(measure);
-    // Mat measure_cv_format = Mat(2,1,CV_32F);
-    // measure_cv_format.at<float>(0,0) = v_polar[0];
-    // measure_cv_format.at<float>(0,1) = v_polar[1];
-    // kf.correct(measure_cv_format);
-    // Mat pred = kf.predict();
-    // cout<<pred<<endl;
-    
+
     //Predict
     auto result_v = pf_v.predict();
     // cout<<v_polar<<endl;
     // cout<<"////////////////////"<<endl;
     // cout<<result_v<<endl;
     // cout<<"----------------------"<<endl;
-    //TODO:恢复速度预测
+    // //TODO:恢复速度预测
     auto predict_rho = polar_target[0];
-    auto predict_theta = polar_target[1];
-    // auto predict_rho = polar_target[0] + result_v[0] * time_estimated / 1e3;
-    // auto predict_theta = polar_target[1] + result_v[1] * time_estimated / 1e3;
-    // auto predict_rho = polar_target[0] + pred.at<float>(0,0) * time_estimated / 1e3;
-    // auto predict_theta = polar_target[1] + pred.at<float>(0,1) * time_estimated / 1e3;
-    auto predict_x = target.xyz[0];
-    auto predict_y = target.xyz[1];
-    // auto predict_x = predict_rho * cos(predict_theta);
-    // auto predict_y = predict_rho * sin(predict_theta);
+    auto predict_theta = polar_target[1] + result_v[1] * time_estimated / 1e3;
+    // auto predict_x = target.xyz[0];
+    // auto predict_y = target.xyz[1];
+    auto predict_x = predict_rho * cos(predict_theta);
+    auto predict_y = predict_rho * sin(predict_theta);
 
     result << predict_x, predict_y, target.xyz[2];
     // cout<<result<<endl;

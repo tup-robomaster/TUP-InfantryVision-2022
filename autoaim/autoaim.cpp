@@ -4,8 +4,7 @@ using namespace cv;
 using namespace std;
 
 #ifdef ASSIST_LABEL
-int cnt = 0;
-const string path_prefix = "/home/tup/TUP-InfantryVision-2022-main/dataset/";
+const string path_prefix = "../dataset/";
 ofstream file;
 #endif //ASSIST_LABEL
 
@@ -45,6 +44,8 @@ Point2i Autoaim::cropImageByROI(Mat &img)
 {
     // cout<<"lost:"<<lost_cnt<<endl;
     //若上次不存在目标
+
+    //FIXME:自适应大小ROI截取可能存在Bug
     auto area_ratio = last_target_area / img.size().area();
     if (!is_last_target_exists)
     {
@@ -57,8 +58,8 @@ Point2i Autoaim::cropImageByROI(Mat &img)
     }
     //若目标大小大于阈值
     //丢失目标帧数较小则放大ROI区域
-    if (lost_cnt <= max_lost_cnt)
-        area_ratio*=(1 + lost_cnt);
+    // if (lost_cnt <= max_lost_cnt)
+    //     area_ratio*=(1 + lost_cnt);
 
     if (area_ratio > no_crop_ratio)
     {
@@ -68,7 +69,7 @@ Point2i Autoaim::cropImageByROI(Mat &img)
     int expand_value = (int)((area_ratio / no_crop_ratio) * max_expand) / 32 * 32;
 
     // Size2i cropped_size = input_size;
-    Size2i cropped_size = input_size;
+    Size2i cropped_size = input_size + Size2i(expand_value,expand_value);
     if (cropped_size.width >= img.size().width)
         cropped_size.width = img.size().width;
     if (cropped_size.height >= img.size().height)
@@ -333,14 +334,14 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     if (src.bullet_speed > 10)
     {
         double bullet_speed;
-        if (abs(src.bullet_speed - last_bullet_speed) < 0.5)
+        if (abs(src.bullet_speed - last_bullet_speed) < 0.5 || abs(src.bullet_speed - last_bullet_speed) > 1.5)
+        {
             bullet_speed = src.bullet_speed;
-        else
-            bullet_speed = (last_bullet_speed + src.bullet_speed) / 2;
+            predictor.setBulletSpeed(bullet_speed);
+            coordsolver.setBulletSpeed(bullet_speed);
+            last_bullet_speed = bullet_speed;
+        }
         
-        predictor.setBulletSpeed(bullet_speed);
-        coordsolver.setBulletSpeed(bullet_speed);
-        last_bullet_speed = bullet_speed;
     }
     LOG(INFO)<<"SPD:"<<src.bullet_speed<<" : "<<last_bullet_speed;
 #endif //DEBUG_WITHOUT_COM
@@ -349,8 +350,19 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     //吊射模式采用固定ROI
     if (src.mode == 2)
     {
-        input(Range(600,1024),Range(432,848)).copyTo(input);
-        roi_offset = Point2f((float)432, (float)600);
+        // cout<<zoom_offset.x<<endl;
+        //若不存在目标则进行中间区域ROI
+        if (lost_cnt >= max_lost_cnt && !is_last_target_exists)
+        {
+            roi_offset = zoom_offset;
+            // cout<<
+            input(Range(zoom_offset.y, zoom_offset.y + input_size.height),
+                    Range(zoom_offset.x, zoom_offset.x + input_size.width)).copyTo(input);
+        }
+        else
+        {
+            roi_offset = cropImageByROI(input);
+        }
     }
     else
     {
@@ -380,7 +392,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         return false;
     }
 #ifdef ASSIST_LABEL
-    auto img_name = path_prefix + to_string(cnt) + ".jpg";
+    auto img_name = path_prefix + to_string(src.timestamp) + ".jpg";
     imwrite(img_name,input);
 #endif //ASSIST_LABEL
     auto time_infer = std::chrono::steady_clock::now();
@@ -463,7 +475,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                 }
                 if (!is_this_armor_available)
                 {
-                    cout<<"IGN"<<endl;
+                    // cout<<"IGN"<<endl;
                     continue;
                 }
             }
@@ -507,8 +519,6 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             isnan(pnp_result.armor_cam[2]))
                 continue;
         }
-        // cout<<target_type<<endl;
-        // cout<<target_type<<endl;
 
         armor.center3d_world = pnp_result.armor_world;
         armor.center3d_cam = pnp_result.armor_cam;
@@ -591,13 +601,17 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                 auto delta_t = src.timestamp - (*iter).second.last_timestamp;
                 auto delta_dist = ((*armor).center3d_world - (*iter).second.last_armor.center3d_world).norm();
                 auto velocity = (delta_dist / delta_t) * 1e3;
-                if (delta_dist <= max_delta_dist && delta_dist <= min_delta_dist &&
-                     delta_t <= min_delta_t && delta_t > 0 && (*iter).second.last_armor.roi.contains((*armor).center2d))
+                
+                if ((*iter).second.last_armor.roi.contains((*armor).center2d) && delta_t > 0)
                 {
-                    min_delta_t = delta_t;
-                    min_delta_dist = delta_dist;
-                    best_candidate = iter;
-                    is_best_candidate_exist = true;
+                    if (delta_dist <= max_delta_dist && delta_dist <= min_delta_dist &&
+                     delta_t <= min_delta_t)
+                    {
+                        min_delta_t = delta_t;
+                        min_delta_dist = delta_dist;
+                        best_candidate = iter;
+                        is_best_candidate_exist = true;
+                    }
                 }
             }
             if (is_best_candidate_exist)
@@ -631,6 +645,8 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         }
     }
     // cout<<"::"<<predictors_map.size()<<endl;
+    // for (auto member : new_armors_cnt_map)
+    //     cout<<member.first<<" : "<<member.second<<endl;
 #ifdef USING_SPIN_DETECT
     ///------------------------检测装甲板变化情况,计算各车陀螺分数----------------------------
     for (auto cnt : new_armors_cnt_map)
@@ -882,7 +898,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
 #endif //USING_PREDICT
     }
 #ifdef ASSIST_LABEL
-    auto label_name = path_prefix + to_string(cnt) + ".txt";
+    auto label_name = path_prefix + to_string(src.timestamp) + ".txt";
     string content;
 
     int cls = 0;
@@ -900,11 +916,10 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         content.append(" ");
     }
     content.pop_back();
-    cout<<to_string(cnt) + " "<<content<<endl;
+    cout<<to_string(src.timestamp) + " "<<content<<endl;
     file.open(label_name,std::ofstream::app);
     file<<content;
     file.close();
-    cnt++;
     usleep(5000);
 #endif //ASSIST_LABEL
 

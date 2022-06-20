@@ -6,7 +6,10 @@ BuffPredictor::BuffPredictor()
     params[0] = 0;
     params[1] = 0; 
     params[2] = 0; 
-    params[3] = 0; 
+    params[3] = 0;
+
+    YAML::Node config = YAML::LoadFile(pf_path);
+    pf_param_loader.initParam(config, "buff");
 }
 
 BuffPredictor::~BuffPredictor()
@@ -21,10 +24,17 @@ BuffPredictor::~BuffPredictor()
  * @param result 结果输出
  * @return 是否预测成功
 */
-bool BuffPredictor::predict(double speed, int dist, int timestamp, double &result)
+bool BuffPredictor::predict(double speed, double dist, int timestamp, double &result)
 {
     auto t1=std::chrono::steady_clock::now();
     TargetInfo target = {speed, dist, timestamp};
+    if (mode != last_mode)
+    {
+        last_mode = mode;
+        history_info.clear();
+        pf.initParam(pf_param_loader);
+        is_params_confirmed = false;
+    }
     //当时间跨度过长视作目标已更新，需清空历史信息队列
     if (history_info.size() == 0 || target.timestamp - history_info.front().timestamp >= max_timespan)
     {
@@ -33,54 +43,81 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
         params[0] = 0;
         params[1] = 0; 
         params[2] = 0; 
-        params[3] = 0; 
+        params[3] = 0;
+        pf.initParam(pf_param_loader);
         last_target = target;
         is_params_confirmed = false;
         return false;
     }
     //输入数据前进行滤波
-    auto delta_speed = target.speed - last_target.speed;
-    auto delta_t = timestamp - last_target.timestamp;
-    auto accel = 1e3 * delta_speed / delta_t;//计算加速度,单位rad/s^2
-    if (abs(speed) > max_v || accel > max_a)
+    auto is_ready = pf.is_ready;
+    Eigen::VectorXd measure(1);
+    measure<<speed;
+    pf.update(measure);
+
+    if (is_ready)
     {
-        history_info.push_back(target);
-        auto filtered_speed = shiftWindowFilter(history_info.size() - window_size - 1);
-        history_info.pop_back();
-        target = {filtered_speed, dist, timestamp};
+        auto predict = pf.predict();
+        // cout<<predict<<" : "<<speed<<endl;
+        target.speed = predict[0];
+    }
+    // cout<<"Mode :"<<mode<<endl;
+    auto deque_len = 0;
+    if (mode == 0)
+    {
+        deque_len = history_deque_len_uniform;
+    }
+    else if (mode == 1)
+    {
+        if (!is_params_confirmed)
+            deque_len = history_deque_len_cos;
+        else
+            deque_len = history_deque_len_phase;
     }
 
-    if (history_info.size() < history_deque_len)    
+    if (history_info.size() < deque_len)    
     {
         history_info.push_back(target);
         last_target = target;
         return false;
     }
-    else
+    else if (history_info.size() == deque_len)
     {
         history_info.pop_front();
         history_info.push_back(target);
     }
+    else if (history_info.size() > deque_len)
+    {
+        while(history_info.size() >= deque_len)
+            history_info.pop_front();
+        history_info.push_back(target);
+    }
+
 
     //计算旋转方向
     double rotate_speed_sum = 0;
     int rotate_sign;
     for (auto target_info : history_info)
         rotate_speed_sum += target_info.speed;
-    params[3] = rotate_speed_sum / history_info.size();
+    auto mean_velocity = rotate_speed_sum / history_info.size();
     // cout<<rotate_speed_sum<<endl;
 
     //TODO:小符模式不需要额外计算,也可增加判断，小符模式给定恒定转速进行击打
-    //若为大符模式且函数未确定
-    if (mode == 1)
+    if (mode == 0)
     {
-        //拟合函数: f(x) = a * sin(ω * t + θ)
+        params[3] = mean_velocity;
+    }
+    //若为大符
+    else if (mode == 1)
+    {
+        //拟合函数: f(x) = a * sin(ω * t + θ) + b， 其中a， ω， θ需要拟合.
+        //参数未确定时拟合a， ω， θ
         if (!is_params_confirmed)
         {
             ceres::Problem problem;
             ceres::Solver::Options options;
             ceres::Solver::Summary summary;       // 优化信息
-            double params_fitting[3] = {1, 1, 1};
+            double params_fitting[4] = {1, 1, 1, mean_velocity};
             
 
             //旋转方向，逆时针为正
@@ -93,39 +130,46 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
             {
                 problem.AddResidualBlock (     // 向问题中添加误差项
                 // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
-                    new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 3> ( 
+                    new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 4> ( 
                         new CURVE_FITTING_COST ((float)(target_info.timestamp) / 1e3,
-                                                                    (target_info.speed - params[3]) * rotate_sign)
+                                                                    target_info.speed  * rotate_sign)
                     ),
-                    new ceres::CauchyLoss(0.1),
+                    new ceres::CauchyLoss(0.5),
                     params_fitting                 // 待估计参数
                 );
             }
 
             //设置上下限
-            problem.SetParameterLowerBound(params_fitting,0,0.5);
-            problem.SetParameterUpperBound(params_fitting,0,2);
-            problem.SetParameterLowerBound(params_fitting,1,0.5);
-            problem.SetParameterUpperBound(params_fitting,1,3);
+            //FIXME:参数需根据场上大符实际调整
+            problem.SetParameterLowerBound(params_fitting,0,0.7);
+            problem.SetParameterUpperBound(params_fitting,0,1.2);
+            problem.SetParameterLowerBound(params_fitting,1,1.6);
+            problem.SetParameterUpperBound(params_fitting,1,2.2);
             problem.SetParameterLowerBound(params_fitting,2,-CV_PI);
             problem.SetParameterUpperBound(params_fitting,2,CV_PI);
+            problem.SetParameterLowerBound(params_fitting,3,0.5);
+            problem.SetParameterUpperBound(params_fitting,3,2.5);
 
             ceres::Solve(options, &problem, &summary);
-            if (summary.final_cost < max_cost)
-            {
-                // cout<<"cost:"<<summary.BriefReport()<<endl;
-                params[0] = params_fitting[0] * rotate_sign;
-                params[1] = params_fitting[1];
-                params[2] = params_fitting[2];
-                is_params_confirmed = true;
-                cout<<"Confirmed!"<<endl;
-                // waitKey(0);
+            double params_tmp[4] = {params_fitting[0] * rotate_sign, params_fitting[1], params_fitting[2], params_fitting[3] * rotate_sign};
+            auto rmse = evalRMSE(params_tmp);
+            if (rmse > max_rmse)
+            {   
+                cout<<summary.BriefReport()<<endl;
+                LOG(INFO)<<"[BUFF_PREDICT]RMSE is too high, Fitting failed!";
+                return false;
             }
             else
             {
-                return false;
+                LOG(INFO)<<"[BUFF_PREDICT]Fitting Succeed! RMSE: "<<rmse;
+                params[0] = params_fitting[0] * rotate_sign;
+                params[1] = params_fitting[1];
+                params[2] = params_fitting[2];
+                params[3] = params_fitting[3] * rotate_sign;
+                is_params_confirmed = true;
             }
         }
+        //参数确定时拟合θ
         else
         {            
             ceres::Problem problem;
@@ -139,9 +183,9 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
                 // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
                     new ceres::AutoDiffCostFunction<CURVE_FITTING_COST_PHASE, 1, 1> ( 
                         new CURVE_FITTING_COST_PHASE ((float)(target_info.timestamp) / 1e3,
-                                                                    (target_info.speed - params[3]) * rotate_sign, params[0], params[1])
+                                                                    (target_info.speed - params[3]) * rotate_sign, params[0], params[1], params[3])
                     ),
-                    new ceres::CauchyLoss(0.1),
+                    new ceres::CauchyLoss(1e1),
                     &phase                 // 待估计参数
                 );
             }
@@ -151,24 +195,26 @@ bool BuffPredictor::predict(double speed, int dist, int timestamp, double &resul
             problem.SetParameterUpperBound(&phase,0,CV_PI);
 
             ceres::Solve(options, &problem, &summary);
-            // cout<<"cost:"<<summary.final_cost<<endl;
             double params_new[4] = {params[0], params[1], phase, params[3]};
-            auto old_rmse = evaluate(params);
-            auto new_rmse = evaluate(params_new);
+            auto old_rmse = evalRMSE(params);
+            auto new_rmse = evalRMSE(params_new);
             if (new_rmse < old_rmse)
-            {
+            {   
+                LOG(INFO)<<"[BUFF_PREDICT]Params Updated! RMSE: "<<new_rmse;
                 params[2] = phase;
             }
+            cout<<"RMSE:"<<new_rmse<<endl;
         }
-    //     // cout<<summary.BriefReport()<<endl;
     }
 
     for (auto param : params)
         cout<<param<<" ";
     cout<<"\n"<<"--------------------"<<endl;
+    int delay = (mode == 1 ? delay_big : delay_small);
     float delta_time_estimate = ((double)dist / bullet_speed) * 1e3 + delay;
     float timespan = history_info.back().timestamp - history_info.front().timestamp;
     float time_estimate = delta_time_estimate + timespan;
+    // cout<<delta_time_estimate<<endl;
     result = calcAimingAngleOffset(params, timespan / 1e3, time_estimate / 1e3, mode);
     last_target = target;
 
@@ -276,7 +322,13 @@ bool BuffPredictor::setBulletSpeed(double speed)
     return true;
 }
 
-double BuffPredictor::evaluate(double params[4])
+/**
+ * @brief 计算RMSE指标
+ * 
+ * @param params 参数首地址指针
+ * @return RMSE值 
+ */
+double BuffPredictor::evalRMSE(double params[4])
 {
     double rmse_sum = 0;
     double rmse = 0;
@@ -289,4 +341,28 @@ double BuffPredictor::evaluate(double params[4])
     }
     rmse = sqrt(rmse_sum / history_info.size());
     return rmse;
+}
+
+/**
+ * @brief 计算RMSE指标
+ * 
+ * @param params 参数首地址指针
+ * @return RMSE值 
+ */
+double BuffPredictor::evalMAPE(double params[4])
+{
+    double mape_sum = 0;
+    double mape = 0;
+    for (auto target_info : history_info)
+    {
+        auto t = (float)(target_info.timestamp) / 1e3;
+        auto pred = params[0] * sin (params[1] * t + params[2]) + params[3];
+        auto measure = target_info.speed;
+
+        mape_sum+=abs((measure - pred) / measure);
+        // cout<<abs((measure - pred) / measure)<<endl;
+    }
+    // mape = mape_sum / history_info.size() * 100;
+    // cout<<mape<<endl;
+    return mape;
 }

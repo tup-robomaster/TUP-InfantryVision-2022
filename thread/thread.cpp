@@ -81,6 +81,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 #endif //USING_VIDEO
 
     fmt::print(fmt::fg(fmt::color::green), "[CAMERA] Set param finished\n");
+
 #ifdef SAVE_VIDEO
     /*============ video_writer ===========*/
     int frame_cnt = 0;
@@ -95,13 +96,36 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     strftime(now, 64, "%Y-%m-%d_%H_%M_%S", ttime);  // 以时间为名字
     std::string now_string(now);
     std::string path(std::string(storage_location + now_string).append(".avi"));
-    auto writer = cv::VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 30.0, cv::Size(width, height));    // Avi form
+    auto writer = cv::VideoWriter(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 30.0, cv::Size(width, height));    // Avi format
     std::future<void> write_video;
     bool is_first_loop = true;
     #ifdef SAVE_LOG_ALL
         LOG(INFO) << "[SAVE_VIDEO] Save video to " << path;
     #endif //SAVE_LOG_ALL
 #endif //SAVE_VIDEO
+
+#ifdef RECORD_DATA
+    /*============ video_writer ===========*/
+    int frame_cnt = 0;
+    char now[64];
+    std::time_t tt;
+    struct tm *ttime;
+    int width = 1280;
+    int height = 1024;
+    tt = time(nullptr);
+    ttime = localtime(&tt);
+    strftime(now, 64, "%Y-%m-%d_%H_%M_%S", ttime);  // 以时间为名字
+    std::string now_string(now);
+    const std::string storage_location = "../record/" + now_string;
+    //Create dir to store datas.
+    mkdir(storage_location.c_str(), S_IRWXU);
+    fmt::print(fmt::fg(fmt::color::green), "[RECORD] Created directory :{}\n",storage_location);
+    string data_file_pth = storage_location + "/" + "data.txt";
+    string video_file_pth = storage_location + "/" + "video.avi";
+    ofstream data;
+    data.open(data_file_pth, std::ofstream::app);
+    auto writer = cv::VideoWriter(video_file_pth, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 60.0, cv::Size(width, height));    // Avi format
+#endif //RECORD_DATA
     while(1)
     {
         TaskData src;
@@ -136,7 +160,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
             goto start_get_img;
         }
         src.timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
-#endif
+#endif //USING_HIK
 
 #ifdef USING_VIDEO
         cap >> src.img;
@@ -184,7 +208,6 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
 
 
         //用于辅助标注
-        // DaHeng.SetExposureTime(1000 + src.timestamp % 100 * 30);
         factory.produce(src);
     }
     return true;
@@ -204,14 +227,14 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
     {
         TaskData dst;
         VisionData data;
+
         task_factory.consume(dst);
         mode = dst.mode;
-        // mode = 4;
-        // dst.mode = 4;
-
+        
 #ifdef DEBUG_WITHOUT_COM
-        mode = 1;
-#endif //DEBUG_WITHOUT_COM
+        mode = 3;
+        dst.mode = mode;
+#endif // DEBUG_WITHOUT_COM
 
 #ifdef SAVE_TRANSMIT_LOG
     // cout<<mode<<"..."<<last_mode<<endl;
@@ -296,10 +319,8 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
             continue;
         }
         //数据读取不成功进行循环
-#ifndef DEBUG_WITHOUT_COM
         while (!serial.get_Mode())
             ;
-#endif //DEBUG_WITHOUT_COM
         auto time_cap = std::chrono::steady_clock::now();
         auto timestamp = (int)(std::chrono::duration<double,std::milli>(time_cap - time_start).count());
         // cout<<"Quat: "<<serial.quat[0]<<" "<<serial.quat[1]<<" "<<serial.quat[2]<<" "<<serial.quat[3]<<" "<<endl;
@@ -308,7 +329,7 @@ bool dataReceiver(SerialPort &serial, MessageFilter<MCUData> &receive_factory, s
         int mode = serial.mode;
         float bullet_speed = serial.bullet_speed;
         
-        // int mode = 4;
+        // int mode = 2;
         Eigen::Quaterniond quat = {serial.quat[0],serial.quat[1],serial.quat[2],serial.quat[3]};
         Eigen::Vector3d acc = {serial.acc[0],serial.acc[1],serial.acc[2]};;
         Eigen::Vector3d gyro = {serial.gyro[0],serial.gyro[1],serial.gyro[2]};;
