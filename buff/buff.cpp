@@ -415,7 +415,7 @@ bool Buff::run(TaskData &src,VisionData &data)
     ///------------------------计算击打点----------------------------
     //将角度转化至[-PI,PI范围内]
     // cout<<theta_offset<<endl;
-    theta_offset = rangedAngleRad(theta_offset);
+    // theta_offset = rangedAngleRad(theta_offset);
     // cout<<theta_offset<<endl;
     //由offset生成欧拉角和旋转矩阵
     Eigen::Vector3d hit_point_world = {sin(theta_offset) * fan_length, (cos(theta_offset) - 1) * fan_length,0};

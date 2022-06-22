@@ -27,6 +27,8 @@ struct Armor
     Eigen::Vector3d center3d_world;
     Eigen::Vector3d euler;
     Eigen::Vector3d predict;
+
+    TargetType type;
 };
 
 class ArmorTracker
@@ -44,6 +46,7 @@ public:
     double hit_score;                       //该tracker可能作为目标的分数,由装甲板旋转角度,距离,面积大小决定
     double velocity;
     double radius;
+    string key;
 
     std::deque<Armor> history_info;//目标队列
 

@@ -25,8 +25,8 @@
 using namespace std;
 using namespace cv;
 
-const string camera_name = "KE0200110076";  // 哨兵下云台
-// const string camera_name = "KE0200110075";  // 步兵（4号)
+// const string camera_name = "KE0200110076";  // 哨兵下云台
+const string camera_name = "KE0200110075";     // 步兵（4号)
 // const string camera_name = "KE0200110074";  // 步兵（5号）
 // const string camera_name = "KE0200110073";  // 英雄
 // const string camera_name = "MV_Sentry";     // 哨兵上云台

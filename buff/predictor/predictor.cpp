@@ -212,9 +212,11 @@ bool BuffPredictor::predict(double speed, double dist, int timestamp, double &re
     cout<<"\n"<<"--------------------"<<endl;
     int delay = (mode == 1 ? delay_big : delay_small);
     float delta_time_estimate = ((double)dist / bullet_speed) * 1e3 + delay;
-    float timespan = history_info.back().timestamp - history_info.front().timestamp;
+    // cout<<"ETA:"<<delta_time_estimate<<endl;
+    float timespan = history_info.back().timestamp;
+    // delta_time_estimate = 0;
     float time_estimate = delta_time_estimate + timespan;
-    // cout<<delta_time_estimate<<endl;
+    // cout<<delta_time_estimate<<endl;     
     result = calcAimingAngleOffset(params, timespan / 1e3, time_estimate / 1e3, mode);
     last_target = target;
 
@@ -255,10 +257,11 @@ double BuffPredictor::calcAimingAngleOffset(double params[4], double t0, double 
     auto a = params[0];
     auto omega = params[1];
     auto theta = params[2];
-    auto b = params[3];
+    auto b = params[3]; 
     double theta1;
     double theta0;
-
+    // cout<<"t1: "<<t1<<endl;
+    // cout<<"t0: "<<t0<<endl;
     //f(x) = a * sin(ω * t + θ) + b
     //对目标函数进行积分
     if (mode == 0)//适用于小符模式
@@ -271,7 +274,7 @@ double BuffPredictor::calcAimingAngleOffset(double params[4], double t0, double 
         theta0 = (b * t0 - (a / omega) * cos(omega * t0 + theta));
         theta1 = (b * t1 - (a / omega) * cos(omega * t1 + theta));
     }
-
+    // cout<<(theta1 - theta0) * 180 / CV_PI<<endl;
     return theta1 - theta0;
 }
 

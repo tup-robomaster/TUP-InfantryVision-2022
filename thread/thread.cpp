@@ -49,7 +49,7 @@ bool producer(Factory<TaskData> &factory, MessageFilter<MCUData> &receive_factor
     // 开始采集帧
     HaiKang.SetStreamOn();
     // 设置曝光事件
-    HaiKang.SetExposureTime(6000);
+    HaiKang.SetExposureTime(8000);
     // 设置1
     // HaiKang.SetGAIN(0, 16);
     // HaiKang.SetGAIN(1, 8);
@@ -232,8 +232,8 @@ bool consumer(Factory<TaskData> &task_factory,Factory<VisionData> &transmit_fact
         mode = dst.mode;
         
 #ifdef DEBUG_WITHOUT_COM
-        mode = 3;
-        dst.mode = mode;
+        mode = 1;
+        // dst.mode = mode;
 #endif // DEBUG_WITHOUT_COM
 
 #ifdef SAVE_TRANSMIT_LOG

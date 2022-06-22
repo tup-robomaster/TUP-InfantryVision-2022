@@ -9,6 +9,7 @@ ArmorTracker::ArmorTracker(Armor src, int src_timestamp)
 {
     last_armor = src;
     last_timestamp = src_timestamp;
+    key = src.key;
     is_initialized = false;
     hit_score = 0;
     history_info.push_back(src);

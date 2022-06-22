@@ -23,7 +23,7 @@ using namespace std;
 using namespace cv;
 using namespace plt;
 
-const string pf_path = "/home/tup/Desktop/TUP-InfantryVision-2022-main/params/filter/filter_param.yaml";
+const string pf_path = "../params/filter/filter_param.yaml";
 class BuffPredictor
 {
 private:
@@ -74,15 +74,15 @@ private:
     double params[4];
     double bullet_speed = 28;                                            
     std::deque<TargetInfo> history_info;                                    //目标队列
-    const int max_timespan = 8000;                                         //最大时间跨度，大于该时间重置预测器(ms)
-    const int max_rmse = 1;                                                 //TODO:回归函数最大Cost
+    const int max_timespan = 20000;                                         //最大时间跨度，大于该时间重置预测器(ms)
+    const double max_rmse = 0.4;                                               //TODO:回归函数最大Cost
     const int max_v = 3;                                                  //设置最大速度,单位rad/s
     const int max_a = 8;                                                  //设置最大角加速度,单位rad/s^2
     const int history_deque_len_cos = 250;                                  //大符全部参数拟合队列长度
-    const int history_deque_len_phase = 150;                                  //大符相位参数拟合队列长度
+    const int history_deque_len_phase = 100;                                  //大符相位参数拟合队列长度
     const int history_deque_len_uniform = 100;                                  //小符转速求解队列长度
-    const int delay_small = 150;                                                  //小符发弹延迟
-    const int delay_big = 200;                                              //大符发弹延迟
+    const int delay_small = 175;                                                  //小符发弹延迟
+    const int delay_big = 100;                                              //大符发弹延迟
     const int window_size = 2;                                              //滑动窗口大小
 
 public:

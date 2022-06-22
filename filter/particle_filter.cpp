@@ -137,8 +137,8 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
 {
     Eigen::MatrixXd gaussian = Eigen::MatrixXd::Zero(num_particle, vector_len);
     Eigen::MatrixXd mat_measure = measure.replicate(1,num_particle).transpose();
-    auto err = (mat_measure - matrix_particle).rowwise().squaredNorm();
-    // cout<<error<<endl;
+    auto err = ((measure - (matrix_particle.transpose() * matrix_weights)).norm());
+    // cout<<num_particle<<" err "<<err<<endl;
 
     if (is_ready)
     {
@@ -156,11 +156,11 @@ bool ParticleFilter::update(Eigen::VectorXd measure)
         double n_eff = 1.0 / (matrix_weights.transpose() * matrix_weights).value();
         //TODO:有效粒子数少于一定值时进行重采样,该值需在实际调试过程中修改
         // if (n_eff < 0.5 * num_particle)
-        // if (err(0,0) > process_noise_cov(0,0) || err(1,0) > process_noise_cov(1,1))
-        // {
+        if (err > observe_noise_cov(0,0) || (n_eff < 0.5 * num_particle))
+        {
             // cout<<"res"<<num_particle<<endl;
             resample();
-        // }
+        }
     }
     else
     {

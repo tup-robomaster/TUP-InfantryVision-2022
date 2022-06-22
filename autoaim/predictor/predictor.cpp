@@ -64,6 +64,7 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     //若位置粒子滤波器已完成初始化且预测值大小恰当,则对目标位置做滤波
     else
     {
+        // cout<<"FIL:"<<predict_pos[0] - xyz[0]<<endl;
         target.xyz[0] = predict_pos[0];
         target.xyz[1] = predict_pos[1];
         history_info.push_back(target);
@@ -73,7 +74,7 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     auto delta_t = timestamp - last_target.timestamp;
     auto last_dist = history_info.back().dist;
     auto delta_time_estimate = (last_dist / bullet_speed) * 1e3 + delay;
-    auto time_estimate = delta_time_estimate + history_info.back().timestamp - history_info.front().timestamp;
+    auto time_estimate = delta_time_estimate + history_info.back().timestamp;
     //如速度过大,可认为为噪声干扰,进行滑窗滤波滤除
     // if (((d_xyz.norm() / delta_t) * 1e3) >= max_v)
     // {
@@ -167,7 +168,7 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
         result[2] = result_fitting[2];
     else
         result[2] = xyz[2];
-
+    result = result_pf;
     auto t2=std::chrono::steady_clock::now();
     double dr_ms=std::chrono::duration<double,std::milli>(t2-t1).count();
     // if(timestamp % 10 == 0)
@@ -176,7 +177,7 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     // cout<<xyz<<endl;
     // result_pf = target.xyz;
 #ifdef DRAW_PREDICT
-    double x_offset = 100;
+    double x_offset = 400;
     double y_offset = 400;
     double z_offset = 200;
     if (cnt < 2000)
@@ -208,7 +209,6 @@ Eigen::Vector3d ArmorPredictor::predict(Eigen::Vector3d xyz, int timestamp)
     // return target.xyz;
     return result;
 }
-
 
 inline Eigen::Vector3d ArmorPredictor::shiftWindowFilter(int start_idx=0)
 {
@@ -244,64 +244,44 @@ inline Eigen::Vector3d ArmorPredictor::shiftWindowFilter(int start_idx=0)
 ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, Vector3d &result, int time_estimated)
 {
     PredictStatus is_available;
+    //采取中心差分法,使用 t, t-1, t-2时刻速度,计算t-1时刻的速度
+    auto target_prev = history_info.at(history_info.size() - 3);
+    auto target_next = target;
+    auto v_xyz = (target_next.xyz - target_prev.xyz) / (target_next.timestamp - target_prev.timestamp) * 1e3;
+    auto t = target_next.timestamp - history_info.at(history_info.size() - 2).timestamp;
 
-    Eigen::Vector2d v_polar_sum = {0,0};
-    Eigen::Vector2d polar_target = {target.xyz.norm(), atan2(target.xyz[1], target.xyz[0])};
-    // Eigen::Vector3d pos_sum = {0,0,0};
-    for (int i = 0; i < 3; i++)
-    {
-        auto target_prev = history_info.at(history_info.size() - 2 - i);
-        auto target_next = history_info.at(history_info.size() - 1 - i);
-        
-        Eigen::Vector2d polar_next = {target_next.xyz.norm(), atan2(target_next.xyz[1], target_next.xyz[0])};
-        Eigen::Vector2d polar_prev = {target_prev.xyz.norm(), atan2(target_prev.xyz[1], target_prev.xyz[0])};
-        //From [-PI,PI] to [0,2PI]
-        if (polar_next[1] < 0)
-            polar_next[1]+=CV_2PI;
-        if (polar_prev[1] < 0)
-            polar_prev[1]+=CV_2PI;
-    
-        Eigen::Vector2d v_polar = {0, 0};
-        v_polar[0] = (polar_next[0] - polar_prev[0]) / (target.timestamp - target_prev.timestamp) * 1e3;
-        if (polar_next[1] > 1.5 * CV_PI && polar_prev[1] < 0.5 * CV_PI)
-        {
-            v_polar[1] = (polar_next[1] - polar_prev[1] + CV_2PI) / (target.timestamp - target_prev.timestamp) * 1e3;
-        }
-        else if (polar_next[1] <  0.5 * CV_PI && polar_prev[1] >  1.5 * CV_PI)
-        {
-            v_polar[1] = (polar_next[1] - polar_prev[1] - CV_2PI) / (target.timestamp - target_prev.timestamp) * 1e3;
-        }
-        else
-        {
-            v_polar[1] = (polar_next[1] - polar_prev[1]) / (target.timestamp - target_prev.timestamp) * 1e3;
-        }
-        v_polar_sum+=v_polar;
-    }
-    auto v_polar = v_polar_sum / 3;
-    
     is_available.xyz_status[0] = pf_v.is_ready;
     is_available.xyz_status[1] = pf_v.is_ready;
+    // cout<<v_xyz<<endl;
 
     //Update
     Eigen::VectorXd measure (2);
-    measure << v_polar[0], v_polar[1];
+    measure << v_xyz[0], v_xyz[1];
     pf_v.update(measure);
 
     //Predict
     auto result_v = pf_v.predict();
-    // cout<<v_polar<<endl;
-    // cout<<"////////////////////"<<endl;
+    cout<<measure<<endl;
     // cout<<result_v<<endl;
-    // cout<<"----------------------"<<endl;
-    // //TODO:恢复速度预测
-    auto predict_rho = polar_target[0];
-    auto predict_theta = polar_target[1] + result_v[1] * time_estimated / 1e3;
+    //TODO:恢复速度预测
     // auto predict_x = target.xyz[0];
     // auto predict_y = target.xyz[1];
-    auto predict_x = predict_rho * cos(predict_theta);
-    auto predict_y = predict_rho * sin(predict_theta);
+    double predict_x;
+    double predict_y;
+    if (history_info.size() > 6)
+    {
+        predict_x = target.xyz[0] + result_v[0] * (time_estimated + t) / 1e3;
+        predict_y = target.xyz[1] + result_v[1] * (time_estimated + t) / 1e3;
+    }
+    else
+    {
+        predict_x = target.xyz[0];
+        predict_y = target.xyz[1];       
+    }
 
     result << predict_x, predict_y, target.xyz[2];
+    // cout<<result<<endl;
+
     // cout<<result<<endl;
 
     return is_available;
@@ -310,8 +290,8 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_pf_run(TargetInfo target, 
 ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &result, int time_estimated)
 {
     //0.1的位置使用0初始化会导致拟合结果出错
-    double params_x[4] = {0,0.01,0,0};            // 参数的估计值
-    double params_y[4] = {0,0.01,0,0};            // 参数的估计值
+    double params_x[4] = {0,0,0,0};            // 参数的估计值
+    double params_y[4] = {0,0,0,0};            // 参数的估计值
 
     ceres::Problem problem_x;
     ceres::Problem problem_y;
@@ -332,26 +312,27 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
         sum += target_info.xyz;
     }
     auto dc = sum / history_info.size();
+    // auto dc = history_info.at(history_info.size() - 1).xyz;
     params_x[0] = dc[0];
     params_y[0] = dc[1];
     
     for (auto target_info : history_info)
     {
-        cout<<"T : "<<(target_info.timestamp - history_info.front().timestamp) / 1e3<<" X:"<<target_info.xyz[0]<<" Y:"<<target_info.xyz[1]<<endl;
+        cout<<"T : "<<target_info.timestamp / 1e3<<" X:"<<target_info.xyz[0]<<" Y:"<<target_info.xyz[1]<<endl;
         problem_x.AddResidualBlock (     // 向问题中添加误差项
         // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
             new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 2> ( 
-                new CURVE_FITTING_COST ((target_info.timestamp - history_info.front().timestamp) / 1e3, target_info.xyz[0] - params_x[0])
+                new CURVE_FITTING_COST (target_info.timestamp / 1e3, (target_info.xyz[0] - params_x[0]))
             ),
-            new ceres::CauchyLoss(0),            // 核函数，这里不使用，为空
+            new ceres::CauchyLoss(0.5),            // 核函数，这里不使用，为空
             &params_x[1]                 // 待估计参数
         );
-        problem_y.AddResidualBlock (     // 向问题中添加误差项
+        problem_y.AddResidualBlock(     // 向问题中添加误差项 
         // 使用自动求导，模板参数：误差类型，输出维度，输入维度，维数要与前面struct中一致
             new ceres::AutoDiffCostFunction<CURVE_FITTING_COST, 1, 2> ( 
-                new CURVE_FITTING_COST ((target_info.timestamp - history_info.front().timestamp) / 1e3, target_info.xyz[1] - params_y[0])
+                new CURVE_FITTING_COST (target_info.timestamp / 1e3, (target_info.xyz[1] - params_y[0]))
             ),
-           new ceres::CauchyLoss(0),            // 核函数，这里不使用，为空
+           new ceres::CauchyLoss(0.5),            // 核函数，这里不使用，为空
             &params_y[1]                 // 待估计参数
         );
     }
@@ -370,6 +351,15 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
     // problem_y.SetParameterUpperBound(&params_y[1],2,CV_PI);
     // problem_y.SetParameterLowerBound(&params_y[1],2,-CV_PI);
 
+    // problem_x.SetParameterUpperBound(&params_x[1],0,5);
+    // problem_x.SetParameterLowerBound(&params_x[1],0,-5);
+    // problem_x.SetParameterUpperBound(&params_x[1],1,5);
+    // problem_x.SetParameterLowerBound(&params_x[1],1,-5);
+
+    // problem_y.SetParameterUpperBound(&params_y[1],0,5);
+    // problem_y.SetParameterLowerBound(&params_y[1],0,-5);
+    // problem_y.SetParameterUpperBound(&params_y[1],1,5);
+    // problem_y.SetParameterLowerBound(&params_y[1],1,-5);
     //异步计算
 
     auto status_solve_x = std::async(std::launch::deferred, [&](){ceres::Solve(options_x, &problem_x, &summary_x);});
@@ -391,8 +381,8 @@ ArmorPredictor::PredictStatus ArmorPredictor::predict_fitting_run(Vector3d &resu
     cout<<"X:"<<params_x[0]<<" "<<params_x[1]<<" "<<params_x[2]<<" "<<params_x[3]<<endl; 
     cout<<"Y:"<<params_y[0]<<" "<<params_y[1]<<" "<<params_y[2]<<" "<<params_y[3]<<endl;
     // cout<<summary_y.BriefReport()<<endl;
-    cout<<time_estimated<<endl;
-    cout<<bullet_speed<<endl;
+    // cout<<time_estimated<<endl;
+    // cout<<bullet_speed<<endl;
     auto x_pred = params_x[0] + params_x[1] * (time_estimated / 1e3) + params_x[2] * pow((time_estimated / 1e3), 2);
     auto y_pred = params_y[0] + params_y[1] * (time_estimated / 1e3) + params_y[2] * pow((time_estimated / 1e3), 2);  
     // auto x_pred = params_x[0] + params_x[1] * cos(params_x[2] * (time_estimated / 1e3) + params_x[3]);
