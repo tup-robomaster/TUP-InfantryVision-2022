@@ -456,7 +456,7 @@ bool Buff::run(TaskData &src,VisionData &data)
 #ifdef SHOW_IMG
         imshow("dst",src.img);
         waitKey(1);
-        LOG(WARNING) <<"[BUFF] NAN Detected!";
+        LOG(ERROR) <<"[BUFF] NAN Detected!";
         data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
 #endif //SHOW_IMG
         return false;

@@ -11,7 +11,7 @@
 #include "../serial/serialport.h"
 
 enum SpinHeading {UNKNOWN, CLOCKWISE, COUNTER_CLOCKWISE};
-enum Color {BLUE,RED,NEUTRAL};
+enum Color {BLUE,RED};
 
 class Autoaim
 {
@@ -40,10 +40,11 @@ private:
     std::vector<Armor> last_armors;
     std::multimap<string, ArmorTracker> trackers_map;      //预测器Map
     std::map<string,int> new_armors_cnt_map;    //装甲板计数map，记录新增装甲板数
+    std::map<string,int> last_switched_time;    //装甲板计数map，记录新增装甲板数
     std::map<string,SpinHeading> spin_status_map;    //反小陀螺，记录该车小陀螺状态
     std::map<string,double> spin_score_map;     //反小陀螺，记录各装甲板小陀螺可能性分数，大于0为逆时针旋转，小于0为顺时针旋转
 
-    const int armor_type_wh_thres = 3;      //大小装甲板长宽比阈值
+    const int armor_type_wh_thres = 2.8;      //大小装甲板长宽比阈值
 
     const double armor_roi_expand_ratio_width = 1;
     const double armor_roi_expand_ratio_height = 2;
@@ -67,7 +68,7 @@ private:
     //FIXME:
     const int hero_danger_zone = 99;       //英雄危险距离阈值，检测到有小于该距离的英雄直接开始攻击
 
-    Point2f zoom_offset = {500, 400};
+    Point2f zoom_offset = {500, 400};       //左上角定点 x y排序
 
     Armor last_armor;
     CoordSolver coordsolver;                

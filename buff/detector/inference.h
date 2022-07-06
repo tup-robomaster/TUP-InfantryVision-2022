@@ -10,7 +10,6 @@
 #include <inference_engine.hpp>
 #include <opencv2/opencv.hpp>
 #include <Eigen/Core>
-#include <fftw3.h>
 
 #include "../../general/general.h"
 

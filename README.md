@@ -6,7 +6,6 @@
 本赛季的视觉程序在研发之处充分考虑到实验室的实际经费和其他资源可支配情况制定了“整体框架不变，小步快跑迭代”的
 ## 环境配置
 ### 建议编译安装的环境依赖库
-[FFTW](http://www.fftw.org/download.html)
 
 [FMT](https://github.com/fmtlib/fmt)
 

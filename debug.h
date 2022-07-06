@@ -5,11 +5,11 @@
 #define DETECT_RED  //红色检测，不启用默认为蓝色检测
 
 #define IGNORE_ENGINEER             //是否忽略工程
+#define IGNORE_NPC                  //是否忽略建筑物与哨兵
 
-//FIXME: 
+//FIXME: RECORD_DATA未完成
 // #define SAVE_VIDEO               // Save video
-// #define RECORD_DATA                 // Record data.
-
+// #define RECORD_DATA
 #define SAVE_LOG_ALL                // Save log
 
 

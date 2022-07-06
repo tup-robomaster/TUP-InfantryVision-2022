@@ -111,7 +111,7 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
         points_world = {
         {-0.1125,0.027,0},
         {-0.1125,-0.027,0},
-        {0,-0.565,-0.05},
+        {0,-0.7,-0.05},
         {0.1125,-0.027,0},
         {0.1125,0.027,0}};
         // points_world = {
@@ -125,7 +125,7 @@ PnPInfo CoordSolver::pnp(const std::vector<Point2f> &points_pic, const Eigen::Ma
     Mat rmat;
     Mat tvec;
     Eigen::Matrix3d rmat_eigen;
-    Eigen::Vector3d R_center_world = {0,-0.565,-0.05};
+    Eigen::Vector3d R_center_world = {0,-0.7,-0.05};
     Eigen::Vector3d tvec_eigen;
     Eigen::Vector3d coord_camera;
 

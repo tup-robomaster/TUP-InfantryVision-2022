@@ -351,10 +351,10 @@ bool Autoaim::run(TaskData &src,VisionData &data)
             predictor.setBulletSpeed(bullet_speed);
             coordsolver.setBulletSpeed(bullet_speed);
             last_bullet_speed = bullet_speed;
+            LOG(INFO)<<"SPD Updated:"<<src.bullet_speed<<" : "<<last_bullet_speed;
         }
         
     }
-    LOG(INFO)<<"SPD:"<<src.bullet_speed<<" : "<<last_bullet_speed;
 #endif //DEBUG_WITHOUT_COM
     // cout<<"lost:"<<lost_cnt<<endl;
 
@@ -363,7 +363,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     if (src.mode == 2)
     {
         // cout<<zoom_offset.x<<endl;
-        //若不存在目标则进行中间区域ROI
+        //若不存在目标则进行中间区域ROI，默认大小为416x416
         if (lost_cnt >= max_lost_cnt && !is_last_target_exists)
         {
             roi_offset = zoom_offset;
@@ -418,10 +418,6 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     for (auto object : objects)
     {
         // cout<<"offset:"<<roi_offset<<endl;
-
-
-        //
-
         Armor armor;
         armor.id = object.cls;
         armor.color = object.color;
@@ -431,6 +427,11 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         if (object.cls == 2)
             continue;
 #endif //IGNORE_ENGINEER
+
+#ifdef IGNORE_NPC
+        if (object.cls == 0 || object.cls == 6 || object.cls == 7)
+            continue;
+#endif // IGNORE_NPC
 
         //放行对应颜色装甲板或灰色装甲板
         if (detect_color == RED)
@@ -514,33 +515,23 @@ bool Autoaim::run(TaskData &src,VisionData &data)
         auto apex_wh_ratio = max(points_pic_rrect.size.height, points_pic_rrect.size.width) /
                                  min(points_pic_rrect.size.height, points_pic_rrect.size.width);
         //若大于长宽阈值或为哨兵、英雄装甲板
-        if (object.cls == 1 || object.cls == 0)
+        //FIXME:若存在平衡步兵需要对此处步兵装甲板类型进行修改
+        if (object.cls == 0 || object.cls == 1)
             target_type = BIG;
-        //FIXME：若存在平衡步兵需要对此处步兵装甲板类型进行修改
         else if (object.cls == 2 || object.cls == 3 || object.cls == 4 || object.cls == 5 || object.cls == 6)
             target_type = SMALL;
-        else if(apex_wh_ratio > armor_type_wh_thres)
+        else if (apex_wh_ratio > armor_type_wh_thres)
             target_type = BIG;
         // for (auto pic : points_pic)
         //     cout<<pic<<endl;
         auto pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, pnp_method);
-        //防止装甲板类型出错导致解算问题，首先尝试切换装甲板类型，若仍无效则直接跳过该装甲板
+        //防止装甲板类型出错导致解算问题，距离过大或出现NAN直接跳过该装甲板
         if (pnp_result.armor_cam.norm() > 13 ||
             isnan(pnp_result.armor_cam[0]) ||
             isnan(pnp_result.armor_cam[1]) ||
             isnan(pnp_result.armor_cam[2]))
-        {
-            if (target_type == SMALL)
-                target_type = BIG;
-            else if (target_type == BIG)
-                target_type = SMALL;
-            pnp_result = coordsolver.pnp(points_pic, rmat_imu, target_type, pnp_method);
-            if (pnp_result.armor_cam.norm() > 13 ||
-            isnan(pnp_result.armor_cam[0]) ||
-            isnan(pnp_result.armor_cam[1]) ||
-            isnan(pnp_result.armor_cam[2]))
                 continue;
-        }
+        
         armor.type = target_type;
         armor.center3d_world = pnp_result.armor_world;
         armor.center3d_cam = pnp_result.armor_cam;
@@ -765,6 +756,24 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     else if (detect_color == RED)
         target_key = "R" + to_string(target_id);
     // cout<<target_key<<endl;
+    ///-----------------------------判断该装甲板是否有可用Tracker------------------------------------------
+    if (trackers_map.count(target_key) == 0)
+    {
+#ifdef SHOW_AIM_CROSS
+        line(src.img, Point2f(src.img.size().width / 2, 0), Point2f(src.img.size().width / 2, src.img.size().height), Scalar(0,255,0), 1);
+        line(src.img, Point2f(0, src.img.size().height / 2), Point2f(src.img.size().width, src.img.size().height / 2), Scalar(0,255,0), 1);
+#endif //SHOW_AIM_CROSS
+#ifdef SHOW_IMG
+        namedWindow("dst",0);
+        imshow("dst",src.img);
+        waitKey(1);
+#endif //SHOW_IMG
+        lost_cnt++;
+        is_last_target_exists = false;
+        data = {(float)0, (float)0, (float)0, 0, 0, 0, 1};
+        LOG(WARNING) <<"[AUTOAIM] No available tracker exists!";
+        return false;
+    }
     auto ID_candiadates = trackers_map.equal_range(target_key);
     ///---------------------------获取最终装甲板序列---------------------------------------
     bool is_target_spinning;
@@ -1050,6 +1059,7 @@ bool Autoaim::run(TaskData &src,VisionData &data)
     fmt::print(fmt::fg(fmt::color::golden_rod), "Pitch: {} \n",angle[1]);
     fmt::print(fmt::fg(fmt::color::green_yellow), "Dist: {} m\n",(float)target.center3d_cam.norm());
     fmt::print(fmt::fg(fmt::color::white), "Target: {} \n",target.key);
+    fmt::print(fmt::fg(fmt::color::white), "Target Type: {} \n",target.type == SMALL ? "SMALL" : "BIG");
     fmt::print(fmt::fg(fmt::color::orange_red), "Is Spinning: {} \n",is_target_spinning);
     fmt::print(fmt::fg(fmt::color::orange_red), "Is Switched: {} \n",is_target_switched);
 #endif //PRINT_TARGET_INFO
@@ -1059,6 +1069,13 @@ bool Autoaim::run(TaskData &src,VisionData &data)
                     << " Target: " << target.key << " Is Spinning: " << is_target_spinning<< " Is Switched: " << is_target_switched;
     LOG(INFO) <<"[AUTOAIM] PREDICTED: "<<"X: "<<aiming_point[0]<<" Y: "<<aiming_point[1]<<" Z: " << aiming_point[2];
 #endif //SAVE_AUTOAIM_LOG
+
+    //若预测出错取消本次数据发送
+    if (isnan(angle[0]) || isnan(angle[1]))
+    {
+        LOG(ERROR)<<"NAN Detected! Data Transmit Aborted!";
+        return false;
+    }
 
     data = {(float)angle[1], (float)angle[0], (float)target.center3d_cam.norm(), is_target_switched, 1, is_target_spinning, 0};
     return true;

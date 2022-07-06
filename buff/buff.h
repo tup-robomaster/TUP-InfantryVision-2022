@@ -35,7 +35,7 @@ private:
     const int max_lost_cnt = 4;//最大丢失目标帧数
     const int max_v = 4;       //最大旋转速度(rad/s)
     const int max_delta_t = 100; //使用同一预测器的最大时间间隔(ms)
-    const double fan_length = 0.565; //大符臂长(R字中心至装甲板中心)
+    const double fan_length = 0.7; //大符臂长(R字中心至装甲板中心)
     const double no_crop_thres = 2e-3;      //禁用ROI裁剪的装甲板占图像面积最大面积比值
 
     Fan last_fan;
