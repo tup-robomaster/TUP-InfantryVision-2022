@@ -17,7 +17,7 @@ Autoaim模块是自瞄任务模块，负责处理自瞄有关的神经网络推�
 ├── CMakeLists.txt      //模块Cmake文件（已弃用）   
 └── README.md           //文档
 # 3.流程图   
-![autoaim](../docs/autoaim.png)
+![autoaim](../docs/autoaim.png)  
 # 4.部分技术细节详解
 ## 1.反陀螺
 ### 1.陀螺状态识别
@@ -41,7 +41,7 @@ Autoaim模块是自瞄任务模块，负责处理自瞄有关的神经网络推�
 神经网络目标检测部分我们基于YOLOX-Nano进行修改，并对网络进行了一些改进，以提高网络推理的速度和精度，让网络符合使用实际需求。  
 
 - 将网络头部的Focus层更换为6*6卷积，优化推理速度。
-- 增加CoordConv，为网络输入增加xy坐标特征图，提升回归精度。
+- 增加CoordConv，为网络输入增加xy坐标特征图，提升回归精度。  
 ![网络输入部分](../docs/network_input.png)  
 - 替换网络backbone为shufflenetV2,加快推理速度。
 - 将检测头reg分支由xywh改为x1y1x2y2x3y3x4y4,形式上类似关键点检测，并使用WingLoss训练。  
