@@ -1,3 +1,4 @@
+# Copyright(C),2018-2022,沈阳航空航天大学T-UP战队 All Rights Reserved
 # CoordSolver Module
 ## Author: 顾昊 guhao0521@gmail.com
 # 1. 简介
