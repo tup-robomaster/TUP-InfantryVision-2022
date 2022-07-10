@@ -310,18 +310,18 @@ bool Buff::run(TaskData &src,VisionData &data)
     if (!is_target_exists)
     {
 #ifdef SHOW_ALL_FANS
-    for (auto fan : fans)
-    {
-        putText(src.img, fmt::format("{:.2f}", fan.conf),fan.apex2d[4],FONT_HERSHEY_SIMPLEX, 1, {0, 255, 0}, 2);
-        if (fan.color == 0)
-            putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
-        if (fan.color == 1)
-            putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
-        for(int i = 0; i < 5; i++)
-            line(src.img, fan.apex2d[i % 5], fan.apex2d[(i + 1) % 5], Scalar(0,255,0), 1);
-        auto fan_armor_center = coordsolver.reproject(fan.armor3d_cam);
-        circle(src.img, fan_armor_center, 4, {0, 0, 255}, 2);
-    }
+        for (auto fan : fans)
+        {
+            putText(src.img, fmt::format("{:.2f}", fan.conf),fan.apex2d[4],FONT_HERSHEY_SIMPLEX, 1, {0, 255, 0}, 2);
+            if (fan.color == 0)
+                putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+            if (fan.color == 1)
+                putText(src.img, fmt::format("{}",fan.key), fan.apex2d[0], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 2);
+            for(int i = 0; i < 5; i++)
+                line(src.img, fan.apex2d[i % 5], fan.apex2d[(i + 1) % 5], Scalar(0,255,0), 1);
+            auto fan_armor_center = coordsolver.reproject(fan.armor3d_cam);
+            circle(src.img, fan_armor_center, 4, {0, 0, 255}, 2);
+        }
 #endif //SHOW_ALL_FANS
 
 #ifdef SHOW_AIM_CROSS
@@ -330,8 +330,8 @@ bool Buff::run(TaskData &src,VisionData &data)
 #endif //SHOW_FPS
 
 #ifdef SHOW_IMG
-    imshow("dst",src.img);
-    waitKey(1);
+        imshow("dst",src.img);
+        waitKey(1);
 #endif //SHOW_IMG
         lost_cnt++;
         is_last_target_exists = false;
