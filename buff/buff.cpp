@@ -246,7 +246,8 @@ bool Buff::run(TaskData &src,VisionData &data)
                     //目前扇叶到上一次扇叶的旋转矩阵
                     auto relative_rmat = (*iter).prev_fan.rmat.transpose() * (*fan).rmat;
                     angle_axisd = Eigen::AngleAxisd(relative_rmat);
-                    auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
+//                     auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
+                    auto rotate_axis_world = angle_axisd.axis();
                     // auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
                     sign = ((*fan).centerR3d_world.dot(rotate_axis_world) > 0 ) ? 1 : -1;
                 }
@@ -258,7 +259,8 @@ bool Buff::run(TaskData &src,VisionData &data)
                     //TODO:使用点乘判断旋转方向
                     angle_axisd = Eigen::AngleAxisd(relative_rmat);
                     // auto rotate_axis_world = (*fan).rmat  * angle_axisd.axis();
-                    auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
+                    auto rotate_axis_world = angle_axisd.axis();
+//                     auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
                     sign = ((*fan).centerR3d_world.dot(rotate_axis_world) > 0 ) ? 1 : -1;
                 }
                 // cout<<sign<<endl;
