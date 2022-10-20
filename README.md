@@ -37,7 +37,7 @@
 - Ubuntu 20.04 LTS
 - GCC 9.3.0
 - OpenVINO 2021.4
-- OpenCV 4.5.0 安装方式：OpenVINO2021.4自带
+- OpenCV 4.5.0 安装方式：OpenVINO2021.4自带(注意: OpenCV4.5.0修改了minAreaRect的角度计算方式,如执意使用更早的版本请自行修改程序相关部分!!!)
 - Eigen 安装方式：`sudo apt-get install libeigen3-dev`
 - fmt 安装方式：[编译安装](https://github.com/fmtlib/fmt)
 - Glog 安装方式：[编译安装](https://github.com/google/glog/releases/tag/v0.5.0)
@@ -96,5 +96,7 @@ V0.1 Beta 完成自瞄推理部分及粒子滤波器. 2021.11.12
 输入命令：sudo systemctl set-default multi-user.target 重启reboot
 
 开启界面：sudo systemctl set-default graphical.target
-## 5.私货
+## 5.致谢(排名不分先后)
+  在本套程序的开发过程中,因为经验不足,我们遇到了很多棘手的问题,在这里特别感谢来自上海交通大学云汉交龙战队,哈尔滨工业大学(深圳)南工骁鹰战队,哈尔滨工业大学(威海)HERO战队,哈尔滨工业大学I Hiter战队,南京工业大学Bluespace战队,华北理工大学Horizon战队的成员与离退休老干部的慷慨相助与分享,如果没有你们的帮助,本套程序的诞生定会变得无比困难.
+## 6.私货
 [神经网络训练仓库传送门](https://github.com/RangerOnMars/TUP-NN-Train) 本赛季的神经网络训练仓库(因为贪图省事,改的比较不雅观,就不放战队仓库给战队抹黑了:( )
