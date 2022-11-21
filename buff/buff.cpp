@@ -247,7 +247,7 @@ bool Buff::run(TaskData &src,VisionData &data)
                     auto relative_rmat = (*iter).prev_fan.rmat.transpose() * (*fan).rmat;
                     angle_axisd = Eigen::AngleAxisd(relative_rmat);
                     auto rotate_axis_world = (*iter).last_fan.rmat * angle_axisd.axis();
-                    auto rotate_axis_world = (*fan).rmat * angle_axisd.axis();
+                    // auto rotate_axis_world = (*fan).rmat * angle_axisd.axis();
                     // auto rotate_axis_world = (*iter).last_fan.rmat  * angle_axisd.axis();
                     sign = ((*fan).centerR3d_world.dot(rotate_axis_world) > 0 ) ? 1 : -1;
                 }
